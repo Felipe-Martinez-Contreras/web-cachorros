@@ -54,20 +54,20 @@ detrás de Cloudflare.
 
 ## 3. Comandos
 
-> Los scripts se crean en la Fase 0. Hasta entonces esta tabla es el contrato a implementar.
+> `db:seed` y `content:pending` se crean en la Fase 1; el resto ya existe.
 
 | Comando | Qué hace |
 |---|---|
 | `pnpm dev` | Servidor de desarrollo |
 | `pnpm build` / `pnpm start` | Build de producción (standalone, **sin acceso a la BD**) / arranque |
-| `pnpm check` | Biome (lint + formato) + `tsc --noEmit` |
+| `pnpm check` / `pnpm check:fix` | Biome (lint + formato) + `tsc --noEmit` / corrige formato y lint |
 | `pnpm test` | Pruebas unitarias (Vitest) |
-| `pnpm test:integration` | Integración contra PostgreSQL 18 real |
-| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe |
+| `pnpm test:integration` | Integración contra PostgreSQL 18 real (base aparte `cachorros_test`, con el rol restringido) |
+| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes) |
 | `pnpm db:generate` | Genera migraciones SQL con `drizzle-kit generate` (se revisan y se commitean) |
 | `pnpm db:migrate` | Aplica migraciones con el migrador de `drizzle-orm` |
 | `pnpm db:seed` / `pnpm db:reset` | Carga datos de ejemplo / recrea la BD (solo desarrollo) |
-| `pnpm admin:create` | Crea un administrador (no hay registro público) |
+| `pnpm admin:create` | Crea un administrador (no hay registro público); `--restablecer` cambia su contraseña |
 | `pnpm content:pending` | Regenera `docs/pendientes-contenido.md` |
 | `pnpm build:scripts` | Empaqueta `scripts/` con esbuild a `.mjs` autocontenidos |
 
@@ -75,7 +75,7 @@ Arranque local desde un clon limpio:
 
 ```powershell
 pnpm i
-docker compose -f compose.dev.yaml up -d   # PostgreSQL 18 + Mailpit
+docker compose -f compose.dev.yaml up -d   # PostgreSQL 18 (puerto 5439) + Mailpit (http://localhost:8025)
 pnpm db:migrate
 pnpm admin:create
 pnpm dev
@@ -86,7 +86,10 @@ pnpm dev
 El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux. Por eso:
 
 - Los scripts de `package.json` DEBEN ser multiplataforma: nada de `rm -rf`, `cp`, `VAR=valor comando` ni `&&` que
-  dependa de un shell POSIX. La lógica no trivial va en `scripts/*.ts` (Node) y las variables se cargan desde `.env`.
+  dependa de un shell POSIX. La lógica no trivial va en `scripts/*.ts` y las variables se cargan desde `.env`.
+- Los scripts de consola (`scripts/<nombre>.ts`) se ejecutan con `node scripts/run.mjs <nombre>`, que los empaqueta
+  con esbuild (sin `tsx` ni otra dependencia). Para la imagen se empaquetan con `pnpm build:scripts`. Un script
+  nuevo se registra en `scripts/lib/bundle.mjs`.
 - PowerShell 5.1 no tiene `&&` / `||`: en documentación y ejemplos, un comando por línea.
 - Finales de línea **LF** en todo el repo (`.gitattributes`); imprescindible para los `.sh`, el Caddyfile y los
   Dockerfile que se ejecutan en Linux.
@@ -202,6 +205,9 @@ redirecciones optimistas: no es una barrera de seguridad; su *matcher* excluye `
 ### Calidad (3.10) y pruebas (3.11)
 
 - Biome (lint + formato) con reglas estrictas; lefthook (`biome check` sobre *staged* + commitlint); Renovate semanal.
+- **Antigüedad mínima de 7 días** para cualquier versión nueva: `minimumReleaseAge` en `pnpm-workspace.yaml` y en
+  `renovate.json`. Next.js y TypeScript van fijados en versión exacta.
+- `process.env` solo se lee en `src/lib/env.ts` (Biome `noProcessEnv`); el resto del código importa `env`.
 - Parches de seguridad de Next.js y React: aplicar en ≤ 48 h.
 - CI: `pnpm audit --prod` y Trivy (falla con CRITICAL).
 
