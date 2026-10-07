@@ -1,0 +1,34 @@
+# Dependencias
+node_modules/
+
+# Next.js
+.next/
+next-env.d.ts
+
+# Salidas de build y cachés
+dist/
+.cache/
+*.tsbuildinfo
+coverage/
+
+# Pruebas
+test-results/
+playwright-report/
+blob-report/
+.lighthouseci/
+
+# Entorno (nunca commitear .env)
+.env
+.env.*
+!.env.example
+
+# Datos locales (subidas y caché de tarjetas)
+/data/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

@@ -1,0 +1,12 @@
+# Finales de línea LF en todo el repo: CI y producción corren en Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary

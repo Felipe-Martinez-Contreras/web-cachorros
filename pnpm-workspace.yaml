@@ -1,0 +1,9 @@
+# Antigüedad mínima de publicación, en minutos (7 días): pnpm no instala versiones más nuevas.
+# Renovate aplica la misma regla (renovate.json).
+minimumReleaseAge: 10080
+
+# Únicos paquetes autorizados a ejecutar scripts de instalación.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  sharp: true
