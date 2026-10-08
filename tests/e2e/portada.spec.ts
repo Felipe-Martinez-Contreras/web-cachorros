@@ -86,6 +86,38 @@ test.describe('portada', () => {
     })
   }
 
+  test('no se mueve cuando la fuente llega tarde', async ({ page }) => {
+    // En una red lenta, Archivo llega después del primer pintado. Las fuentes de respaldo ajustadas
+    // (src/styles/fonts.css) ocupan el mismo ancho, así que los titulares no cambian de línea.
+    await page.setViewportSize({ width: 412, height: 823 })
+    await page.route('**/*.woff2', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await route.continue()
+    })
+    await page.addInitScript(() => {
+      ;(window as unknown as { __cls: number }).__cls = 0
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as (PerformanceEntry & {
+          value: number
+          hadRecentInput: boolean
+        })[]) {
+          if (!entry.hadRecentInput) (window as unknown as { __cls: number }).__cls += entry.value
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
+    })
+    await page.goto('/')
+    const display = page.getByRole('heading', { level: 1 })
+    const before = await display.boundingBox()
+    await page.evaluate(() => document.fonts.ready)
+    await page.waitForTimeout(500)
+    const after = await display.boundingBox()
+
+    // El titular ocupa las mismas líneas con la fuente de respaldo que con la definitiva.
+    expect(after?.height).toBe(before?.height)
+    const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls)
+    expect(cls, 'CLS con la fuente retrasada').toBeLessThanOrEqual(0.05)
+  })
+
   test('no tiene violaciones de accesibilidad serias ni críticas', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')

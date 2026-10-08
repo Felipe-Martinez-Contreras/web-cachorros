@@ -17,7 +17,7 @@ export default function NotFound() {
           404
         </p>
         <h1 className="text-h2">Este balón se fue fuera de la cancha</h1>
-        <p className="max-w-[48ch] text-(--muted)">La página que buscas no existe o cambió de lugar.</p>
+        <p className="max-w-md text-(--muted)">La página que buscas no existe o cambió de lugar.</p>
         <Link href="/" className={buttonVariants({ variant: 'primary', className: 'mt-2' })}>
           Volver al inicio
         </Link>

@@ -14,7 +14,7 @@ export function ComingSoon({ title }: { title: string }) {
       <div className="container-site section-y grid justify-items-center gap-4 text-center">
         <p className="text-eyebrow text-accent">Próximamente</p>
         <h1 className="text-h1">{title}</h1>
-        <p className="max-w-[48ch] text-lg text-(--muted)">
+        <p className="max-w-md text-lg text-(--muted)">
           Estamos preparando esta sección del sitio. Mientras tanto, revisa los partidos y las noticias en la
           portada.
         </p>

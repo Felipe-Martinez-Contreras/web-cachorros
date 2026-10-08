@@ -97,8 +97,8 @@ export async function HeroSection() {
           <p className="text-eyebrow text-accent">
             {site?.clubName} · Desde {site?.foundedYear}
           </p>
-          <h1 className="text-display max-w-[12ch] text-balance">{hero?.title ?? site?.shortName}</h1>
-          {hero?.subtitle && <p className="max-w-[40ch] text-lg text-paper/90 md:text-xl">{hero.subtitle}</p>}
+          <h1 className="text-display max-w-5xl text-balance">{hero?.title ?? site?.shortName}</h1>
+          {hero?.subtitle && <p className="max-w-xl text-lg text-paper/90 md:text-xl">{hero.subtitle}</p>}
           {hero?.ctaLabel && hero.ctaHref && (
             <div>
               <Link href={hero.ctaHref} className={buttonVariants({ variant: 'primary', size: 'lg' })}>

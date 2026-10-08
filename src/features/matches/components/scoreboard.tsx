@@ -87,7 +87,7 @@ export function Scoreboard({ match, size = 'md', className }: ScoreboardProps) {
           <p
             className={cn(
               'tabular-nums',
-              large ? 'text-score' : 'font-display text-4xl font-black [font-stretch:62.5%]',
+              large ? 'text-score' : 'font-tight text-4xl font-black [font-stretch:62.5%]',
             )}
           >
             <span className="sr-only">{scoreText(match)}</span>
@@ -100,7 +100,7 @@ export function Scoreboard({ match, size = 'md', className }: ScoreboardProps) {
         ) : (
           <p
             className={cn(
-              'font-display font-black tabular-nums [font-stretch:62.5%]',
+              'font-tight font-black tabular-nums [font-stretch:62.5%]',
               large ? 'text-5xl md:text-6xl' : 'text-3xl',
             )}
           >

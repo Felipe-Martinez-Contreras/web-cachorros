@@ -68,7 +68,7 @@ export function EmptyState({ icon, title, children, action, className }: EmptySt
     >
       {icon && <div className="text-(--muted) [&_svg]:size-10">{icon}</div>}
       <p className="text-h3">{title}</p>
-      {children && <div className="max-w-[48ch] text-(--muted)">{children}</div>}
+      {children && <div className="max-w-md text-(--muted)">{children}</div>}
       {action}
     </div>
   )

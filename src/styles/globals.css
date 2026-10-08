@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./fonts.css";
 
 @layer base {
   html {
@@ -53,7 +54,7 @@
 
 /* Tipografía (especificación 4.3): una sola familia variable; el ancho distingue display de texto. */
 @utility text-display {
-  font-family: var(--font-display);
+  font-family: var(--font-tight);
   font-size: clamp(3rem, 12vw, 9rem);
   font-weight: 900;
   font-stretch: 62.5%;
@@ -100,7 +101,7 @@
 }
 
 @utility text-score {
-  font-family: var(--font-display);
+  font-family: var(--font-tight);
   font-size: clamp(3rem, 14vw, 7rem);
   font-weight: 900;
   font-stretch: 62.5%;

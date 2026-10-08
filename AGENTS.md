@@ -146,6 +146,9 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
 - Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
   como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`.
+- Tipografía sin saltos: `src/styles/fonts.css` define las fuentes de respaldo con el mismo ancho que Archivo
+  (normal, 75 % y 62,5 %). Usa `font-display` para títulos al 75 % y `font-tight` para display y marcadores al
+  62,5 %; no uses anchos en `ch` (cambian al cargar la fuente): usa `rem` o las clases `max-w-*`.
 - Los escudos van dentro de `.crest` (`TeamCrest`, `ClubCrest`): en secciones `.theme-dark` reciben un disco blanco.
 - Sobre fondo claro, el naranja `accent` no alcanza contraste: para texto, enlaces e indicadores usa
   `accent-strong` (o los tokens `--link` / `--focus`). Lo verifica `tests/unit/tokens-contrast.test.ts`.

@@ -30,18 +30,54 @@
 | Unitarias del marcador derivado, la tabla calculada e `isMinor` | Cumple | `tests/unit/matches-lib.test.ts`, `tests/unit/domain-lib.test.ts`; cobertura de `src/features/*/lib` ≈ 98 % |
 | Test de contraste de tokens en verde | Cumple | `tests/unit/tokens-contrast.test.ts` (22 casos) |
 | Portada correcta en 360, 768 y 1280 px, sin scroll horizontal ni CLS visible | Cumple | e2e: sin desborde y CLS ≤ 0,1 en los tres anchos (medido: 0 a 0,03) |
-| Lighthouse móvil local ≥ 90 / 95 / 95 / 95 | **Parcial: rendimiento no llega** | Accesibilidad 100, Buenas prácticas 100, SEO 100. **Rendimiento bajo 90** en todas las mediciones locales (entre 42 y 84 según la carga de la máquina). Diagnóstico abajo; el CI lo mide ahora sin carga |
+| Lighthouse móvil ≥ 90 / 95 / 95 / 95 | Cumple (en el CI) | **94 / 100 / 100 / 100** en el runner de GitHub, LCP 1,22 s. En esta máquina, con carga, el rendimiento quedó entre 42 y 84. Detalle abajo |
 | Cuenta regresiva correcta en `America/Santiago`, incluido el cambio de horario, sin errores de hidratación | Cumple | Unitarias con las transiciones de abril y septiembre de 2026; la e2e de la portada falla ante cualquier error de consola |
 | Navegación completa con teclado y foco visible; axe sin *serious/critical* | Cumple | e2e: enlace «Saltar al contenido», foco visible en cada parada, desplegable «Club», hoja «Más»; axe sin violaciones |
 | Ningún dato del club inventado | Cumple | `docs/pendientes-contenido.md`: 197 marcadores (122 en la base, 75 en el código y el seed) y 6 campos de Configuración sin completar |
 
-Totales: **99** pruebas unitarias, **51** de integración y **36** e2e (18 por viewport), todas en verde.
+Totales: **99** pruebas unitarias, **51** de integración y **38** e2e (19 por viewport), todas en verde y
+ninguna omitida.
 Las e2e corren contra el build en el puerto 3100 y nunca reutilizan un servidor que ya esté corriendo.
 `pnpm check` y `pnpm build` en verde; el build se verificó además apuntando a una base inexistente.
 
-### Lighthouse: diagnóstico del rendimiento
+### Lighthouse en el CI: criterio cumplido
 
-**No se alcanzó la meta de 90 en local.** La meta no se bajó: `pnpm lighthouse` sigue exigiendo 90 / 95 / 95 / 95.
+Medido en el runner de GitHub (sin carga), sobre el build con el seed, 4G lento y CPU ×4:
+
+| Categoría | Meta | CI |
+|---|---|---|
+| Rendimiento | 90 | **94** |
+| Accesibilidad | 95 | **100** |
+| Buenas prácticas | 95 | **100** |
+| SEO | 95 | **100** |
+
+LCP **1,22 s** (objetivo ≤ 2,5 s). CLS **0,099** en esa corrida: dentro del límite de 0,1, pero sin margen.
+
+**Qué se movía (CLS):** la fuente. Archivo se carga con `display: swap`; mientras llega, el texto se pinta con
+una fuente del sistema. El respaldo que genera next/font solo calza con Archivo a ancho normal, y los titulares
+usan Archivo condensada (62,5 % y 75 %): con el respaldo ocupaban hasta un 31 % más de ancho, el titular del hero
+tomaba una línea más y, al llegar Archivo, todo el bloque del hero se desplazaba.
+
+Corrección, en esta misma rama:
+
+- `src/styles/fonts.css` agrega a la familia de respaldo las caras que faltaban (ancho 62,5 %, ancho 75 % y
+  negrita), con `size-adjust` calibrado midiendo en el navegador: el ancho del texto de respaldo queda igual al de
+  Archivo (1.743 px contra 1.744 px en la muestra del display; 1.961 contra 1.961 en los títulos).
+- Los anchos máximos en `ch` pasaron a `rem`: `ch` depende de la fuente cargada y cambiaba al llegar Archivo.
+- Prueba nueva en `tests/e2e/portada.spec.ts`: retrasa la fuente 1,5 s y exige que el titular no cambie de alto
+  y que el CLS sea ≤ 0,05.
+
+En local (Arial), el CLS con la fuente retrasada quedó en **0,024**. Lo que resta es el subtítulo del hero, que
+a 412 px queda justo en el límite entre una y dos líneas con el texto de ejemplo; el efecto real en el CI
+(Liberation Sans) se verá en la próxima corrida del job.
+
+También se corrigió el job: no subía el artefacto porque `.lighthouseci/` empieza con punto y
+`upload-artifact` omite las carpetas ocultas (`include-hidden-files: true`).
+
+### Lighthouse en local: diagnóstico del rendimiento
+
+En esta máquina no se alcanzó la meta de 90 (sí en el CI, arriba). La meta no se bajó: `pnpm lighthouse`
+sigue exigiendo 90 / 95 / 95 / 95.
 
 | Medición (5 corridas, 4G lento y CPU ×4 aplicados) | Rendimiento | LCP | Índice de CPU de la máquina |
 |---|---|---|---|
@@ -100,7 +136,8 @@ informes como artefacto `lighthouse`. No bloquea el PR. Se revisa de nuevo en la
 
 ## Qué falta
 
-1. **Rendimiento de Lighthouse** (arriba): la meta sigue en 90; se revisa con el job del CI y, en la Fase 5, sobre el servidor real.
+1. **Confirmar el CLS en el CI** después de la corrección de las fuentes de respaldo (estaba en 0,099). El
+   rendimiento se vuelve a medir en la Fase 5 sobre el servidor real y con la foto definitiva del hero.
 2. **Foto del hero:** el escudo que dejaste en `public/placeholder/escudo.svg` ya está en uso; no había foto, así
    que el hero usa una imagen de ejemplo. Para cambiarla: deja `public/placeholder/hero.jpg` (y, opcional,
    `hero-movil.jpg`) y corre `pnpm db:seed`.

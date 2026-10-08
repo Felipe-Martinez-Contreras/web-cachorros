@@ -35,7 +35,7 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
           </span>
           <TeamCrest team={match.away} size="sm" />
         </span>
-        <span className="text-right font-display text-xl font-black tabular-nums [font-stretch:62.5%]">
+        <span className="text-right font-tight text-xl font-black tabular-nums [font-stretch:62.5%]">
           {hasScore(match)
             ? `${match.homeScore}-${match.awayScore}`
             : formatMatchDate(match.kickoffAt).split(' · ')[1]}

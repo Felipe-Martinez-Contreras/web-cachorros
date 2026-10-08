@@ -20,9 +20,9 @@ jobs:
     name: Lint, tipos y pruebas unitarias
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -36,9 +36,9 @@ jobs:
     name: Build sin base de datos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -74,9 +74,9 @@ jobs:
       SMTP_PORT: "1025"
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -86,7 +86,7 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
@@ -122,9 +122,9 @@ jobs:
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
       LOG_LEVEL: warn
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -140,21 +140,24 @@ jobs:
       - name: Resumen de puntajes
         if: ${{ !cancelled() }}
         run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
           name: lighthouse
           path: .lighthouseci/
+          # La carpeta empieza con punto: sin esto la action la considera oculta y no sube nada.
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 30
 
   docker:
     name: Imagen Docker (build y arranque)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
       - name: Construir la imagen (sin base de datos)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true

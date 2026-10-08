@@ -154,7 +154,7 @@ export default async function DesignSystemPage() {
           <p className="text-h1">Título H1</p>
           <p className="text-h2">Título H2</p>
           <p className="text-h3">Título H3</p>
-          <p className="max-w-[68ch] text-lg leading-relaxed">
+          <p className="max-w-2xl text-lg leading-relaxed">
             Texto: Archivo a ancho normal. El ancho de lectura máximo es de 68 caracteres para que las
             noticias se lean cómodas en cualquier pantalla.
           </p>

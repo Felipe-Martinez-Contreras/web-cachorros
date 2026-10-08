@@ -1,4 +1,4 @@
-// Capturas para el reporte de fase (360 px y 1280 px). No corre con las pruebas normales:
+// Capturas para el reporte de fase (360 px y 1280 px). playwright.config.ts las excluye de las pruebas normales:
 //   PowerShell:  $env:CAPTURAS = 'fase-1'; pnpm test:e2e capturas; Remove-Item Env:CAPTURAS
 import { expect, test } from '@playwright/test'
 import { ADMIN, login } from './support'
@@ -6,8 +6,6 @@ import { ADMIN, login } from './support'
 const fase = process.env.CAPTURAS
 
 test.describe('capturas del reporte de fase', () => {
-  test.skip(!fase, 'solo con la variable CAPTURAS')
-
   test('portada, sección provisional, login, panel y sistema de diseño', async ({ page }, testInfo) => {
     test.setTimeout(120_000)
     const dir = `docs/fases/capturas/${fase}`

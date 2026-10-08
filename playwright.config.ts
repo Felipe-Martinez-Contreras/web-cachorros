@@ -10,6 +10,8 @@ const baseURL = `http://localhost:${PORT}`
  */
 export default defineConfig({
   testDir: 'tests/e2e',
+  // Las capturas del reporte de fase no son pruebas: solo corren con la variable CAPTURAS.
+  testIgnore: process.env.CAPTURAS ? [] : ['**/capturas.spec.ts'],
   globalSetup: './tests/e2e/global-setup.ts',
   // Las pruebas comparten usuarios y la bandeja de Mailpit: van en serie.
   fullyParallel: false,
