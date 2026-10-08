@@ -16,6 +16,8 @@ try {
   try {
     // Los partidos que crean las pruebas usan números de fecha desde el 40 (el seed llega al 11).
     await sql`delete from matches where round_number >= 40`
+    // Las inscripciones que crean las pruebas usan camisetas desde la 90.
+    await sql`delete from squad_registrations where shirt_number >= 90`
     // Primero lo que referencia a otras tablas (inscripciones, cargos) y a la biblioteca de medios.
     await sql`delete from squad_registrations where player_id in (select id from players where first_name like 'E2E%')`
     await sql`delete from players where first_name like 'E2E%'`

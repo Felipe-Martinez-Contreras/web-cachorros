@@ -145,11 +145,18 @@ test('programar una jornada crea un partido por serie con su hora', async ({ pag
   await page.getByRole('button', { name: 'Programar 2 partidos' }).click()
   await expect(page).toHaveURL(/\/admin\/partidos$/)
   await expect(page.getByText('Se programaron 2 partidos.')).toBeVisible()
-  const created = page.getByRole('listitem').filter({ hasText: `Fecha ${round}` })
-  await expect(created).toHaveCount(2)
-  await expect(created.filter({ hasText: 'Honor' })).toContainText('16:00')
-  await expect(created.filter({ hasText: 'Segunda' })).toContainText('14:00')
-  await expect(created.first()).toContainText('Unión El Boldo vs Club Deportivo Los Cachorros')
+  // La lista viene paginada: se filtra por serie para encontrar cada partido creado.
+  for (const [serie, time] of [
+    ['Honor', '16:00'],
+    ['Segunda', '14:00'],
+  ] as const) {
+    await page.getByRole('combobox', { name: 'Serie' }).selectOption({ label: serie })
+    await page.getByRole('button', { name: 'Filtrar' }).click()
+    const created = page.getByRole('listitem').filter({ hasText: `Fecha ${round}` })
+    await expect(created).toHaveCount(1)
+    await expect(created).toContainText(time)
+    await expect(created).toContainText('Unión El Boldo vs Club Deportivo Los Cachorros')
+  }
 })
 
 test('la tabla de posiciones se edita y muestra su vista previa', async ({ page }) => {
