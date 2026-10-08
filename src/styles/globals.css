@@ -20,12 +20,17 @@
   .theme-dark .crest {
     background-color: var(--color-paper);
     border-radius: 9999px;
-    padding: 10%;
+  }
+  /* El margen interior se logra escalando la imagen (un padding en % dependería del ancho del padre). */
+  .theme-dark .crest > img {
+    scale: 0.74;
   }
   .theme-dark .theme-light .crest {
     background-color: transparent;
     border-radius: 0;
-    padding: 0;
+  }
+  .theme-dark .theme-light .crest > img {
+    scale: 1;
   }
 
   :focus-visible {

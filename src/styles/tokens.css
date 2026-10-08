@@ -44,7 +44,8 @@
 .theme-light {
   --bg: var(--color-paper);
   --fg: var(--color-ink);
-  --muted: var(--color-neutral-500);
+  /* neutral-600 y no 500: el texto secundario también va sobre fondos grises, donde 500 no alcanza AA. */
+  --muted: var(--color-neutral-600);
   --border: var(--color-neutral-200);
   --surface: var(--color-neutral-50);
   --link: var(--color-accent-strong);

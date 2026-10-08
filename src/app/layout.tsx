@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Archivo } from 'next/font/google'
-import type { ReactNode } from 'react'
+import { type ReactNode, Suspense } from 'react'
 import '@/styles/globals.css'
 
 // Una sola familia variable (peso y ancho), autoalojada por next/font (especificación 4.3).
@@ -27,8 +27,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es-CL" className={archivo.variable}>
-      <body className="min-h-svh antialiased">{children}</body>
-    </html>
+    // El <Suspense> envuelve el documento completo: las páginas con datos (que se leen en runtime, nunca
+    // en el build) se entregan como HTML terminado, sin esqueletos que después reemplace un script. Así
+    // el sitio público muestra su contenido con JavaScript deshabilitado (especificación 3.3).
+    <Suspense fallback={null}>
+      <html lang="es-CL" className={archivo.variable}>
+        <body className="min-h-svh antialiased">{children}</body>
+      </html>
+    </Suspense>
   )
 }

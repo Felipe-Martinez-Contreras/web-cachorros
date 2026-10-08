@@ -168,10 +168,17 @@ function pitchLines(width: number, height: number, variant: number, color: strin
   }
 }
 
-type PhotoOptions = { width: number; height: number; variant: number; tone?: Tone; caption?: string }
+type PhotoOptions = {
+  width: number
+  height: number
+  variant: number
+  tone?: Tone
+  /** Rótulo «Foto de ejemplo». El hero no lo lleva: el texto de la portada va encima. */
+  label?: boolean
+}
 
 /** Foto de ejemplo: líneas de cancha sobre un degradado, marcada como «Foto de ejemplo». JPEG sin transparencia. */
-export async function photoArtwork({ width, height, variant, tone = 'dark', caption }: PhotoOptions) {
+export async function photoArtwork({ width, height, variant, tone = 'dark', label = true }: PhotoOptions) {
   const palette = TONES[tone]
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
@@ -181,30 +188,19 @@ export async function photoArtwork({ width, height, variant, tone = 'dark', capt
     ${pitchLines(width, height, variant, palette.line)}
   </svg>`
   const margin = Math.round(width * 0.05)
-  const layers: Placed[] = [
-    await anchored(
-      {
-        text: 'FOTO DE EJEMPLO',
-        color: palette.text,
-        width: Math.round(width * 0.3),
-        height: Math.round(height * 0.035),
-        font: TEXT,
-      },
-      margin,
-      height - margin - Math.round(height * 0.035),
-    ),
-  ]
-  if (caption) {
+  const layers: Placed[] = []
+  if (label) {
     layers.push(
       await anchored(
         {
-          text: caption.toUpperCase(),
+          text: 'FOTO DE EJEMPLO',
           color: palette.text,
-          width: width - margin * 2,
-          height: Math.round(height * 0.16),
+          width: Math.round(width * 0.3),
+          height: Math.round(height * 0.035),
+          font: TEXT,
         },
         margin,
-        margin,
+        height - margin - Math.round(height * 0.035),
       ),
     )
   }

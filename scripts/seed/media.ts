@@ -103,7 +103,7 @@ export async function buildSeedMedia(uploadsDir: string): Promise<SeedMedia> {
     clubHero ? `Foto principal del ${CLUB.name}` : 'Imagen de ejemplo: líneas de una cancha de fútbol',
     clubHero
       ? await readFile(clubHero)
-      : await photoArtwork({ width: 2400, height: 1500, variant: 0, tone: 'accent' }),
+      : await photoArtwork({ width: 2400, height: 1500, variant: 0, tone: 'accent', label: false }),
     { credit: clubHero ? null : CREDIT, focalY: 0.4 },
   )
   const mobileHero = findPlaceholder([
