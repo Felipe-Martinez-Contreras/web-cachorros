@@ -1,21 +1,24 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buttonVariants } from '@/components/ui/button'
 
 export const metadata: Metadata = { title: 'Página no encontrada' }
 
+/**
+ * 404 de cualquier dirección que no existe. Es una página estática (responde con estado 404 real) y por
+ * eso no lleva el encabezado del sitio, que necesita datos de la BD.
+ */
 export default function NotFound() {
   return (
-    <main className="grid min-h-svh place-items-center px-4">
-      <div className="text-center">
-        <p className="font-display text-[clamp(3rem,14vw,7rem)] font-black leading-none [font-stretch:62.5%]">
+    <main className="theme-dark grid min-h-svh place-items-center px-4">
+      <div className="grid justify-items-center gap-3 text-center">
+        <p className="text-eyebrow text-accent">Club Deportivo Los Cachorros · Desde 1934</p>
+        <p className="text-score" aria-hidden="true">
           404
         </p>
-        <h1 className="mt-2 text-xl font-bold">Este balón se fue fuera de la cancha</h1>
-        <p className="mt-2 text-neutral-600">La página que buscas no existe o cambió de lugar.</p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex min-h-11 items-center rounded-md bg-ink px-5 font-semibold text-paper"
-        >
+        <h1 className="text-h2">Este balón se fue fuera de la cancha</h1>
+        <p className="max-w-md text-(--muted)">La página que buscas no existe o cambió de lugar.</p>
+        <Link href="/" className={buttonVariants({ variant: 'primary', className: 'mt-2' })}>
           Volver al inicio
         </Link>
       </div>

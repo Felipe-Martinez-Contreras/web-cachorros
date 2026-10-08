@@ -27,7 +27,7 @@ LABEL org.opencontainers.image.title="cachorros-web" \
       org.opencontainers.image.source="https://github.com/Felipe-Martinez-Contreras/web-cachorros" \
       org.opencontainers.image.revision="${REVISION}"
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 UPLOADS_DIR=/data/uploads
 RUN addgroup -S -g 1001 app && adduser -S -u 1001 -G app app \
  && mkdir -p /data/uploads /data/cache/share && chown -R app:app /data
 COPY --from=build --chown=app:app /app/.next/standalone ./

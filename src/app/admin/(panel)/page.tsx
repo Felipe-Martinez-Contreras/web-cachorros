@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { ClubIdentityForm } from '@/features/settings/components/club-identity-form'
 import { getClubIdentity } from '@/features/settings/queries'
 import { requirePanelUser } from '@/lib/auth/session'
@@ -36,6 +37,12 @@ export default async function AdminHomePage() {
           Versión instalada: <span className="font-medium text-ink">{env.APP_VERSION}</span>
         </p>
       </section>
+
+      <p>
+        <Link href="/admin/sistema-de-diseno" className="inline-flex min-h-12 items-center underline">
+          Ver el sistema de diseño
+        </Link>
+      </p>
     </div>
   )
 }

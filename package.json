@@ -5,12 +5,17 @@
   "type": "module",
   "packageManager": "pnpm@12.8.2",
   "engines": {
-    "node": "\u003e=24 \u003c25"
+    "node": ">=24 <25"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "better-auth": "^1.7.7",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.3",
+    "lucide-react": "^1.49.0",
     "next": "16.3.8",
     "nodemailer": "^10.0.13",
     "pino": "^10.3.1",
@@ -18,6 +23,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
+    "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -25,6 +32,7 @@
     "@biomejs/biome": "^2.5.15",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.0",
@@ -43,16 +51,19 @@
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node scripts/postbuild.mjs",
-    "start": "node --env-file-if-exists=.env .next/standalone/server.js",
-    "check": "biome check . \u0026\u0026 tsc --noEmit",
+    "start": "node scripts/start.mjs",
+    "check": "biome check . && tsc --noEmit",
     "check:fix": "biome check --write .",
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
+    "lighthouse": "lhci autorun",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/run.mjs migrate",
+    "db:seed": "node scripts/run.mjs seed",
     "db:reset": "node scripts/run.mjs db-reset",
     "admin:create": "node scripts/run.mjs create-admin",
+    "content:pending": "node scripts/run.mjs content-pending",
     "build:scripts": "node scripts/build-scripts.mjs"
   }
 }

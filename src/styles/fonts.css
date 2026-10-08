@@ -1,0 +1,61 @@
+/*
+ * Fuentes de respaldo ajustadas a Archivo (especificación 4.3 y presupuesto de CLS de la sección 10).
+ *
+ * Archivo se carga con `display: swap`: mientras llega, el texto se pinta con una fuente del sistema. Si esa
+ * fuente ocupa otro ancho, los titulares cambian de línea al llegar Archivo y todo lo de abajo se mueve
+ * (era la causa del CLS de la portada).
+ *
+ * next/font ya genera la familia «Archivo Fallback» (Arial escalada), pero solo calza con el ancho normal y
+ * el peso regular. Aquí se agregan a ESA MISMA familia las caras que faltan; el navegador elige la que
+ * corresponde según `font-stretch` y `font-weight`. `size-adjust` escala la fuente del sistema para que ocupe
+ * el mismo ancho que Archivo; el alto de línea no cambia.
+ *
+ * Razones medidas en el navegador (ancho de Archivo ÷ ancho de Arial Bold, mismo tamaño):
+ *   display 900 / ancho 62,5 % → 0,726 · títulos 800 / ancho 75 % → 0,817 · texto 700 / ancho 100 % → 0,990
+ * Liberation Sans (Linux) tiene las mismas métricas que Arial; Roboto (Android) es una aproximación.
+ *
+ * Depende del nombre que genera next/font («Archivo Fallback»). Si cambia la tipografía, sus ejes o ese
+ * nombre, la prueba «no se mueve cuando la fuente llega tarde» de tests/e2e/portada.spec.ts falla.
+ */
+
+/* Texto en negrita, ancho normal (next/font solo define la cara regular). */
+@font-face {
+  font-family: "Archivo Fallback";
+  src:
+    local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Roboto Bold"),
+    local("Arial");
+  font-weight: 600 900;
+  font-stretch: 100%;
+  ascent-override: 88.96%;
+  descent-override: 21.28%;
+  line-gap-override: 0%;
+  size-adjust: 99%;
+}
+
+/* Títulos: Archivo al 75 % de ancho. */
+@font-face {
+  font-family: "Archivo Fallback";
+  src:
+    local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Roboto Bold"),
+    local("Arial");
+  font-weight: 100 900;
+  font-stretch: 75%;
+  ascent-override: 88.96%;
+  descent-override: 21.28%;
+  line-gap-override: 0%;
+  size-adjust: 81.7%;
+}
+
+/* Display y marcadores: Archivo al 62,5 % de ancho. */
+@font-face {
+  font-family: "Archivo Fallback";
+  src:
+    local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Roboto Bold"),
+    local("Arial");
+  font-weight: 100 900;
+  font-stretch: 62.5%;
+  ascent-override: 88.96%;
+  descent-override: 21.28%;
+  line-gap-override: 0%;
+  size-adjust: 72.6%;
+}

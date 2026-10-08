@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500" role="img" aria-label="Silueta de jugador">
+  <rect width="400" height="500" fill="#ededed"/>
+  <circle cx="200" cy="170" r="72" fill="#bdbdbd"/>
+  <path d="M60 500c0-110 62-190 140-190s140 80 140 190Z" fill="#bdbdbd"/>
+</svg>

@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["**", "!drizzle/meta", "!pnpm-lock.yaml", "!docs/ESPECIFICACION.md"]
+    "includes": ["**", "!drizzle/meta", "!pnpm-lock.yaml", "!docs/ESPECIFICACION.md", "!public"]
   },
   "formatter": {
     "enabled": true,
@@ -51,7 +51,18 @@
   },
   "overrides": [
     {
-      "includes": ["scripts/**", "tests/**", "*.config.ts", "*.config.mjs", "src/lib/env.ts"],
+      "includes": ["**/*.css"],
+      "linter": { "rules": { "complexity": { "noImportantStyles": "off" } } }
+    },
+    {
+      "includes": [
+        "scripts/**",
+        "tests/**",
+        "*.config.ts",
+        "*.config.mjs",
+        "lighthouserc.cjs",
+        "src/lib/env.ts"
+      ],
       "linter": { "rules": { "style": { "noProcessEnv": "off" } } }
     },
     {

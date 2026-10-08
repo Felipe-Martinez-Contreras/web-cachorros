@@ -10,19 +10,30 @@ afterAll(async () => {
   await Promise.all([app.end(), admin.end()])
 })
 
-describe('primera migración', () => {
-  it('crea las tablas de la Fase 0', async () => {
-    const rows = await admin<{ table_name: string }[]>`
-      select table_name from information_schema.tables where table_schema = 'public' order by 1`
-    expect(rows.map((r) => r.table_name)).toEqual([
-      'account',
-      'audit_log',
-      'ops_runs',
-      'rate_limit',
-      'session',
-      'site_settings',
-      'user',
-      'verification',
+describe('migraciones', () => {
+  it('crean las tablas del modelo completo y la vista de estadísticas', async () => {
+    const rows = await admin<{ table_name: string; table_type: string }[]>`
+      select table_name, table_type from information_schema.tables where table_schema = 'public' order by 1`
+    const tables = rows.filter((r) => r.table_type === 'BASE TABLE').map((r) => r.table_name)
+    expect(tables).toHaveLength(52)
+    expect(tables).toEqual(
+      expect.arrayContaining([
+        'account',
+        'audit_log',
+        'matches',
+        'media_assets',
+        'news',
+        'ops_runs',
+        'rate_limit',
+        'session',
+        'site_settings',
+        'sponsors',
+        'user',
+        'verification',
+      ]),
+    )
+    expect(rows.filter((r) => r.table_type === 'VIEW').map((r) => r.table_name)).toEqual([
+      'v_player_season_stats',
     ])
   })
 

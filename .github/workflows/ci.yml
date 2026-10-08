@@ -20,9 +20,9 @@ jobs:
     name: Lint, tipos y pruebas unitarias
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -36,9 +36,9 @@ jobs:
     name: Build sin base de datos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -74,9 +74,9 @@ jobs:
       SMTP_PORT: "1025"
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -86,7 +86,7 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
@@ -95,14 +95,69 @@ jobs:
             test-results/
           retention-days: 7
 
+  lighthouse:
+    name: Lighthouse móvil de la portada (informativo)
+    runs-on: ubuntu-latest
+    # No bloquea el PR: publica los puntajes para compararlos con la meta (90 / 95 / 95 / 95).
+    continue-on-error: true
+    services:
+      db:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: cachorros
+          POSTGRES_USER: cachorros_admin
+          POSTGRES_PASSWORD: cachorros_admin_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cachorros_admin -d cachorros"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      SITE_ENV: development
+      SITE_URL: http://localhost:3210
+      DATABASE_ADMIN_URL: postgres://cachorros_admin:cachorros_admin_ci@localhost:5432/cachorros
+      DATABASE_URL: postgres://cachorros_app:cachorros_app_ci@localhost:5432/cachorros
+      BETTER_AUTH_SECRET: secreto-solo-para-ci-sin-valor-real-0123456789abcdef
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
+      LOG_LEVEL: warn
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Lighthouse (5 corridas, 4G lento y CPU ×4)
+        id: lighthouse
+        continue-on-error: true
+        run: pnpm lighthouse
+      - name: Resumen de puntajes
+        if: ${{ !cancelled() }}
+        run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: lighthouse
+          path: .lighthouseci/
+          # La carpeta empieza con punto: sin esto la action la considera oculta y no sube nada.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
   docker:
     name: Imagen Docker (build y arranque)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
       - name: Construir la imagen (sin base de datos)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
