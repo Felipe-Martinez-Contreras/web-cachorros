@@ -14,6 +14,13 @@ try {
   }
   const sql = postgres(adminUrl, { max: 1, onnotice: () => {} })
   try {
+    // Primero lo que referencia a otras tablas (inscripciones, cargos) y a la biblioteca de medios.
+    await sql`delete from squad_registrations where player_id in (select id from players where first_name like 'E2E%')`
+    await sql`delete from players where first_name like 'E2E%'`
+    await sql`delete from staff_members where full_name like 'E2E%'`
+    await sql`delete from teams where name like 'E2E%' and not is_own_club`
+    await sql`delete from venues where name like 'E2E%'`
+    await sql`delete from slug_redirects where old_slug like 'e2e-%'`
     const media = await sql<{ storage_key: string }[]>`
       delete from media_assets where alt_text like 'E2E %' returning storage_key`
     const uploadsDir = path.resolve(process.env.UPLOADS_DIR || './data/uploads')

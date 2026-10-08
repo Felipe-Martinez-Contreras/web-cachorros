@@ -1,4 +1,16 @@
-import { House, Images, type LucideIcon, Palette } from 'lucide-react'
+import {
+  CalendarRange,
+  ClipboardList,
+  House,
+  Images,
+  type LucideIcon,
+  MapPin,
+  Palette,
+  Shield,
+  ShieldHalf,
+  Trophy,
+  Users,
+} from 'lucide-react'
 import type { Permission } from '@/lib/permissions'
 
 export type AdminNavItem = {
@@ -17,6 +29,34 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'General',
     items: [{ href: '/admin', label: 'Inicio', icon: House, permission: 'panel:access', primary: true }],
+  },
+  {
+    label: 'Plantel',
+    items: [
+      {
+        href: '/admin/jugadores',
+        label: 'Jugadores',
+        icon: Users,
+        permission: 'players:write',
+        primary: true,
+      },
+      {
+        href: '/admin/cuerpo-tecnico',
+        label: 'Cuerpo técnico',
+        icon: ClipboardList,
+        permission: 'players:write',
+      },
+    ],
+  },
+  {
+    label: 'Competencia',
+    items: [
+      { href: '/admin/series', label: 'Series', icon: Shield, permission: 'sport:write' },
+      { href: '/admin/temporadas', label: 'Temporadas', icon: CalendarRange, permission: 'sport:write' },
+      { href: '/admin/competencias', label: 'Competencias', icon: Trophy, permission: 'sport:write' },
+      { href: '/admin/rivales', label: 'Rivales', icon: ShieldHalf, permission: 'sport:write' },
+      { href: '/admin/canchas', label: 'Canchas', icon: MapPin, permission: 'sport:write' },
+    ],
   },
   {
     label: 'Contenido',
