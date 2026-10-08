@@ -70,7 +70,9 @@ test.describe('partidos', () => {
     await expect(page.getByRole('heading', { name: 'Cronología' })).toBeVisible()
     await expect(page.getByRole('heading', { name: /^Nómina de / })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Titulares' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\//)
+    await expect(
+      page.getByRole('region', { name: 'Compartir y calendario' }).getByRole('link', { name: 'WhatsApp' }),
+    ).toHaveAttribute('href', /^https:\/\/wa\.me\//)
     await expectNoHorizontalScroll(page)
     await expectAccessible(page)
     expect(errors).toEqual([])
@@ -129,7 +131,7 @@ test.describe('partidos', () => {
       await page.goto(path)
       await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
       // Mientras el ADR 0008 no se apruebe, el estado HTTP es 200 y la página va con `noindex`.
-      await expect(page.locator('meta[name="robots"][content*="noindex"]')).toBeAttached()
+      await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached()
     }
   })
 })
@@ -185,7 +187,8 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
   page,
 }, testInfo) => {
   const isMobile = testInfo.project.name === 'celular'
-  // Un juvenil cuyo apellido no comparte ningún jugador de las series adultas (así se puede buscar en el HTML).
+  // Un juvenil cuyo «nombre apellido» no coincide con el de ningún adulto ni del cuerpo técnico: así se
+  // puede buscar en el HTML completo de cada página (incluidos los datos que viajan al navegador).
   const sql = adminSql()
   const candidates = await sql<{ id: string; first_name: string; last_name: string; slug: string }[]>`
     select p.id, p.first_name, p.last_name, p.slug
@@ -194,7 +197,12 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
     join series s on s.id = r.series_id and s.slug = 'juvenil'
     where not exists (
       select 1 from players other
-      where other.id <> p.id and split_part(other.last_name, ' ', 1) = split_part(p.last_name, ' ', 1)
+      where other.id <> p.id
+        and other.first_name || ' ' || other.last_name like '%' || p.first_name || ' ' || split_part(p.last_name, ' ', 1) || '%'
+    )
+    and not exists (
+      select 1 from staff_members staff
+      where staff.full_name like '%' || p.first_name || ' ' || split_part(p.last_name, ' ', 1) || '%'
     )
     and not exists (
       select 1 from squad_registrations elsewhere
@@ -204,16 +212,16 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
     order by p.slug`
   await sql.end()
   const juvenile = candidates[isMobile ? 0 : 1]
-  expect(juvenile, 'el seed trae juveniles con apellido único').toBeTruthy()
+  expect(juvenile, 'el seed trae juveniles con nombre y apellido únicos').toBeTruthy()
   if (!juvenile) return
-  const surname = juvenile.last_name.split(' ')[0] ?? juvenile.last_name
+  const surname = `${juvenile.first_name} ${juvenile.last_name.split(' ')[0] ?? juvenile.last_name}`
   const publicName = `${juvenile.first_name} ${juvenile.last_name.charAt(0)}.`
   const shirt = isMobile ? '96' : '95'
 
   const expectHidden = async (path: string) => {
     await page.goto(path)
     const html = await page.content()
-    expect(html, `${path} no debe traer el apellido`).not.toContain(surname)
+    expect(html, `${path} no debe traer el nombre con apellido`).not.toContain(surname)
     expect(html, `${path} no debe enlazar a su ficha`).not.toContain(`/jugadores/${juvenile.slug}`)
   }
 
@@ -240,7 +248,7 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
   await login(page, ADMIN.email)
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
   await page.goto(`/admin/jugadores/${juvenile.id}`)
-  await expect(page.getByText('Es menor de edad')).toBeVisible()
+  await expect(page.getByText('Es menor de edad', { exact: true })).toBeVisible()
   await page.getByText('Inscribir en una serie').click()
   const form = page.locator('details', { hasText: 'Inscribir en una serie' })
   await form.getByRole('combobox', { name: 'Serie' }).selectOption({ label: 'Honor' })

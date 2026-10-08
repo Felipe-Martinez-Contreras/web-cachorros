@@ -55,7 +55,7 @@ export default async function SquadPage(props: Props) {
           <p className="max-w-2xl text-lg text-(--muted)">{squad.series.description}</p>
         )}
       </PageHero>
-      <div className="container-site grid gap-12 py-8 md:py-12">
+      <div className="container-site grid grid-cols-1 gap-12 py-8 md:py-12">
         <SportsNav
           nav={nav}
           path={`/plantel/${squad.series.slug}`}

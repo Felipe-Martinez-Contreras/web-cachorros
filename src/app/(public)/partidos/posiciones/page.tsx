@@ -28,7 +28,7 @@ export default async function StandingsPage({ searchParams }: Props) {
         ]}
         title="Tabla de posiciones"
       />
-      <div className="container-site grid gap-10 py-8 md:py-12">
+      <div className="container-site grid grid-cols-1 gap-10 py-8 md:py-12">
         {series && season ? (
           <>
             <SportsNav
@@ -47,7 +47,7 @@ export default async function StandingsPage({ searchParams }: Props) {
                 <section
                   key={`${table.competitionName}:${table.groupLabel}`}
                   aria-label={`${table.competitionName} ${table.groupLabel}`.trim()}
-                  className="grid max-w-4xl gap-3"
+                  className="grid max-w-4xl grid-cols-1 gap-3"
                 >
                   <h2 className="text-h3">
                     {table.competitionName}

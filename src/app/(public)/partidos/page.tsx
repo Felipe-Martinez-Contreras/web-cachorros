@@ -47,7 +47,7 @@ export default async function FixturePage({ searchParams }: Props) {
   return (
     <>
       <PageHero crumbs={[{ href: '/', label: 'Inicio' }, { label: 'Partidos' }]} title="Partidos" />
-      <div className="container-site grid gap-10 py-8 md:py-12">
+      <div className="container-site grid grid-cols-1 gap-10 py-8 md:py-12">
         {series && season ? (
           <>
             <SportsNav

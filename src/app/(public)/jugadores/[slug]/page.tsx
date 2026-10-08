@@ -42,7 +42,7 @@ export default async function PlayerPage({ params }: Props) {
   return (
     <article>
       <header className="theme-dark">
-        <div className="container-site grid gap-6 pt-4 pb-10 md:grid-cols-[minmax(0,18rem)_1fr] md:items-end md:pb-14">
+        <div className="container-site grid grid-cols-1 gap-6 pt-4 pb-10 md:grid-cols-[minmax(0,18rem)_1fr] md:items-end md:pb-14">
           <div className="md:col-span-2">
             <Breadcrumbs
               items={[
@@ -102,7 +102,7 @@ export default async function PlayerPage({ params }: Props) {
         </div>
       </header>
 
-      <div className="container-site grid max-w-4xl gap-6 py-8 md:py-12">
+      <div className="container-site grid grid-cols-1 max-w-4xl gap-6 py-8 md:py-12">
         <h2 className="text-h2 uppercase">Estadísticas</h2>
         {profile.stats.length === 0 ? (
           <p className="text-lg text-(--muted)">Todavía no registra partidos con el club.</p>

@@ -72,7 +72,7 @@ export default async function MatchPage({ params }: Props) {
   return (
     <article>
       <header className="theme-dark">
-        <div className="container-site grid gap-4 pt-4 pb-10 md:pb-14">
+        <div className="container-site grid grid-cols-1 gap-4 pt-4 pb-10 md:pb-14">
           <Breadcrumbs
             items={[
               { href: '/', label: 'Inicio' },
@@ -96,7 +96,7 @@ export default async function MatchPage({ params }: Props) {
         </div>
       </header>
 
-      <div className="container-site grid max-w-4xl gap-10 py-8 md:py-12">
+      <div className="container-site grid grid-cols-1 max-w-4xl gap-10 py-8 md:py-12">
         {off && (
           <Alert variant="warning" title={`Partido ${matchStatusLabels[match.status].toLowerCase()}`}>
             {notes ?? 'Avisaremos aquí cuando haya novedades.'}
