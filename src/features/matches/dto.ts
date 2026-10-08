@@ -1,4 +1,11 @@
-import type { clubSide, matchEventType, matchPeriod, matchResolution, matchStatus } from '@/db/schema/enums'
+import type {
+  clubSide,
+  matchEventType,
+  matchPeriod,
+  matchResolution,
+  matchStatus,
+  standingsMode,
+} from '@/db/schema/enums'
 import type { ImageDTO } from '@/lib/images/dto'
 
 // DTOs públicos de partidos: lo mínimo y serializable. Nunca filas de la BD (especificación 3.2).
@@ -74,6 +81,48 @@ export type StandingsDTO = {
   asOf: string | null
   sourceNote: string | null
   rows: StandingsRowDTO[]
+}
+
+/** Jugador en una página pública: el nombre ya viene resuelto para menores; sin ficha no hay enlace. */
+export type PlayerRefDTO = { name: string; slug: string | null }
+
+export type LineupPlayerDTO = PlayerRefDTO & { shirtNumber: number | null }
+
+export type MatchDetailDTO = {
+  match: MatchDTO
+  /** Motivo de una postergación o nota del partido. */
+  notes: string | null
+  venue: {
+    name: string
+    address: string | null
+    notes: string | null
+    directions: { google: string; waze: string; apple: string } | null
+  } | null
+  events: MatchEventDTO[]
+  /** Nómina del club: titulares y suplentes (entraron o no). */
+  lineup: { starters: LineupPlayerDTO[]; substitutes: (LineupPlayerDTO & { played: boolean })[] }
+  /** Instante ISO de la última modificación (para `dateModified` y el calendario). */
+  updatedAt: string
+  shareVersion: number
+}
+
+export type StandingsGroupDTO = StandingsDTO & {
+  groupLabel: string
+  mode: (typeof standingsMode.enumValues)[number]
+}
+
+export type ScorerDTO = {
+  /** Los empates comparten posición. */
+  rank: number
+  player: PlayerRefDTO
+  goals: number
+  appearances: number
+}
+
+export type SportsNavDTO = {
+  series: { id: string; slug: string; name: string }[]
+  seasons: { id: string; name: string; year: number; isCurrent: boolean }[]
+  featuredSeriesSlug: string | null
 }
 
 /** Franja matchday de la portada (5.3), en orden de prioridad. */

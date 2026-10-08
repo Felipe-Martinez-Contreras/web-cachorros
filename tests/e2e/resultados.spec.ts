@@ -62,7 +62,7 @@ test('programar un partido, cargar su resultado completo y verlo en el sitio en 
     await expect(page.getByRole('button', { name: 'Registrar' })).toBeHidden()
   }
   await register('Gol nuestro', async () => {
-    await page.getByRole('combobox', { name: 'Jugador' }).selectOption({ index: 9 })
+    await page.getByRole('combobox', { name: 'Jugador', exact: true }).selectOption({ index: 9 })
     await page.getByRole('spinbutton', { name: /^Minuto/ }).fill('23')
   })
   await expect(scoreboard).toHaveText(/Cachorros 1 – 0 Los Litres/)
@@ -72,12 +72,12 @@ test('programar un partido, cargar su resultado completo y verlo en el sitio en 
   })
   await register('Gol nuestro', async () => {
     await page.getByRole('combobox', { name: 'Tipo' }).selectOption({ label: 'Gol de penal' })
-    await page.getByRole('combobox', { name: 'Jugador' }).selectOption({ index: 10 })
+    await page.getByRole('combobox', { name: 'Jugador', exact: true }).selectOption({ index: 10 })
     await page.getByRole('spinbutton', { name: /^Minuto/ }).fill('45')
     await page.getByRole('spinbutton', { name: /^Adición/ }).fill('2')
   })
   await register('Tarjeta', async () => {
-    await page.getByRole('combobox', { name: 'Jugador' }).selectOption({ index: 3 })
+    await page.getByRole('combobox', { name: 'Jugador', exact: true }).selectOption({ index: 3 })
     await page.getByRole('spinbutton', { name: /^Minuto/ }).fill('77')
   })
   await expect(scoreboard).toHaveText(/Cachorros 2 – 1 Los Litres/)
@@ -129,6 +129,9 @@ test('programar una jornada crea un partido por serie con su hora', async ({ pag
   await page.getByRole('button', { name: 'Programar 0 partidos' }).click()
   await expect(page.getByText('Marca al menos una serie que juegue ese día.')).toBeVisible()
 
+  // Lejos en el calendario: así no pasa a ser el «próximo partido» de la portada para las demás pruebas.
+  const farDate = new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10)
+  await page.getByLabel('Día', { exact: true }).fill(farDate)
   await page.getByRole('combobox', { name: 'Rival' }).selectOption({ label: 'Unión El Boldo' })
   await page.getByRole('combobox', { name: 'El club juega de' }).selectOption({ label: 'Visita' })
   for (const [serie, time] of [

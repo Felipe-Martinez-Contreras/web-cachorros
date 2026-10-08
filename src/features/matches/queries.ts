@@ -51,7 +51,7 @@ const awayCrestSelect = {
 }
 
 /** Una sola consulta por lista de partidos: equipos, escudos, serie, competencia y cancha con joins. */
-function selectMatches() {
+export function selectMatches() {
   return db
     .select({
       id: matches.id,
@@ -91,9 +91,9 @@ function selectMatches() {
     .leftJoin(venues, eq(venues.id, matches.venueId))
 }
 
-type MatchRow = Awaited<ReturnType<typeof selectMatches>>[number]
+export type MatchRow = Awaited<ReturnType<typeof selectMatches>>[number]
 
-function toTeamDTO(team: MatchRow['home'], crest: MatchRow['homeCrest']): TeamDTO {
+export function toTeamDTO(team: MatchRow['home'], crest: MatchRow['homeCrest']): TeamDTO {
   return {
     name: team.name,
     shortName: team.shortName,
@@ -102,7 +102,7 @@ function toTeamDTO(team: MatchRow['home'], crest: MatchRow['homeCrest']): TeamDT
   }
 }
 
-function toMatchDTO(row: MatchRow): MatchDTO {
+export function toMatchDTO(row: MatchRow): MatchDTO {
   return {
     id: row.id,
     slug: row.slug,
@@ -135,10 +135,10 @@ function toMatchDTO(row: MatchRow): MatchDTO {
   }
 }
 
-const isClubMatch = ne(matches.clubSide, 'ninguno')
+export const isClubMatch = ne(matches.clubSide, 'ninguno')
 const NEXT_MATCH_WINDOW_DAYS = 7
 
-async function featuredSeriesId(): Promise<string | null> {
+export async function featuredSeriesId(): Promise<string | null> {
   const [row] = await db
     .select({ id: siteSettings.featuredSeriesId })
     .from(siteSettings)
