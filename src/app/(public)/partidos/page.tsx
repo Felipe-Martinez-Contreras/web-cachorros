@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { connection } from 'next/server'
 import { PageHero } from '@/components/site/page-shell'
 import { EmptyState } from '@/components/ui/feedback'
 import { MatchCard } from '@/features/matches/components/match-card'
@@ -37,6 +38,8 @@ function MatchList({ title, matches }: { title: string; matches: MatchDTO[] }) {
 }
 
 export default async function FixturePage({ searchParams }: Props) {
+  // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
+  await connection()
   const [params, nav] = await Promise.all([searchParams, getSportsNav()])
   const { series, season } = resolveSportsParams(nav, params)
   const matches = series && season ? await getFixture(series.id, season.id) : []

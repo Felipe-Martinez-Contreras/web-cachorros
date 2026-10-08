@@ -2,6 +2,7 @@ import { CalendarPlus, MapPin } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
+import { connection } from 'next/server'
 import { Breadcrumbs } from '@/components/site/page-shell'
 import { ShareBar } from '@/components/site/share-bar'
 import { buttonVariants } from '@/components/ui/button'
@@ -17,6 +18,8 @@ import { matchStatusLabels } from '@/lib/labels'
 type Props = { params: Promise<{ slug: string }> }
 
 async function loadMatch(slug: string) {
+  // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
+  await connection()
   const detail = await getMatchDetail(slug)
   if (detail) return detail
   // Dirección antigua de un partido que cambió de slug: se envía a la vigente (3.9).

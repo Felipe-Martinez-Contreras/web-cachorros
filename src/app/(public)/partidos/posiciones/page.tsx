@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { connection } from 'next/server'
 import { PageHero } from '@/components/site/page-shell'
 import { EmptyState } from '@/components/ui/feedback'
 import { SportsNav } from '@/features/matches/components/sports-nav'
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
 type Props = { searchParams: Promise<{ serie?: string | string[]; temporada?: string | string[] }> }
 
 export default async function StandingsPage({ searchParams }: Props) {
+  // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
+  await connection()
   const [params, nav] = await Promise.all([searchParams, getSportsNav()])
   const { series, season } = resolveSportsParams(nav, params)
   const tables = series && season ? await getStandings(series.id, season.id) : []

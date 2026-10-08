@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
+import { connection } from 'next/server'
 import { ClubImage } from '@/components/site/club-image'
 import { Breadcrumbs } from '@/components/site/page-shell'
 import { resolveSlugRedirect } from '@/features/matches/public-queries'
@@ -11,6 +12,8 @@ type Props = { params: Promise<{ slug: string }> }
 
 /** La ficha no existe para menores de edad ni para jugadores inactivos: responde 404 (6.3). */
 async function loadProfile(slug: string) {
+  // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
+  await connection()
   const profile = await getPlayerProfile(slug)
   if (profile) return profile
   const current = await resolveSlugRedirect('player', slug)

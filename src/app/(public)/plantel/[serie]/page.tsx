@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
+import { connection } from 'next/server'
 import { PageHero } from '@/components/site/page-shell'
 import { EmptyState } from '@/components/ui/feedback'
 import { SportsNav } from '@/features/matches/components/sports-nav'
@@ -15,6 +16,8 @@ type Props = {
 }
 
 async function loadSquad({ params, searchParams }: Props) {
+  // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
+  await connection()
   const [{ serie }, query, nav] = await Promise.all([params, searchParams, getSportsNav()])
   const { season } = resolveSportsParams(nav, { serie, temporada: query.temporada })
   const squad = season ? await getSquad(serie, season.id) : null
