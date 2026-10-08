@@ -146,6 +146,11 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
 - Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
   como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`.
+- Las páginas de detalle (`/noticias/[slug]`, `/partidos/[slug]`, `/jugadores/[slug]`, `/plantel/[serie]`) reciben
+  su 404 y su 301 desde `proxy.ts` (ADR 0008), que llama a `src/features/<dominio>/slug.ts`: **una sola consulta
+  indexada**, con la misma regla de visibilidad que el DTO público; si la base falla, deja pasar. La página
+  conserva su `notFound()` como segunda barrera. Una página de detalle nueva se agrega a `DETAIL_ROUTES` y al
+  *matcher* (nunca `/api`, `/_next` ni `/media`), con su e2e sin JavaScript de 404 y 301.
 - Tipografía sin saltos: `src/styles/fonts.css` define las fuentes de respaldo con el mismo ancho que Archivo
   (normal, 75 % y 62,5 %). Usa `font-display` para títulos al 75 % y `font-tight` para display y marcadores al
   62,5 %; no uses anchos en `ch` (cambian al cargar la fuente): usa `rem` o las clases `max-w-*`.
@@ -180,7 +185,8 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
 Nunca se lanzan errores crudos al cliente: se registran con pino y se devuelve un mensaje claro en español.
 
 La autorización se verifica **en cada Server Action, Route Handler y layout del panel**. `proxy.ts` solo hace
-redirecciones optimistas: no es una barrera de seguridad; su *matcher* excluye `/api`, `/_next` y `/media`.
+redirecciones optimistas del panel y decide el estado HTTP (404 / 301) de las páginas de detalle públicas
+(ADR 0008): no es una barrera de seguridad; su *matcher* excluye `/api`, `/_next` y `/media`.
 
 Las mutaciones del panel usan `mutate()` (`src/lib/entity-action.ts`), que aplica los seis pasos en un solo lugar:
 cada acción aporta su permiso, su esquema, la escritura dentro de la transacción (`write`) y sus tags. Un rechazo
@@ -283,7 +289,7 @@ Convenciones de las pruebas:
 | Panel y modo en vivo | 7 |
 | Esquema y reglas de dominio | 8 |
 | Seguridad, privacidad, menores de edad | 9 (y 6.3) |
-| Estado HTTP de las páginas de detalle (404 / 301) | ADR 0007 y ADR 0008 (propuesto) |
+| Estado HTTP de las páginas de detalle (404 / 301) | ADR 0007 y ADR 0008 |
 | Docker, Caddy, Cloudflare, respaldos | 12 |
 | Criterios de aceptación de la fase | 14 |
 | **Trampas conocidas** (léelas siempre) | 16 |

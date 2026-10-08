@@ -52,5 +52,6 @@ reemplazo. Reglas que se derivan:
 - **Pendiente para la Fase 2:** en una página de detalle (`/noticias/[slug]`), un `notFound()` lanzado después
   de `connection()` sigue respondiendo 200. `[VERIFICAR: resolver la existencia del slug antes de enviar el
   documento, por ejemplo con una redirección desde el proxy o con la API que ofrezca Next para fijar el estado]`
+  **Resuelto por el [ADR 0008](0008-estado-http-en-paginas-de-detalle.md):** el slug se resuelve en `proxy.ts`.
 - **Reversible:** volver a la opción A es mover el `<Suspense>` del layout raíz a cada capa (los *skeletons* de
   la portada se pueden recuperar del historial de la rama).

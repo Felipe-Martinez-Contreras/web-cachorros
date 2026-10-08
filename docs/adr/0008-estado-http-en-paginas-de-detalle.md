@@ -1,6 +1,7 @@
 # ADR 0008 — 404 y 301 reales en las páginas de detalle: el slug se resuelve en `proxy.ts`
 
-- **Estado:** propuesto (pendiente de aprobación)
+- **Estado:** aprobado el 8 de octubre de 2026, con condiciones (ver «Condiciones de la aprobación»); aplicado en
+  la rama `fase-2a-panel-deportivo`
 - **Fecha:** 8 de octubre de 2026
 
 ## Contexto
@@ -53,6 +54,8 @@ La misma documentación indica la salida: resolver la existencia **antes del ren
   200 con `noindex`, nunca datos indebidos).
 - Si la BD no responde, el proxy deja pasar la petición: la página mostrará su error como hoy.
 - Sin caché en memoria en el proxy: una noticia recién publicada debe verse en la carga siguiente.
+- Solo se redirige hacia una página que se puede ver: la dirección antigua de un menor de edad, de un jugador
+  inactivo o de una noticia sin publicar responde 404, sin revelar el slug vigente.
 
 Medido en el spike (build de producción, local): slug inexistente → **404** con la página del club; slug
 antiguo → **301**; el panel sigue redirigiendo al login. El proxy tiene su propio *bundle* y por lo tanto su
@@ -67,6 +70,17 @@ propio pool de conexiones: se limita a `max: 2` para no pasar del presupuesto de
   el estado de páginas públicas. Hay que actualizar la frase correspondiente de `AGENTS.md`.
 - **Cambia la especificación** en 2.1 («`proxy.ts` solo para redirecciones optimistas y cabeceras del panel»):
   por eso este ADR necesita aprobación.
-- **Mientras no se apruebe:** las páginas de detalle del hito 5 se construyen con la opción A y la prueba e2e
-  de estados queda marcada como pendiente en el reporte.
 - **Reversible:** quitar las rutas del *matcher* devuelve el comportamiento de la opción A.
+
+## Condiciones de la aprobación
+
+| Condición | Cómo se cumple | Prueba |
+|---|---|---|
+| El *matcher* solo cubre las rutas de detalle (`/noticias/*`, `/partidos/*`, `/jugadores/*`, `/plantel/*`), nunca `/api`, `/_next` ni `/media` | `config.matcher` de `src/proxy.ts` lista esas cuatro rutas de un segmento, además del panel | e2e: las rutas fijas (`/partidos/posiciones`, `/partidos/goleadores`) siguen en 200 |
+| Una sola consulta indexada por petición | Una función por dominio (`src/features/{matches,players,news}/slug.ts`) con un único `SELECT` por los índices únicos del slug y de `slug_redirects (entity_type, old_slug)`; pool propio de 2 conexiones (`src/db/proxy-client.ts`) | `tests/integration/slug-status.test.ts` |
+| Si la BD falla, el proxy deja pasar y la página responde como hoy; nunca un 500 por el proxy | Todo va dentro de un `try`; la consulta tiene un tope de 2 s y la conexión de 3 s; ante cualquier error se registra un aviso y la petición sigue | Medido sobre el build con una base inexistente: la página responde como antes (200 con su aviso de error) |
+| e2e sin JavaScript: 404 para un slug inexistente y para la ficha de un menor; 301 para un slug cambiado | `tests/e2e/deportes.spec.ts`, bloque «sin JavaScript» (el cambio de slug se hace por el panel) | `pnpm test:e2e` |
+
+Al aplicarlo se agregó un caso: una dirección mal codificada (`%E0%A4%A`) responde 404 sin consultar (antes,
+Next respondía 500 en las rutas dinámicas). La página 404 que entrega el proxy es la estática de la raíz
+(`src/app/not-found.tsx`), la misma de cualquier dirección que no existe.

@@ -9,7 +9,7 @@
 
 | Hito | Entregable | Dónde |
 |---|---|---|
-| 0 | Medición del estado HTTP de las páginas de detalle y **ADR 0008 (propuesto)**; dependencias; permisos | `docs/adr/0008-…md`, `src/lib/permissions.ts` |
+| 0 | Medición del estado HTTP de las páginas de detalle y **ADR 0008** (aprobado con condiciones y aplicado); dependencias; permisos | `docs/adr/0008-…md`, `src/lib/permissions.ts` |
 | 1 | Base del panel: shell móvil (barra inferior + hoja «Más», menú lateral en escritorio), avisos, confirmaciones, listas, formulario genérico, slugs con redirección | `src/components/admin/`, `src/lib/{entity-action,form-schemas,slug-redirects}.ts` |
 | 2 | Biblioteca de medios: subida secuencial con redimensión en el navegador, validación por firma, cola de 1, texto alternativo obligatorio, punto focal, «contiene menores», dónde se usa y bloqueo de eliminación | `src/features/media/`, `src/app/api/admin/media/`, `/admin/medios` |
 | 3 | Catálogos: series (orden con botones), temporadas (con copia de plantel y cuerpo técnico), competencias, rivales, canchas (ubicación desde un enlace de mapa), jugadores, inscripciones, estadísticas históricas, cuerpo técnico | `src/features/{series,teams,players,staff}/`, `/admin/{series,temporadas,competencias,rivales,canchas,jugadores,cuerpo-tecnico}` |
@@ -31,10 +31,10 @@ El panel suma 31 pantallas nuevas; el sitio, 7 páginas que antes decían «Pró
 | Con JavaScript deshabilitado, las páginas muestran su contenido y los filtros funcionan | Cumple (deporte) | e2e sin JS: fixture, cambio de serie y de temporada, posiciones, goleadores, detalle, plantel y ficha |
 | Sitemap, JSON-LD, robots, canonical con `SITE_URL` en runtime | 2b | Hito 9 |
 
-Totales: **135** pruebas unitarias (cobertura de `src/features/*/lib` ≈ 98 %), **100** de integración y **66** e2e
-(33 por viewport), todas en verde y ninguna omitida. `pnpm check` y `pnpm build` en verde; el build se verificó
-además apuntando a una base inexistente. `pnpm audit --prod` sin vulnerabilidades conocidas. **El CI todavía no
-ha corrido sobre esta rama** (necesita el PR abierto).
+Totales: **135** pruebas unitarias (cobertura de `src/features/*/lib` ≈ 98 %), **105** de integración y **70** e2e
+(35 por viewport), todas en verde y ninguna omitida. `pnpm check` y `pnpm build` en verde; el build se verificó
+además apuntando a una base inexistente. `pnpm audit --prod` sin vulnerabilidades conocidas. Con el PR abierto, el CI
+corre en cada push a la rama.
 
 ## Memoria
 
@@ -59,9 +59,7 @@ inexistente; el CI lo habría detenido en el PR.
 
 ## Qué falta
 
-1. **Aprobar o rechazar el ADR 0008.** Mientras tanto, una dirección de detalle inexistente (o la ficha de un menor)
-   muestra la página 404 del club pero responde **200 con `noindex`**, y un slug antiguo redirige con
-   `<meta refresh>` en vez de 301. La e2e lo deja escrito así; con el ADR aprobado el cambio queda acotado a `proxy.ts` y a una función por dominio.
+1. ~~Aprobar o rechazar el ADR 0008.~~ **Aprobado con condiciones y aplicado** (ver «Desviaciones y ADRs»).
 2. La prueba guiada con una persona no técnica y la subida desde un celular real (por la red local).
 3. Fase 2b: noticias, historia, textos de páginas, configuración completa, usuarios y 2FA, auditoría, SEO base,
    Inicio del panel (hoy sigue siendo el de la Fase 0, con el menú nuevo).
@@ -70,8 +68,19 @@ inexistente; el CI lo habría detenido en el PR.
 
 ## Desviaciones y ADRs
 
-- **[ADR 0008](../adr/0008-estado-http-en-paginas-de-detalle.md) — propuesto, sin aplicar.** Medido sobre el build:
-  con el ADR 0007 una página de detalle no puede responder 404 ni 301. Propongo resolver el slug en `proxy.ts`.
+- **[ADR 0008](../adr/0008-estado-http-en-paginas-de-detalle.md) — aprobado con condiciones y aplicado.** Con el
+  ADR 0007 una página de detalle no podía responder 404 ni 301; ahora `proxy.ts` resuelve el slug antes del render.
+  Las condiciones de la aprobación y cómo se cumple cada una están en el ADR:
+  - el *matcher* solo suma `/noticias/:slug`, `/partidos/:slug`, `/jugadores/:slug` y `/plantel/:serie`;
+  - una sola consulta indexada por petición (`src/features/{matches,players,news}/slug.ts`), con un pool propio
+    de 2 conexiones; si la base falla o tarda más de 2 s, la petición pasa y la página responde como antes
+    (medido sobre el build con una base inexistente: ningún 500 por el proxy);
+  - e2e sin JavaScript: 404 para un slug inexistente y para la ficha de un menor, 301 para un slug cambiado.
+
+  Cambios visibles: la página 404 de una dirección de detalle es ahora la estática de la raíz (sin el encabezado
+  del sitio), igual que la de cualquier otra dirección inexistente; `/noticias/<slug>` responde 404 si la noticia
+  no está publicada (la página sigue en «Próximamente» hasta la 2b); la dirección antigua de un menor responde
+  404 sin revelar la vigente; una dirección mal codificada responde 404 en vez de 500.
 - **Migración `0003` y Tiptap se mueven a la 2b.** La tabla `two_factor` es del hito 8 y el editor del hito 6: no
   tenía sentido agregarlos en este PR. La 2a no trae migraciones.
 - **El CI no corre con solo subir la rama** (el workflow se dispara con `pull_request` o con push a `main`).
