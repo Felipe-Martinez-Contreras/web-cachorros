@@ -18,6 +18,7 @@ import { SponsorStrip } from '@/features/sponsors/components/sponsor-strip'
 import { getActiveSponsors } from '@/features/sponsors/queries'
 import { cn } from '@/lib/cn'
 import { formatDayMonth } from '@/lib/format'
+import { ClubImage } from './club-image'
 import { ClubCrest } from './site-header'
 
 // Capas de la portada (especificación 5.3). Cada una resuelve sus datos en runtime (`connection()`), dentro
@@ -42,7 +43,15 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href?: strin
 
 function Section({ className, children, label }: { className?: string; children: ReactNode; label: string }) {
   return (
-    <section aria-label={label} className={cn('py-12 md:py-20', className)}>
+    // `content-visibility` posterga el layout y el pintado de las capas que están bajo el pliegue; el tamaño
+    // intrínseco reservado evita saltos de la barra de desplazamiento.
+    <section
+      aria-label={label}
+      className={cn(
+        'py-12 [contain-intrinsic-size:auto_700px] [content-visibility:auto] md:py-20',
+        className,
+      )}
+    >
       <div className="container-site">{children}</div>
     </section>
   )
@@ -65,24 +74,24 @@ export async function HeroSection() {
         aria-label="Presentación"
         className={cn('theme-dark relative isolate flex items-end', HERO_HEIGHT)}
       >
-        {image && (
+        {/* Es el LCP de la página: `priority` la precarga con prioridad alta desde el <head>. */}
+        {image && !mobile && (
+          <ClubImage
+            image={image}
+            sizes="100vw"
+            priority
+            className="absolute inset-0 -z-20 size-full object-cover"
+          />
+        )}
+        {image && mobile && (
+          // Con foto alternativa para celular se usa <picture>: el navegador descarga solo la que corresponde.
           <picture>
-            {mobile && <source media="(max-width: 767px)" srcSet={mobile.srcSet} sizes="100vw" />}
-            {/* Sin optimizador de imágenes en runtime (especificación 2.7): las variantes ya existen. */}
-            <img
-              src={image.src}
-              srcSet={image.srcSet}
+            <source media="(max-width: 767px)" srcSet={mobile.srcSet} sizes="100vw" />
+            <ClubImage
+              image={image}
               sizes="100vw"
-              width={image.width}
-              height={image.height}
-              alt={image.alt}
-              fetchPriority="high"
-              decoding="sync"
+              priority
               className="absolute inset-0 -z-20 size-full object-cover"
-              style={{
-                objectPosition: image.focalPoint,
-                ...(image.lqip ? { backgroundImage: `url(${image.lqip})`, backgroundSize: 'cover' } : null),
-              }}
             />
           </picture>
         )}

@@ -81,7 +81,7 @@ function NextMatch({ match, alsoToday }: { match: MatchDTO; alsoToday: MatchDTO[
       </div>
       {alsoToday.length > 0 && (
         <div className="border-t border-(--border) pt-4">
-          <h3 className="mb-1 text-eyebrow text-(--muted)">Ese día también juegan</h3>
+          <h2 className="mb-1 text-eyebrow text-(--muted)">Ese día también juegan</h2>
           <ul className="grid gap-1 md:grid-cols-2">
             {alsoToday.map((other) => (
               <li key={other.id}>

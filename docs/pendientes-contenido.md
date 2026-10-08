@@ -8,8 +8,8 @@ Marcadores que todavía están en el sitio (especificación, sección 0.3):
 | Marcador | Significado | Cantidad |
 |---|---|---|
 | `[COMPLETAR: …]` | Dato del club que aún no tenemos | 187 |
-| `[DECIDIR: …]` | Decisión de producto pendiente (rige el default) | 3 |
-| `[VERIFICAR: …]` | Supuesto técnico o normativo por confirmar | 5 |
+| `[DECIDIR: …]` | Decisión de producto pendiente (rige el default) | 4 |
+| `[VERIFICAR: …]` | Supuesto técnico o normativo por confirmar | 6 |
 
 ## En la base de datos
 
@@ -88,7 +88,6 @@ y decisiones anotados junto al código que los aplica.
 | [COMPLETAR: banco] | `scripts/seed/club.ts:46` |
 | [COMPLETAR: beneficios de cada tipo de socio] | `scripts/seed/content.ts:353` |
 | [COMPLETAR: camiseta histórica, años en que se usó y foto] | `scripts/seed/content.ts:336` |
-| [COMPLETAR: color exacto del león del escudo] | `src/styles/tokens.css:6` |
 | [COMPLETAR: competencia] | `scripts/seed/content.ts:316` |
 | [COMPLETAR: correo para comprobantes] | `scripts/seed/club.ts:49` |
 | [COMPLETAR: cuota y beneficios reales de este tipo de socio; el valor mostrado es de ejemplo] | `scripts/seed/club.ts:210` |
@@ -134,11 +133,13 @@ y decisiones anotados junto al código que los aplica.
 | [COMPLETAR: valor del completo y de la promoción] | `scripts/seed/club.ts:112` |
 | [COMPLETAR: valores, promociones y forma de reservar] | `scripts/seed/club.ts:110` |
 | [COMPLETAR: WhatsApp del club] | `scripts/seed/club.ts:36` |
-| [COMPLETAR] | `.env.example:22`, `.env.example:70`, `.env.example:71`, `scripts/content-pending.ts:1` |
+| [COMPLETAR] | `.env.example:22`, `.env.example:70`, `.env.example:71`, `scripts/content-pending.ts:1`, `src/lib/links.ts:18` |
 | [DECIDIR: …] | `scripts/content-pending.ts:157` |
 | [DECIDIR: desempate en la tabla calculada. Default: PTS, DIF, GF y luego manual] | `src/features/matches/lib/standings.ts:33` |
+| [DECIDIR: mini-tabla en la portada. Default: sí] | `src/features/matches/queries.ts:235` |
 | [DECIDIR] | `scripts/content-pending.ts:1` |
 | [VERIFICAR: …] | `scripts/content-pending.ts:158` |
+| [VERIFICAR: color oficial del club con la directiva] | `src/styles/tokens.css:6` |
 | [VERIFICAR: con asesoría legal, Ley 19.628 y Ley 21.719] | `scripts/seed/content.ts:358` |
 | [VERIFICAR: puntos por triunfo y empate según el reglamento de la asociación] | `src/features/matches/lib/standings.ts:67` |
 | [VERIFICAR] | `scripts/content-pending.ts:1` |

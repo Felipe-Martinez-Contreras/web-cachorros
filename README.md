@@ -53,10 +53,13 @@ docker compose -f compose.dev.yaml up -d
 # 4. Crear las tablas
 pnpm db:migrate
 
-# 5. Crear tu usuario administrador (te pregunta nombre, correo y contraseña de 12+ caracteres)
+# 5. Cargar los datos de ejemplo (partidos, noticias, imágenes…). Tarda cerca de medio minuto
+pnpm db:seed
+
+# 6. Crear tu usuario administrador (te pregunta nombre, correo y contraseña de 12+ caracteres)
 pnpm admin:create
 
-# 6. Levantar el sitio
+# 7. Levantar el sitio
 pnpm dev
 ```
 
@@ -86,7 +89,11 @@ En desarrollo no se envía ningún correo real: todos quedan en Mailpit. Ahí ll
 | `pnpm test:e2e` | Pruebas de navegador a 360 px y 1280 px. Requiere `pnpm build` antes |
 | `pnpm db:generate` | Genera una migración SQL a partir de los cambios en `src/db/schema` |
 | `pnpm db:migrate` | Aplica las migraciones pendientes |
-| `pnpm db:reset` | **Borra todo** y recrea la base (solo desarrollo) |
+| `pnpm db:seed` | Carga los datos de ejemplo. Se puede repetir: no duplica nada |
+| `pnpm db:seed --en-vivo` | Lo mismo, dejando un partido de Honor en curso para ver la franja EN VIVO |
+| `pnpm db:reset` | **Borra todo** (base e imágenes procesadas) y recrea la base (solo desarrollo) |
+| `pnpm content:pending` | Lista lo que falta completar y regenera `docs/pendientes-contenido.md` |
+| `pnpm lighthouse` | Mide la portada con Lighthouse móvil. Requiere `pnpm build` y el seed cargado |
 | `pnpm admin:create` | Crea un administrador |
 | `pnpm admin:create --restablecer` | Cambia la contraseña de un administrador que ya existe |
 | `pnpm build:scripts` | Empaqueta los scripts de consola para la imagen Docker |
@@ -134,12 +141,44 @@ La imagen se construye sin base de datos ni variables de entorno, y la misma sir
 docker build -t cachorros-web:local .
 ```
 
-Dentro de la imagen quedan los scripts `node scripts/migrate.mjs` y `node scripts/create-admin.mjs`.
+Dentro de la imagen quedan los scripts `node scripts/migrate.mjs`, `node scripts/create-admin.mjs`,
+`node scripts/seed.mjs` y `node scripts/content-pending.mjs`.
 El despliegue completo (VM, Caddy, Cloudflare, respaldos) se documenta en la Fase 5.
 
-## Datos de ejemplo, despliegue, respaldos y cambio de dominio
+## Datos de ejemplo
 
-Todavía no existen: llegan con las fases 1 (seed) y 5 (producción). Este README se completa en cada fase.
+`pnpm db:seed` deja el sitio como una demo completa: 8 series, 11 rivales **ficticios**, planteles, 11 fechas por
+serie (unas 7 jugadas y 4 por jugar), tablas, noticias, eventos, tienda, auspiciadores y directiva de ejemplo.
+
+- Las fechas son **relativas a hoy**: la demo siempre tiene partidos jugados y por jugar. Para fijar el día,
+  `pnpm db:seed --hoy=2026-10-10`.
+- Es idempotente: correrlo de nuevo actualiza los mismos datos y vuelve a procesar las imágenes.
+- No inventa datos del club: lo que no está confirmado queda como `[COMPLETAR: …]` y aparece en
+  `docs/pendientes-contenido.md` (`pnpm content:pending`).
+- En producción se niega a correr si la base ya tiene contenido.
+- Con `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` crea además un administrador de demostración.
+- En staging: `docker compose run --rm app node scripts/seed.mjs`.
+
+Para empezar de cero en desarrollo:
+
+```powershell
+pnpm db:reset
+pnpm db:seed
+pnpm admin:create
+```
+
+### Reemplazar el escudo y las fotos de ejemplo
+
+Deja los archivos del club en [`public/placeholder/`](public/placeholder/README.md) (`escudo.svg` o `escudo.png`,
+`hero.jpg` y, opcional, `hero-movil.jpg`) y vuelve a correr `pnpm db:seed`. Si no están, el seed usa un escudo
+genérico y una imagen de ejemplo. El resto de las imágenes se reemplazará desde el panel (Fase 2).
+
+Las imágenes procesadas quedan en `data/uploads/` (fuera del repositorio). En desarrollo las sirve la propia app
+en `/media/…`; en staging y producción las sirve Caddy y esa ruta de la app responde 404.
+
+## Despliegue, respaldos y cambio de dominio
+
+Todavía no existen: llegan con la Fase 5 (producción). Este README se completa en cada fase.
 
 ## Problemas frecuentes
 

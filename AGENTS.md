@@ -54,8 +54,6 @@ detrás de Cloudflare.
 
 ## 3. Comandos
 
-> `db:seed` y `content:pending` se crean en la Fase 1; el resto ya existe.
-
 | Comando | Qué hace |
 |---|---|
 | `pnpm dev` | Servidor de desarrollo |
@@ -66,7 +64,8 @@ detrás de Cloudflare.
 | `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes) |
 | `pnpm db:generate` | Genera migraciones SQL con `drizzle-kit generate` (se revisan y se commitean) |
 | `pnpm db:migrate` | Aplica migraciones con el migrador de `drizzle-orm` |
-| `pnpm db:seed` / `pnpm db:reset` | Carga datos de ejemplo / recrea la BD (solo desarrollo) |
+| `pnpm db:seed` / `pnpm db:reset` | Carga datos de ejemplo (idempotente; `--en-vivo`, `--hoy=AAAA-MM-DD`) / recrea la BD (solo desarrollo) |
+| `pnpm lighthouse` | Lighthouse móvil de la portada (`pnpm build` y seed antes) |
 | `pnpm admin:create` | Crea un administrador (no hay registro público); `--restablecer` cambia su contraseña |
 | `pnpm content:pending` | Regenera `docs/pendientes-contenido.md` |
 | `pnpm build:scripts` | Empaqueta `scripts/` con esbuild a `.mjs` autocontenidos |
@@ -77,6 +76,7 @@ Arranque local desde un clon limpio:
 pnpm i
 docker compose -f compose.dev.yaml up -d   # PostgreSQL 18 (puerto 5439) + Mailpit (http://localhost:8025)
 pnpm db:migrate
+pnpm db:seed
 pnpm admin:create
 pnpm dev
 ```
@@ -141,6 +141,14 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
 - Al cliente solo DTOs serializables mínimos. Módulos de datos con `import 'server-only'`.
 - Valores dependientes de la hora (cuenta regresiva, «hace 5 min») se calculan en el cliente después del montaje; el
   servidor renderiza un texto estático equivalente.
+- **Sin `<Suspense>` ni `loading.tsx` alrededor de datos en el sitio público:** el contenido que llega por
+  *streaming* necesita JavaScript para colocarse y la página quedaría en el *skeleton* sin JS. El único límite está
+  en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
+- Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
+  como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`.
+- Los escudos van dentro de `.crest` (`TeamCrest`, `ClubCrest`): en secciones `.theme-dark` reciben un disco blanco.
+- Sobre fondo claro, el naranja `accent` no alcanza contraste: para texto, enlaces e indicadores usa
+  `accent-strong` (o los tokens `--link` / `--focus`). Lo verifica `tests/unit/tokens-contrast.test.ts`.
 
 ### Datos y caché (3.4)
 

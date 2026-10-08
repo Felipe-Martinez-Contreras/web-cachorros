@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
 import { formatMatchDate } from '@/lib/format'
-import { hasScore, type MatchDTO, scoreText } from '../dto'
+import { hasScore, type MatchDTO } from '../dto'
 import { LiveBadge, Scoreboard, TeamCrest } from './scoreboard'
 
 type MatchCardProps = {
@@ -11,13 +11,6 @@ type MatchCardProps = {
   /** `compact`: una fila por partido (listas como «Hoy también juegan»). */
   variant?: 'standard' | 'compact'
   className?: string
-}
-
-function matchLabel(match: MatchDTO): string {
-  const teams = `${match.home.shortName} contra ${match.away.shortName}`
-  return hasScore(match)
-    ? `${match.seriesName}: ${scoreText(match)}`
-    : `${match.seriesName}: ${teams}, ${formatMatchDate(match.kickoffAt)}`
 }
 
 /** Tarjeta de partido: toda la tarjeta enlaza al detalle. */
@@ -29,7 +22,6 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
     return (
       <Link
         href={href}
-        aria-label={matchLabel(match)}
         className={cn(
           'grid min-h-14 grid-cols-[auto_1fr_auto] items-center gap-3 rounded-md px-3 py-2 hover:bg-(--fg)/8',
           className,
@@ -65,11 +57,7 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
           <p className="text-meta text-(--muted)">{formatMatchDate(match.kickoffAt)}</p>
         )}
       </div>
-      <Link
-        href={href}
-        aria-label={matchLabel(match)}
-        className="block p-4 after:absolute after:inset-0 after:rounded-lg"
-      >
+      <Link href={href} className="block p-4 after:absolute after:inset-0 after:rounded-lg">
         <Scoreboard match={match} />
       </Link>
       {!hasScore(match) && match.venue && (
