@@ -31,6 +31,11 @@ El panel suma 31 pantallas nuevas; el sitio, 7 páginas que antes decían «Pró
 | Con JavaScript deshabilitado, las páginas muestran su contenido y los filtros funcionan | Cumple (deporte) | e2e sin JS: fixture, cambio de serie y de temporada, posiciones, goleadores, detalle, plantel y ficha |
 | Sitemap, JSON-LD, robots, canonical con `SITE_URL` en runtime | 2b | Hito 9 |
 
+Totales: **135** pruebas unitarias (cobertura de `src/features/*/lib` ≈ 98 %), **100** de integración y **66** e2e
+(33 por viewport), todas en verde y ninguna omitida. `pnpm check` y `pnpm build` en verde; el build se verificó
+además apuntando a una base inexistente. `pnpm audit --prod` sin vulnerabilidades conocidas. **El CI todavía no
+ha corrido sobre esta rama** (necesita el PR abierto).
+
 ## Memoria
 
 Medido sobre la imagen Docker de esta rama, con el límite de e2-micro (`--memory=512m`, heap de Node 320 MB) y
