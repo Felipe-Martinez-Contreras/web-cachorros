@@ -8,6 +8,20 @@
       "when": 1791414921202,
       "tag": "0000_inicial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791427006700,
+      "tag": "0001_modelo_completo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791427014919,
+      "tag": "0002_vista_estadisticas",
+      "breakpoints": true
     }
   ]
 }
