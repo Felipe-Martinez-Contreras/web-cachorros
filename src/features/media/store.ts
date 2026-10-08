@@ -6,6 +6,7 @@ import { mediaAssets } from '@/db/schema'
 import { audit } from '@/lib/audit'
 import { env } from '@/lib/env'
 import { processImage } from '@/lib/images/process'
+import { logger } from '@/lib/logger'
 import { type MediaThumbDTO, toMediaThumbDTO } from './dto'
 import { createSerialQueue, sniffImageFormat } from './lib/upload-rules'
 
@@ -62,7 +63,13 @@ export async function storeUploadedImage(input: StoreInput): Promise<MediaThumbD
     let processed: Awaited<ReturnType<typeof processImage>>
     try {
       processed = await processImage(input.bytes, { uploadsDir: uploadsDir(), kind: input.kind })
-    } catch {
+    } catch (error) {
+      // Casi siempre es una imagen dañada, pero también puede ser el disco o los permisos de la carpeta:
+      // la causa queda en el log para poder distinguirlo.
+      logger.warn(
+        { err: error, format, bytes: input.bytes.byteLength },
+        'no se pudo procesar una imagen subida',
+      )
       throw new UploadError(400, 'No pudimos leer la imagen. Puede estar dañada: prueba con otra.')
     }
     try {
