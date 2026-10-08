@@ -293,3 +293,22 @@ export async function getResultSheet(id: string) {
 }
 
 export type ResultSheet = NonNullable<Awaited<ReturnType<typeof getResultSheet>>>
+
+/**
+ * Valores por defecto de «Programar jornada» (7.1): por cada serie, la hora habitual y la fecha
+ * siguiente, tomadas de su último partido del club.
+ */
+export async function lastClubMatchBySeries(): Promise<
+  Map<string, { kickoffAt: Date; roundNumber: number | null }>
+> {
+  const rows = await db
+    .selectDistinctOn([matches.seriesId], {
+      seriesId: matches.seriesId,
+      kickoffAt: matches.kickoffAt,
+      roundNumber: matches.roundNumber,
+    })
+    .from(matches)
+    .where(ne(matches.clubSide, 'ninguno'))
+    .orderBy(matches.seriesId, desc(matches.kickoffAt))
+  return new Map(rows.map(({ seriesId, ...rest }) => [seriesId, rest]))
+}
