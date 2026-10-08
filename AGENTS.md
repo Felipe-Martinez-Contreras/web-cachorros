@@ -149,6 +149,8 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
 - Tipografía sin saltos: `src/styles/fonts.css` define las fuentes de respaldo con el mismo ancho que Archivo
   (normal, 75 % y 62,5 %). Usa `font-display` para títulos al 75 % y `font-tight` para display y marcadores al
   62,5 %; no uses anchos en `ch` (cambian al cargar la fuente): usa `rem` o las clases `max-w-*`.
+- Un contenedor `grid` con tablas o contenido ancho lleva `grid-cols-1` (`minmax(0, 1fr)`): así la tabla se
+  desplaza dentro de su región (`role="region"` + `tabIndex={0}`) y no ensancha la página en el celular.
 - Los escudos van dentro de `.crest` (`TeamCrest`, `ClubCrest`): en secciones `.theme-dark` reciben un disco blanco.
 - Sobre fondo claro, el naranja `accent` no alcanza contraste: para texto, enlaces e indicadores usa
   `accent-strong` (o los tokens `--link` / `--focus`). Lo verifica `tests/unit/tokens-contrast.test.ts`.
@@ -179,6 +181,32 @@ Nunca se lanzan errores crudos al cliente: se registran con pino y se devuelve u
 
 La autorización se verifica **en cada Server Action, Route Handler y layout del panel**. `proxy.ts` solo hace
 redirecciones optimistas: no es una barrera de seguridad; su *matcher* excluye `/api`, `/_next` y `/media`.
+
+Las mutaciones del panel usan `mutate()` (`src/lib/entity-action.ts`), que aplica los seis pasos en un solo lugar:
+cada acción aporta su permiso, su esquema, la escritura dentro de la transacción (`write`) y sus tags. Un rechazo
+de negocio se lanza como `Rejection(mensaje, campo?)`; las restricciones de la BD que el usuario puede provocar
+se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se validan con `assertId()`.
+
+### Panel (7)
+
+- Cada pantalla verifica su permiso con `requirePanelUser('permiso')`. Un módulo nuevo se agrega a
+  `src/components/admin/nav.ts` cuando su página existe.
+- Formularios: `EntityForm` (`src/components/admin/entity-form.tsx`, react-hook-form + Zod) con el **mismo
+  esquema** que valida la acción; el formulario envía los valores tal como están y el servidor los vuelve a validar.
+  Las piezas de esquema están en `src/lib/form-schemas.ts` (un campo vacío llega como `''` y se guarda `null`).
+- Listas con `ResourceList` / `ResourceRow` (tarjetas en el celular), filtros como formulario GET (`ListToolbar`),
+  acciones con `ActionButton` (confirmación en `<dialog>` para lo destructivo) y avisos con `useToast()`.
+- Slugs: `resolveSlug()` + `recordSlugChange()` (`src/lib/slug-redirects.ts`) dentro de la transacción.
+- Imágenes: toda imagen que se asigna a algo visible pasa por `assertPublishableMedia()`
+  (`src/features/media/guards.ts`); las subidas van por `POST /api/admin/media`, nunca por una Server Action.
+- Una ruta de archivos que se decide en runtime (`UPLOADS_DIR`) lleva `/* turbopackIgnore: true */`; sin eso el
+  build rastrea todo el proyecto y lo mete en la imagen.
+
+### Menores de edad (6.3)
+
+Los jugadores llegan al sitio público **solo** a través de `src/features/players/public.ts`
+(`loadMinorIds` + `toPublicPlayerRef`): nombre e inicial, sin apodo, sin foto, sin ficha y sin fecha de nacimiento.
+Ningún DTO público se arma leyendo `players` directamente.
 
 ### Errores y estados de carga (3.6)
 
@@ -231,6 +259,15 @@ redirecciones optimistas: no es una barrera de seguridad; su *matcher* excluye `
 | Rendimiento | Lighthouse CI | Presupuestos de la sección 10 |
 | Carga | k6 | Escenario de la sección 10 (Fase 5) |
 
+Convenciones de las pruebas:
+
+- **Integración de acciones:** `tests/integration/next-mocks.ts` simula las cabeceras, la caché y la navegación de
+  Next; `session.ts` da `actAs('admin' | 'prensa' | 'nadie')` e `invalidatedTags()`.
+- **E2E:** todo lo que crean empieza con «E2E» (o usa fechas de partido desde la 40 y camisetas desde la 90);
+  `scripts/e2e-clean.ts` lo borra antes de cada corrida. Las pruebas no escriben en la BD por fuera del panel: el
+  panel es lo que invalida la caché. Se busca por rol (`getByRole`): Next conserva oculta la pantalla anterior y
+  `getByLabel` / `getByText` también encuentran sus elementos.
+
 ### Logs (3.12)
 
 - pino en JSON a stdout con `requestId`; nunca datos personales (emails y teléfonos enmascarados; IP solo como hash).
@@ -246,6 +283,7 @@ redirecciones optimistas: no es una barrera de seguridad; su *matcher* excluye `
 | Panel y modo en vivo | 7 |
 | Esquema y reglas de dominio | 8 |
 | Seguridad, privacidad, menores de edad | 9 (y 6.3) |
+| Estado HTTP de las páginas de detalle (404 / 301) | ADR 0007 y ADR 0008 (propuesto) |
 | Docker, Caddy, Cloudflare, respaldos | 12 |
 | Criterios de aceptación de la fase | 14 |
 | **Trampas conocidas** (léelas siempre) | 16 |
