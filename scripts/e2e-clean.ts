@@ -14,6 +14,8 @@ try {
   }
   const sql = postgres(adminUrl, { max: 1, onnotice: () => {} })
   try {
+    // Los partidos que crean las pruebas usan números de fecha desde el 40 (el seed llega al 11).
+    await sql`delete from matches where round_number >= 40`
     // Primero lo que referencia a otras tablas (inscripciones, cargos) y a la biblioteca de medios.
     await sql`delete from squad_registrations where player_id in (select id from players where first_name like 'E2E%')`
     await sql`delete from players where first_name like 'E2E%'`

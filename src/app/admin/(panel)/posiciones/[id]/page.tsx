@@ -49,7 +49,14 @@ export default async function EditStandingsPage({ params }: { params: Promise<{ 
         {preview.length === 0 ? (
           <p className="text-neutral-600">La tabla todavía no tiene equipos.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-paper">
+          <div
+            className="overflow-x-auto rounded-lg border border-neutral-200 bg-paper"
+            {...{
+              role: 'region',
+              tabIndex: 0,
+              'aria-label': `Vista previa de la tabla de ${table.seriesName}`,
+            }}
+          >
             <table className="w-full min-w-[32rem] text-sm tabular-nums">
               <caption className="sr-only">Vista previa de la tabla guardada</caption>
               <thead>
