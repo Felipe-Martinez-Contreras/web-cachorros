@@ -8,42 +8,43 @@ const controlClass =
   'aria-invalid:border-danger aria-invalid:border-2'
 
 type Shared = {
-  /** También se usa como `id`: debe ser único en la página. */
   name: string
+  /** Por defecto es `name`. Hay que darlo cuando la página tiene varios formularios con el mismo campo. */
+  id?: string
   label: string
   help?: string
   error?: string
   className?: string
 }
 
-function describedBy(name: string, help?: string, error?: string): string | undefined {
-  return [error ? `${name}-error` : null, help ? `${name}-help` : null].filter(Boolean).join(' ') || undefined
+function describedBy(id: string, help?: string, error?: string): string | undefined {
+  return [error ? `${id}-error` : null, help ? `${id}-help` : null].filter(Boolean).join(' ') || undefined
 }
 
 /** Etiqueta visible, ayuda y error asociados al control (especificación 4.9). */
 function FieldShell({
-  name,
+  id,
   label,
   help,
   error,
   required,
   className,
   children,
-}: Shared & { required?: boolean; children: ReactNode }) {
+}: Omit<Shared, 'name' | 'id'> & { id: string; required?: boolean; children: ReactNode }) {
   return (
     <div className={cn('grid gap-1', className)}>
-      <label htmlFor={name} className="font-medium">
+      <label htmlFor={id} className="font-medium">
         {label}
         {required === false && <span className="font-normal text-neutral-600"> (opcional)</span>}
       </label>
       {children}
       {help && (
-        <p id={`${name}-help`} className="text-sm text-neutral-600">
+        <p id={`${id}-help`} className="text-sm text-neutral-600">
           {help}
         </p>
       )}
       {error && (
-        <p id={`${name}-error`} className="text-sm font-medium text-danger">
+        <p id={`${id}-error`} className="text-sm font-medium text-danger">
           {error}
         </p>
       )}
@@ -53,10 +54,10 @@ function FieldShell({
 
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'name' | 'className'> & Shared
 
-export function Field({ name, label, help, error, className, ...input }: FieldProps) {
+export function Field({ name, id = name, label, help, error, className, ...input }: FieldProps) {
   return (
     <FieldShell
-      name={name}
+      id={id}
       label={label}
       help={help}
       error={error}
@@ -64,10 +65,10 @@ export function Field({ name, label, help, error, className, ...input }: FieldPr
       className={className}
     >
       <input
-        id={name}
+        id={id}
         name={name}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, help, error)}
+        aria-describedby={describedBy(id, help, error)}
         className={controlClass}
         {...input}
       />
@@ -80,6 +81,7 @@ type TextareaFieldProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'
 
 export function TextareaField({
   name,
+  id = name,
   label,
   help,
   error,
@@ -89,7 +91,7 @@ export function TextareaField({
 }: TextareaFieldProps) {
   return (
     <FieldShell
-      name={name}
+      id={id}
       label={label}
       help={help}
       error={error}
@@ -97,11 +99,11 @@ export function TextareaField({
       className={className}
     >
       <textarea
-        id={name}
+        id={id}
         name={name}
         rows={rows}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, help, error)}
+        aria-describedby={describedBy(id, help, error)}
         className={cn(controlClass, 'py-3')}
         {...textarea}
       />
@@ -111,10 +113,19 @@ export function TextareaField({
 
 type SelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id' | 'name' | 'className'> & Shared
 
-export function SelectField({ name, label, help, error, className, children, ...select }: SelectFieldProps) {
+export function SelectField({
+  name,
+  id = name,
+  label,
+  help,
+  error,
+  className,
+  children,
+  ...select
+}: SelectFieldProps) {
   return (
     <FieldShell
-      name={name}
+      id={id}
       label={label}
       help={help}
       error={error}
@@ -122,10 +133,10 @@ export function SelectField({ name, label, help, error, className, children, ...
       className={className}
     >
       <select
-        id={name}
+        id={id}
         name={name}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, help, error)}
+        aria-describedby={describedBy(id, help, error)}
         className={controlClass}
         {...select}
       >
@@ -139,28 +150,36 @@ type CheckboxFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'na
   Omit<Shared, 'label'> & { label: ReactNode }
 
 /** Casilla con toda la fila como área táctil. */
-export function CheckboxField({ name, label, help, error, className, ...input }: CheckboxFieldProps) {
+export function CheckboxField({
+  name,
+  id = name,
+  label,
+  help,
+  error,
+  className,
+  ...input
+}: CheckboxFieldProps) {
   return (
     <div className={cn('grid gap-1', className)}>
-      <label htmlFor={name} className="flex min-h-11 cursor-pointer items-start gap-3 py-2">
+      <label htmlFor={id} className="flex min-h-11 cursor-pointer items-start gap-3 py-2">
         <input
-          id={name}
+          id={id}
           name={name}
           type="checkbox"
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(name, help, error)}
+          aria-describedby={describedBy(id, help, error)}
           className="mt-0.5 size-5 shrink-0 accent-ink"
           {...input}
         />
         <span>{label}</span>
       </label>
       {help && (
-        <p id={`${name}-help`} className="text-sm text-neutral-600">
+        <p id={`${id}-help`} className="text-sm text-neutral-600">
           {help}
         </p>
       )}
       {error && (
-        <p id={`${name}-error`} className="text-sm font-medium text-danger">
+        <p id={`${id}-error`} className="text-sm font-medium text-danger">
           {error}
         </p>
       )}

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Controller, type FieldValues, type Path, type Resolver, useForm } from 'react-hook-form'
 import type { ZodType } from 'zod'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -51,7 +51,9 @@ type EntityFormProps<T extends FieldValues> = {
   submitLabel?: string
   successMessage?: string
   /** A dónde ir al guardar (normalmente la lista); sin ella se queda en la pantalla. */
-  redirectTo?: string
+  redirectTo?: string | ((id: string) => string)
+  /** Formularios de «agregar» que se quedan en la pantalla: vuelven a sus valores iniciales al guardar. */
+  resetOnSuccess?: boolean
   cancelHref?: string
   /** Miniatura de la imagen ya guardada en cada campo `media` (el formulario solo guarda su id). */
   mediaPreviews?: Record<string, MediaThumbDTO | null>
@@ -72,7 +74,10 @@ export function EntityForm<T extends FieldValues>({
   redirectTo,
   cancelHref,
   mediaPreviews,
+  resetOnSuccess = false,
 }: EntityFormProps<T>) {
+  // Una página puede tener varios formularios con los mismos campos: cada uno prefija sus ids.
+  const uid = useId()
   const router = useRouter()
   const toast = useToast()
   const [formError, setFormError] = useState<string | null>(null)
@@ -99,7 +104,13 @@ export function EntityForm<T extends FieldValues>({
       return
     }
     toast({ message: successMessage })
-    if (redirectTo) router.push(redirectTo)
+    if (resetOnSuccess) form.reset()
+    const savedId = (result.data as { id?: unknown } | null)?.id
+    if (typeof redirectTo === 'function') {
+      if (typeof savedId === 'string') router.push(redirectTo(savedId))
+    } else if (redirectTo) {
+      router.push(redirectTo)
+    }
     router.refresh()
   })
 
@@ -132,6 +143,7 @@ export function EntityForm<T extends FieldValues>({
           )
         }
         const shared = {
+          id: `${uid}-${field.name}`,
           label: field.label,
           help: field.help,
           required: field.required,

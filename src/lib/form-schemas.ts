@@ -76,3 +76,19 @@ export function requiredTime(message: string) {
 export function checkbox() {
   return z.preprocess((value) => value === true || value === 'on' || value === 'true', z.boolean())
 }
+
+/** Enum del dominio a partir de sus etiquetas (`src/lib/labels.ts`), sin importar el esquema de la BD. */
+export function labeledEnum<T extends string>(labels: Record<T, string>, message: string) {
+  return z.enum(Object.keys(labels) as [T, ...T[]], { error: message })
+}
+
+/** Opciones de un `<select>` a partir de las etiquetas de un enum. */
+export function optionsFromLabels<T extends string>(labels: Record<T, string>) {
+  return (Object.entries(labels) as [T, string][]).map(([value, label]) => ({ value, label }))
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID.test(value)
+}
