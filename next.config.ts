@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Sin optimizador de imágenes en runtime (especificación 2.7): las variantes se generan al subir.
   images: { unoptimized: true },
-  serverExternalPackages: ['pino', 'postgres'],
+  serverExternalPackages: ['pino', 'postgres', 'sharp'],
 }
 
 export default nextConfig

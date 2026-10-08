@@ -50,7 +50,7 @@
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node scripts/postbuild.mjs",
-    "start": "node --env-file-if-exists=.env .next/standalone/server.js",
+    "start": "node scripts/start.mjs",
     "check": "biome check . && tsc --noEmit",
     "check:fix": "biome check --write .",
     "test": "vitest run --config vitest.config.ts",

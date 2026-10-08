@@ -38,6 +38,9 @@ export const env = createEnv({
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     MAIL_FROM: requerida('Ejemplo: "Club Deportivo Los Cachorros <no-responder@dominio>".'),
+
+    // Carpeta de las imágenes procesadas. En la VM es el volumen /data/uploads, que Caddy sirve en /media.
+    UPLOADS_DIR: z.string().default('./data/uploads'),
   },
   experimental__runtimeEnv: {},
   emptyStringAsUndefined: true,
