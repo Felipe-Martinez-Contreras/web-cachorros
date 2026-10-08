@@ -3,9 +3,10 @@
   /* Marca */
   --color-ink: #0b0b0c; /* negro base */
   --color-paper: #ffffff; /* blanco base */
-  --color-accent: #c8702a; /* provisional [COMPLETAR: color exacto del león del escudo] */
-  --color-accent-strong: #a0561c; /* acento para texto y enlaces sobre fondo claro */
-  --color-accent-soft: #f6e7da; /* fondos sutiles */
+  /* Naranja del león, tomado del escudo entregado. [VERIFICAR: color oficial del club con la directiva] */
+  --color-accent: #f27604;
+  --color-accent-strong: #b05500; /* acento para texto, enlaces e indicadores sobre fondo claro */
+  --color-accent-soft: #fdeedd; /* fondos sutiles */
 
   /* Neutros */
   --color-neutral-50: #f7f7f7;
@@ -35,18 +36,26 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Tokens semánticos por contexto */
-:root {
+/*
+ * Tokens semánticos por contexto. No hay modo oscuro conmutable en v1: la identidad alterna secciones
+ * claras y oscuras a propósito (`.theme-dark` / `.theme-light` sobre cada sección).
+ */
+:root,
+.theme-light {
   --bg: var(--color-paper);
   --fg: var(--color-ink);
   --muted: var(--color-neutral-500);
   --border: var(--color-neutral-200);
+  --surface: var(--color-neutral-50);
   --link: var(--color-accent-strong);
+  --focus: var(--color-accent-strong);
 }
 .theme-dark {
   --bg: var(--color-ink);
   --fg: var(--color-paper);
   --muted: var(--color-neutral-400);
   --border: var(--color-neutral-800);
+  --surface: var(--color-neutral-900);
   --link: var(--color-accent);
+  --focus: var(--color-accent);
 }

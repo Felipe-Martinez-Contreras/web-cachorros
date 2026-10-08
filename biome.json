@@ -51,6 +51,10 @@
   },
   "overrides": [
     {
+      "includes": ["**/*.css"],
+      "linter": { "rules": { "complexity": { "noImportantStyles": "off" } } }
+    },
+    {
       "includes": ["scripts/**", "tests/**", "*.config.ts", "*.config.mjs", "src/lib/env.ts"],
       "linter": { "rules": { "style": { "noProcessEnv": "off" } } }
     },
