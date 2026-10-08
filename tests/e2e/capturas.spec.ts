@@ -98,7 +98,13 @@ test.describe('capturas del reporte de fase', () => {
       await shot(name)
     }
     await page.goto('/admin/partidos?vista=jugados')
-    await page.getByRole('link', { name: 'Corregir resultado' }).first().click()
+    // Un partido del club (los partidos entre rivales solo llevan el marcador final).
+    await page
+      .getByRole('listitem')
+      .filter({ hasText: 'Club Deportivo Los Cachorros' })
+      .first()
+      .getByRole('link', { name: 'Corregir resultado' })
+      .click()
     await expect(page.getByRole('heading', { name: 'Corregir resultado', level: 1 })).toBeVisible()
     await shot('panel-resultado')
     await page.goto('/admin/posiciones')
