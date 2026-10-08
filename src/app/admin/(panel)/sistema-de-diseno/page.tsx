@@ -2,6 +2,8 @@ import { Inbox } from 'lucide-react'
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 import type { ReactNode } from 'react'
+import { ActionButton } from '@/components/admin/action-button'
+import { FilterSelect, ListToolbar, ResourceList, ResourceRow } from '@/components/admin/resource-list'
 import {
   BallIcon,
   CardIcon,
@@ -18,6 +20,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Alert, EmptyState, Skeleton, Toast } from '@/components/ui/feedback'
 import { CheckboxField, Field, SelectField, TextareaField } from '@/components/ui/field'
 import { Pagination } from '@/components/ui/pagination'
+import { accionDeMuestra } from '@/features/design-system/actions'
+import { ToastDemo } from '@/features/design-system/components/toast-demo'
 import {
   sampleEvent,
   sampleEvents,
@@ -73,6 +77,7 @@ const SECTIONS = [
   ['partidos', 'Partidos'],
   ['contenido', 'Contenido'],
   ['iconos', 'Íconos'],
+  ['panel', 'Panel'],
 ] as const
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
@@ -427,6 +432,57 @@ export default async function DesignSystemPage() {
               </li>
             ))}
           </ul>
+        </Example>
+      </Section>
+
+      <Section id="panel" title="Panel">
+        <Example title="Lista: tarjetas en el celular, filas en escritorio">
+          <ListToolbar search="" placeholder="Buscar por nombre…">
+            <FilterSelect
+              name="estado"
+              label="Estado"
+              allLabel="Todas"
+              options={[
+                { value: 'activas', label: 'Activas' },
+                { value: 'inactivas', label: 'Inactivas' },
+              ]}
+            />
+          </ListToolbar>
+          <ResourceList label="Series de muestra">
+            <ResourceRow
+              title="Honor"
+              href="#panel-titulo"
+              subtitle="Adulta · tiempos de 45 minutos"
+              badges={<Badge variant="success">Activa</Badge>}
+              actions={
+                <ActionButton action={accionDeMuestra} successMessage="Listo: esta acción era de muestra.">
+                  Acción
+                </ActionButton>
+              }
+            />
+            <ResourceRow
+              title="Senior 50"
+              subtitle="Senior · tiempos de 30 minutos"
+              badges={<Badge>Inactiva</Badge>}
+              actions={
+                <ActionButton
+                  action={accionDeMuestra}
+                  variant="danger"
+                  successMessage="Listo: no se eliminó nada, era una muestra."
+                  confirm={{
+                    title: '¿Eliminar la serie Senior 50?',
+                    description: 'Esta acción no se puede deshacer.',
+                    confirmLabel: 'Sí, eliminar',
+                  }}
+                >
+                  Eliminar
+                </ActionButton>
+              }
+            />
+          </ResourceList>
+        </Example>
+        <Example title="Avisos del panel (se cierran solos)">
+          <ToastDemo />
         </Example>
       </Section>
     </div>

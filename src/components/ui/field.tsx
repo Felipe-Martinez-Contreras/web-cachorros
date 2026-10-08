@@ -55,7 +55,14 @@ type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'name' | 'c
 
 export function Field({ name, label, help, error, className, ...input }: FieldProps) {
   return (
-    <FieldShell name={name} label={label} help={help} error={error} className={className}>
+    <FieldShell
+      name={name}
+      label={label}
+      help={help}
+      error={error}
+      required={input.required}
+      className={className}
+    >
       <input
         id={name}
         name={name}
@@ -81,7 +88,14 @@ export function TextareaField({
   ...textarea
 }: TextareaFieldProps) {
   return (
-    <FieldShell name={name} label={label} help={help} error={error} className={className}>
+    <FieldShell
+      name={name}
+      label={label}
+      help={help}
+      error={error}
+      required={textarea.required}
+      className={className}
+    >
       <textarea
         id={name}
         name={name}
@@ -99,7 +113,14 @@ type SelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id' | 'na
 
 export function SelectField({ name, label, help, error, className, children, ...select }: SelectFieldProps) {
   return (
-    <FieldShell name={name} label={label} help={help} error={error} className={className}>
+    <FieldShell
+      name={name}
+      label={label}
+      help={help}
+      error={error}
+      required={select.required}
+      className={className}
+    >
       <select
         id={name}
         name={name}
