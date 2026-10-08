@@ -58,8 +58,10 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/run.mjs migrate",
+    "db:seed": "node scripts/run.mjs seed",
     "db:reset": "node scripts/run.mjs db-reset",
     "admin:create": "node scripts/run.mjs create-admin",
+    "content:pending": "node scripts/run.mjs content-pending",
     "build:scripts": "node scripts/build-scripts.mjs"
   }
 }

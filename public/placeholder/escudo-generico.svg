@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Escudo genérico de ejemplo">
+  <path d="M256 28 452 84v166c0 118-80 196-196 238C140 446 60 368 60 250V84Z" fill="#fff" stroke="#0b0b0c" stroke-width="16"/>
+  <path d="M256 60v394C162 416 92 350 92 250V108Z" fill="#0b0b0c"/>
+  <circle cx="256" cy="250" r="74" fill="#fff" stroke="#0b0b0c" stroke-width="12"/>
+  <path d="m256 206 42 30-16 49h-52l-16-49Z" fill="#0b0b0c"/>
+</svg>

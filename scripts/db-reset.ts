@@ -1,4 +1,6 @@
 // `pnpm db:reset`: borra TODO y vuelve a crear el esquema. Solo para desarrollo.
+import { rm } from 'node:fs/promises'
+import path from 'node:path'
 import postgres from 'postgres'
 import { requireEnv, runMigrations } from './lib/migrate'
 
@@ -25,7 +27,15 @@ try {
   }
 
   await runMigrations({ adminUrl, appUrl: requireEnv('DATABASE_URL') })
-  console.log('Base de datos recreada desde cero. Crea un administrador con: pnpm admin:create')
+
+  // Las imágenes procesadas quedaron huérfanas: se borran junto con la base.
+  const uploadsDir = path.resolve(process.env.UPLOADS_DIR || './data/uploads')
+  await rm(uploadsDir, { recursive: true, force: true })
+
+  console.log('Base de datos recreada desde cero.')
+  console.log(
+    'Carga los datos de ejemplo con: pnpm db:seed   ·   Crea un administrador con: pnpm admin:create',
+  )
 } catch (error) {
   console.error(error instanceof Error ? error.message : error)
   process.exit(1)
