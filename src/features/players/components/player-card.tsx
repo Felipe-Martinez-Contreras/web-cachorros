@@ -43,8 +43,8 @@ export function PlayerCard({ player, className }: { player: SquadPlayerDTO; clas
             {player.shirtNumber}
           </span>
         )}
-        <div className="grid min-w-0 gap-0.5">
-          <h3 className="leading-tight font-semibold break-words">
+        <div className="grid min-w-0 grid-cols-1 gap-0.5">
+          <h3 className="leading-tight font-semibold wrap-anywhere">
             {player.slug ? (
               <Link
                 href={`/jugadores/${player.slug}`}
@@ -75,7 +75,7 @@ export function StaffCard({ member, className }: { member: StaffDTO; className?:
     <div className={cn('grid gap-2', className)}>
       <Portrait photo={member.photo} sizes={PORTRAIT_SIZES} />
       <div className="grid gap-0.5">
-        <h3 className="leading-tight font-semibold break-words">{member.name}</h3>
+        <h3 className="leading-tight font-semibold wrap-anywhere">{member.name}</h3>
         <p className="text-meta text-(--muted)">{staffRoleLabels[member.role]}</p>
       </div>
     </div>
