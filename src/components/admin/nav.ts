@@ -1,8 +1,10 @@
 import {
+  CalendarDays,
   CalendarRange,
   ClipboardList,
   House,
   Images,
+  ListOrdered,
   type LucideIcon,
   MapPin,
   Palette,
@@ -29,6 +31,19 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'General',
     items: [{ href: '/admin', label: 'Inicio', icon: House, permission: 'panel:access', primary: true }],
+  },
+  {
+    label: 'Partidos',
+    items: [
+      {
+        href: '/admin/partidos',
+        label: 'Partidos',
+        icon: CalendarDays,
+        permission: 'matches:write',
+        primary: true,
+      },
+      { href: '/admin/posiciones', label: 'Posiciones', icon: ListOrdered, permission: 'standings:write' },
+    ],
   },
   {
     label: 'Plantel',
