@@ -24,6 +24,43 @@ function collectErrors(page: Page): string[] {
 
 const NOT_FOUND = 'Este balón se fue fuera de la cancha'
 
+// Direcciones de detalle que no existen: el proxy las responde con 404 real (ADR 0008).
+const MISSING_PATHS = [
+  '/partidos/no-existe-este-partido',
+  '/jugadores/no-existe-este-jugador',
+  '/plantel/no-existe',
+  '/noticias/no-existe-esta-noticia',
+]
+
+/** Un juvenil del seed que solo está inscrito en la serie juvenil (el celular y el escritorio usan uno distinto). */
+async function seedJuveniles() {
+  // Su «nombre apellido» no coincide con el de ningún adulto ni del cuerpo técnico: así se puede buscar en
+  // el HTML completo de cada página (incluidos los datos que viajan al navegador).
+  const sql = adminSql()
+  const candidates = await sql<{ id: string; first_name: string; last_name: string; slug: string }[]>`
+    select p.id, p.first_name, p.last_name, p.slug
+    from players p
+    join squad_registrations r on r.player_id = p.id
+    join series s on s.id = r.series_id and s.slug = 'juvenil'
+    where not exists (
+      select 1 from players other
+      where other.id <> p.id
+        and other.first_name || ' ' || other.last_name like '%' || p.first_name || ' ' || split_part(p.last_name, ' ', 1) || '%'
+    )
+    and not exists (
+      select 1 from staff_members staff
+      where staff.full_name like '%' || p.first_name || ' ' || split_part(p.last_name, ' ', 1) || '%'
+    )
+    and not exists (
+      select 1 from squad_registrations elsewhere
+      join series es on es.id = elsewhere.series_id
+      where elsewhere.player_id = p.id and es.slug <> 'juvenil'
+    )
+    order by p.slug`
+  await sql.end()
+  return candidates
+}
+
 test.describe('partidos', () => {
   test('fixture y resultados por serie y temporada, y detalle de un partido jugado', async ({ page }) => {
     const errors = collectErrors(page)
@@ -123,15 +160,10 @@ test.describe('partidos', () => {
   test('una dirección de partido o de jugador que no existe muestra la página 404 del club', async ({
     page,
   }) => {
-    for (const path of [
-      '/partidos/no-existe-este-partido',
-      '/jugadores/no-existe-este-jugador',
-      '/plantel/no-existe',
-    ]) {
-      await page.goto(path)
+    for (const path of MISSING_PATHS) {
+      const response = await page.goto(path)
+      expect(response?.status(), `${path} responde 404`).toBe(404)
       await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
-      // Mientras el ADR 0008 no se apruebe, el estado HTTP es 200 y la página va con `noindex`.
-      await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached()
     }
   })
 })
@@ -181,37 +213,81 @@ test.describe('sin JavaScript', () => {
     await page.getByRole('region', { name: 'Delanteros' }).getByRole('link').first().click()
     await expect(page.getByRole('heading', { name: 'Estadísticas' })).toBeVisible()
   })
+
+  // ADR 0008: el estado HTTP lo decide el proxy antes del render, así que no depende de JavaScript.
+  test('un slug que no existe y la ficha de un menor responden 404', async ({ page }, testInfo) => {
+    for (const path of MISSING_PATHS) {
+      const response = await page.goto(path)
+      expect(response?.status(), `${path} responde 404`).toBe(404)
+      await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+    }
+
+    const juvenile = (await seedJuveniles())[testInfo.project.name === 'celular' ? 0 : 1]
+    expect(juvenile, 'el seed trae juveniles').toBeTruthy()
+    if (!juvenile) return
+    const response = await page.goto(`/jugadores/${juvenile.slug}`)
+    expect(response?.status(), 'la ficha de un menor responde 404').toBe(404)
+    await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+    expect(await page.content()).not.toContain(`${juvenile.first_name} ${juvenile.last_name}`)
+
+    // Las rutas fijas que comparten el prefijo siguen respondiendo.
+    for (const path of ['/partidos/posiciones', '/partidos/goleadores', '/plantel/honor']) {
+      expect((await page.goto(path))?.status(), `${path} responde 200`).toBe(200)
+    }
+  })
+
+  test('un slug que cambió responde 301 hacia la dirección vigente', async ({
+    page,
+    browser,
+    request,
+    baseURL,
+  }, testInfo) => {
+    const stamp = Date.now()
+    const oldPath = `/jugadores/e2e-jugador-antes${stamp}`
+    const newPath = `/jugadores/e2e-jugador-despues${stamp}`
+
+    // El cambio de nombre se hace por el panel (que necesita JavaScript), en un contexto aparte.
+    const panelContext = await browser.newContext({ baseURL, locale: 'es-CL', javaScriptEnabled: true })
+    const panel = await panelContext.newPage()
+    await login(panel, ADMIN.email)
+    await expect(panel.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+    await panel.goto('/admin/jugadores/nuevo')
+    await panel.getByRole('textbox', { name: 'Nombre', exact: true }).fill('E2E Jugador')
+    await panel.getByRole('textbox', { name: 'Apellido' }).fill(`Antes${stamp}`)
+    await panel.getByRole('combobox', { name: 'Posición', exact: true }).selectOption({ label: 'Delantero' })
+    await panel.getByRole('combobox', { name: /^Inscribir en la serie/ }).selectOption({ label: 'Honor' })
+    await panel
+      .getByRole('spinbutton', { name: /^Número de camiseta/ })
+      .fill(testInfo.project.name === 'celular' ? '93' : '94')
+    await panel.getByRole('button', { name: 'Crear jugador' }).click()
+    await expect(panel.getByRole('heading', { name: `E2E Jugador Antes${stamp}`, level: 1 })).toBeVisible()
+
+    expect((await page.goto(oldPath))?.status()).toBe(200)
+
+    await panel.getByRole('textbox', { name: 'Apellido' }).fill(`Despues${stamp}`)
+    await panel.getByRole('button', { name: 'Guardar', exact: true }).click()
+    await expect(panel.getByRole('heading', { name: `E2E Jugador Despues${stamp}`, level: 1 })).toBeVisible()
+    await panelContext.close()
+
+    // Sin seguir la redirección: el estado es 301 y `Location` apunta al slug vigente, con su consulta.
+    const moved = await request.get(`${oldPath}?desde=prueba`, { maxRedirects: 0 })
+    expect(moved.status()).toBe(301)
+    expect(new URL(moved.headers().location ?? '', baseURL).pathname).toBe(newPath)
+    expect(new URL(moved.headers().location ?? '', baseURL).search).toBe('?desde=prueba')
+
+    // Y el navegador, sin JavaScript, llega a la ficha.
+    const response = await page.goto(oldPath)
+    expect(response?.status()).toBe(200)
+    await expect(page).toHaveURL(new RegExp(`${newPath}$`))
+    await expect(page.getByRole('heading', { level: 1, name: `E2E Jugador Despues${stamp}` })).toBeVisible()
+  })
 })
 
 test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juvenil inscrito en una serie adulta', async ({
   page,
 }, testInfo) => {
   const isMobile = testInfo.project.name === 'celular'
-  // Un juvenil cuyo «nombre apellido» no coincide con el de ningún adulto ni del cuerpo técnico: así se
-  // puede buscar en el HTML completo de cada página (incluidos los datos que viajan al navegador).
-  const sql = adminSql()
-  const candidates = await sql<{ id: string; first_name: string; last_name: string; slug: string }[]>`
-    select p.id, p.first_name, p.last_name, p.slug
-    from players p
-    join squad_registrations r on r.player_id = p.id
-    join series s on s.id = r.series_id and s.slug = 'juvenil'
-    where not exists (
-      select 1 from players other
-      where other.id <> p.id
-        and other.first_name || ' ' || other.last_name like '%' || p.first_name || ' ' || split_part(p.last_name, ' ', 1) || '%'
-    )
-    and not exists (
-      select 1 from staff_members staff
-      where staff.full_name like '%' || p.first_name || ' ' || split_part(p.last_name, ' ', 1) || '%'
-    )
-    and not exists (
-      select 1 from squad_registrations elsewhere
-      join series es on es.id = elsewhere.series_id
-      where elsewhere.player_id = p.id and es.slug <> 'juvenil'
-    )
-    order by p.slug`
-  await sql.end()
-  const juvenile = candidates[isMobile ? 0 : 1]
+  const juvenile = (await seedJuveniles())[isMobile ? 0 : 1]
   expect(juvenile, 'el seed trae juveniles con nombre y apellido únicos').toBeTruthy()
   if (!juvenile) return
   const surname = `${juvenile.first_name} ${juvenile.last_name.split(' ')[0] ?? juvenile.last_name}`
@@ -231,7 +307,7 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
   await expect(page.locator('main a[href^="/jugadores/"]')).toHaveCount(0)
 
   // Su ficha no existe.
-  await page.goto(`/jugadores/${juvenile.slug}`)
+  expect((await page.goto(`/jugadores/${juvenile.slug}`))?.status()).toBe(404)
   await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
   expect(await page.content()).not.toContain(surname)
 
