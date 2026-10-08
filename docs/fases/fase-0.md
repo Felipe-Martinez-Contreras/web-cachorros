@@ -37,7 +37,7 @@ resultado tipado), rol de base de datos restringido para la app y scripts de con
 | El email de recuperación llega a Mailpit | Cumple | e2e: llega, el enlace permite crear la contraseña nueva y la anterior deja de servir |
 | La imagen arranca junto a PostgreSQL y `/api/health` responde `ok` | Cumple | `{"status":"ok","db":"ok","version":"fase0-local"}`; contenedor `healthy`, usuario `app`, ≈ 51 MB de RAM en reposo |
 
-Totales: 20 pruebas unitarias, 17 de integración y 20 e2e (10 por viewport), todas en verde. `pnpm audit --prod`
+Totales: 20 pruebas unitarias, 21 de integración y 20 e2e (10 por viewport), todas en verde. `pnpm audit --prod`
 sin vulnerabilidades conocidas.
 
 ## Qué falta
@@ -74,7 +74,8 @@ No hay desviaciones de arquitectura (ningún ADR de excepción). Estos son los d
    para que el rate limit de la librería (que solo actúa sobre peticiones HTTP) proteja el login. Son mínimos, con
    Tailwind y sin shadcn/ui, como se acordó.
 2. **El rate limit de Better Auth se desactiva con `SITE_ENV=development`**, para no entorpecer pruebas locales y
-   e2e. En staging y producción está activo y guarda sus contadores en la BD.
+   e2e. En staging y producción está activo y guarda sus contadores en la BD; lo verifica
+   `tests/integration/rate-limit.test.ts` (429 tras intentos repetidos en staging y production, nunca en development).
 3. **La validación de entorno se omite durante `next build`** (detectado por `NEXT_PHASE`), además de con
    `SKIP_ENV_VALIDATION=1`. Así `pnpm build` y el CI compilan sin variables; la validación ocurre al arrancar.
 4. **Puerto 5439 para PostgreSQL de desarrollo.** En esta máquina el 5432, 5433 y 5434 ya estaban ocupados por
