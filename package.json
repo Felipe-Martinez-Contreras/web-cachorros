@@ -5,12 +5,17 @@
   "type": "module",
   "packageManager": "pnpm@12.8.2",
   "engines": {
-    "node": "\u003e=24 \u003c25"
+    "node": ">=24 <25"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "better-auth": "^1.7.7",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.3",
+    "lucide-react": "^1.49.0",
     "next": "16.3.8",
     "nodemailer": "^10.0.13",
     "pino": "^10.3.1",
@@ -18,6 +23,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
+    "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -44,7 +51,7 @@
     "build": "next build",
     "postbuild": "node scripts/postbuild.mjs",
     "start": "node --env-file-if-exists=.env .next/standalone/server.js",
-    "check": "biome check . \u0026\u0026 tsc --noEmit",
+    "check": "biome check . && tsc --noEmit",
     "check:fix": "biome check --write .",
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
