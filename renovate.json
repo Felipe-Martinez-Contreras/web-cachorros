@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "timezone": "America/Santiago",
+  "schedule": ["before 8am on monday"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Agrupa actualizaciones menores y de parche",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dependencias (menores y parches)"
+    },
+    {
+      "description": "Automerge solo de parches de dependencias de desarrollo con CI verde",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "description": "Next.js y React van solos y sin agrupar: sus parches de seguridad se aplican en 48 h o menos",
+      "matchPackageNames": ["next", "react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "next y react",
+      "schedule": ["at any time"]
+    },
+    {
+      "description": "Node se mantiene en la línea 24 LTS hasta que la 26 sea LTS (especificación 2.1)",
+      "matchPackageNames": ["node", "@types/node"],
+      "allowedVersions": "<25"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null,
+    "schedule": ["at any time"],
+    "labels": ["seguridad"]
+  }
+}

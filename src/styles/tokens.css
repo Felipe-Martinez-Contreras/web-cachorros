@@ -1,0 +1,52 @@
+/* Tokens de diseño (especificación 4.2) — Tailwind CSS v4 */
+@theme {
+  /* Marca */
+  --color-ink: #0b0b0c; /* negro base */
+  --color-paper: #ffffff; /* blanco base */
+  --color-accent: #c8702a; /* provisional [COMPLETAR: color exacto del león del escudo] */
+  --color-accent-strong: #a0561c; /* acento para texto y enlaces sobre fondo claro */
+  --color-accent-soft: #f6e7da; /* fondos sutiles */
+
+  /* Neutros */
+  --color-neutral-50: #f7f7f7;
+  --color-neutral-100: #ededed;
+  --color-neutral-200: #dcdcdc;
+  --color-neutral-300: #bdbdbd;
+  --color-neutral-400: #9e9e9e;
+  --color-neutral-500: #757575; /* mínimo para texto secundario sobre blanco */
+  --color-neutral-600: #5c5c5c;
+  --color-neutral-700: #424242;
+  --color-neutral-800: #2b2b2b;
+  --color-neutral-900: #1a1a1a;
+
+  /* Funcionales */
+  --color-live: #d7263d; /* EN VIVO */
+  --color-success: #1f7a4d;
+  --color-danger: #b42318;
+
+  /* Tipografía */
+  --font-display: var(--font-archivo), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+
+  /* Forma y movimiento */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Tokens semánticos por contexto */
+:root {
+  --bg: var(--color-paper);
+  --fg: var(--color-ink);
+  --muted: var(--color-neutral-500);
+  --border: var(--color-neutral-200);
+  --link: var(--color-accent-strong);
+}
+.theme-dark {
+  --bg: var(--color-ink);
+  --fg: var(--color-paper);
+  --muted: var(--color-neutral-400);
+  --border: var(--color-neutral-800);
+  --link: var(--color-accent);
+}

@@ -1,0 +1,31 @@
+# Desarrollo local: PostgreSQL 18 + Mailpit. Las credenciales son solo para tu máquina.
+#   docker compose -f compose.dev.yaml up -d
+name: cachorros-dev
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cachorros
+      POSTGRES_USER: cachorros_admin
+      POSTGRES_PASSWORD: cachorros_admin_dev
+    ports:
+      - "127.0.0.1:5439:5432" # 5439 en tu máquina: no choca con otros PostgreSQL locales en 5432
+    volumes:
+      - pgdata:/var/lib/postgresql # PostgreSQL 18+: la imagen oficial guarda los datos en /var/lib/postgresql/18/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cachorros_admin -d cachorros"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025" # SMTP
+      - "127.0.0.1:8025:8025" # bandeja web: http://localhost:8025
+
+volumes:
+  pgdata:
