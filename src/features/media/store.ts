@@ -32,13 +32,15 @@ type StoreInput = {
 }
 
 export function uploadsDir(): string {
-  return path.resolve(env.UPLOADS_DIR ?? './data/uploads')
+  // La carpeta de subidas se decide en runtime (variable de entorno): el comentario evita que el build
+  // rastree todo el proyecto y lo meta en la imagen.
+  return path.resolve(/* turbopackIgnore: true */ env.UPLOADS_DIR ?? './data/uploads')
 }
 
 export async function removeMediaFiles(storageKey: string): Promise<void> {
   // La clave es un UUID generado por el servidor; igual se verifica que no salga de la carpeta.
   if (!/^[a-z0-9][a-z0-9-]*$/.test(storageKey)) return
-  await rm(path.join(uploadsDir(), storageKey), { recursive: true, force: true })
+  await rm(path.join(/* turbopackIgnore: true */ uploadsDir(), storageKey), { recursive: true, force: true })
 }
 
 /**
