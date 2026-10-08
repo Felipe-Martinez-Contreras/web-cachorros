@@ -30,44 +30,86 @@
 | Unitarias del marcador derivado, la tabla calculada e `isMinor` | Cumple | `tests/unit/matches-lib.test.ts`, `tests/unit/domain-lib.test.ts`; cobertura de `src/features/*/lib` ≈ 98 % |
 | Test de contraste de tokens en verde | Cumple | `tests/unit/tokens-contrast.test.ts` (22 casos) |
 | Portada correcta en 360, 768 y 1280 px, sin scroll horizontal ni CLS visible | Cumple | e2e: sin desborde y CLS ≤ 0,1 en los tres anchos (medido: 0 a 0,03) |
-| Lighthouse móvil local ≥ 90 / 95 / 95 / 95 | **Parcial: rendimiento no llega** | Accesibilidad 100, Buenas prácticas 100, SEO 100. **Rendimiento 80–84** en cinco corridas (se pide 90). Detalle abajo |
+| Lighthouse móvil local ≥ 90 / 95 / 95 / 95 | **Parcial: rendimiento no llega** | Accesibilidad 100, Buenas prácticas 100, SEO 100. **Rendimiento bajo 90** en todas las mediciones locales (entre 42 y 84 según la carga de la máquina). Diagnóstico abajo; el CI lo mide ahora sin carga |
 | Cuenta regresiva correcta en `America/Santiago`, incluido el cambio de horario, sin errores de hidratación | Cumple | Unitarias con las transiciones de abril y septiembre de 2026; la e2e de la portada falla ante cualquier error de consola |
 | Navegación completa con teclado y foco visible; axe sin *serious/critical* | Cumple | e2e: enlace «Saltar al contenido», foco visible en cada parada, desplegable «Club», hoja «Más»; axe sin violaciones |
 | Ningún dato del club inventado | Cumple | `docs/pendientes-contenido.md`: 197 marcadores (122 en la base, 75 en el código y el seed) y 6 campos de Configuración sin completar |
 
 Totales: **99** pruebas unitarias, **51** de integración y **36** e2e (18 por viewport), todas en verde.
+Las e2e corren contra el build en el puerto 3100 y nunca reutilizan un servidor que ya esté corriendo.
 `pnpm check` y `pnpm build` en verde; el build se verificó además apuntando a una base inexistente.
 
-### Lighthouse: lo que falta
+### Lighthouse: diagnóstico del rendimiento
 
-Cinco corridas con red 4G lenta y CPU ×4 aplicadas: rendimiento **0,73 · 0,80 · 0,84 · 0,80 · 0,81**.
-FCP = LCP ≈ 2,7–2,9 s (el objetivo de LCP es 2,5 s), TBT ≈ 340–480 ms, CLS ≈ 0.
+**No se alcanzó la meta de 90 en local.** La meta no se bajó: `pnpm lighthouse` sigue exigiendo 90 / 95 / 95 / 95.
 
-Lo que se revisó:
+| Medición (5 corridas, 4G lento y CPU ×4 aplicados) | Rendimiento | LCP | Índice de CPU de la máquina |
+|---|---|---|---|
+| Antes de optimizar, máquina con poca carga | 73 · 80 · 84 · 80 · 81 | 2,7–3,3 s | 1.700–2.180 |
+| Después de optimizar, máquina cargada | 42 · 60 · 54 · 53 · 57 | 3,4–5,2 s | 610–910 |
 
-- El servidor no es el problema: la portada sale en ≈ 10–20 ms con la caché tibia (≈ 160 ms en frío) y pesa
-  30 KB comprimida; el total de la página es ≈ 340 KB.
-- Sin limitar la CPU, el navegador gasta ≈ 30–60 ms en layout y ≈ 50–65 ms en scripts. Con CPU ×4 esos tiempos
-  se multiplican y retrasan el primer pintado.
-- El puntaje varió entre 0,59 y 0,84 según la corrida: en esta máquina corren otros contenedores a la vez.
-- Ya se aplicó: imagen del hero precargada con prioridad alta, `content-visibility` en las capas bajo el
-  pliegue, una sola fuente autoalojada y cero scripts de terceros.
+Las dos filas **no son comparables**: en la segunda la máquina rendía menos de la mitad (el índice de CPU que
+reporta Lighthouse bajó de ≈ 1.900 a ≈ 750; OneDrive estaba sincronizando y la CPU marcaba 76 % sin hacer nada).
+Por eso las optimizaciones se compararon con una traza propia, alternando ambas variantes en el mismo momento.
 
-Queda pendiente: volver a medir en una máquina sin carga (o en el CI) y, si sigue bajo 90, reducir el JavaScript
-de hidratación de la portada. No lo doy por cumplido.
+**Elemento LCP en móvil:** la imagen del hero (`main#contenido > section > img`). Desglose de la mejor corrida
+inicial:
+
+| Fase | Tiempo | Qué significa |
+|---|---|---|
+| TTFB | ≈ 25 ms | El servidor responde de inmediato (consultas cacheadas) |
+| Retraso de carga | ≈ 660 ms | Latencia de la red 4G lenta hasta que llega el `<head>` con la precarga |
+| Tiempo de carga | ≈ 630 ms | Una petición más en 4G lento; la imagen pesa 2,5 KB |
+| Retraso de render | ≈ 1.400 ms | **El problema:** la imagen ya llegó, pero el navegador aún no puede pintar |
+
+Lo que se verificó, punto por punto:
+
+- **Imagen del hero:** se precarga desde el `<head>` con prioridad alta y con `imagesrcset` / `sizes="100vw"`; en
+  un celular de 412 px (densidad 1,75) elige la variante de 768 px. La de ejemplo pesa 2,2 KB (la mayor, de
+  1.920 px, 8 KB): muy bajo los 180 KB. **Con una foto real hay que volver a medir**; el pipeline la limita a
+  2.560 px y WebP calidad 78.
+- **Error corregido:** la precarga de prioridad alta estaba puesta en el escudo del encabezado, no en el hero, y
+  el `<picture>` impedía que React precargara la imagen. Ahora la lleva el hero.
+- **JavaScript antes del LCP:** no lo bloquea. La hidratación (React y las islas `Countdown` y `NavLink`) corre
+  después del primer pintado. Sí pesa en el TBT: ≈ 0,6–0,7 s de evaluación con CPU ×4.
+- **Fuentes:** una sola (Archivo variable, 88 KB), precargada y con `display: swap`: no bloquea el pintado. Al
+  llegar provoca un segundo layout (≈ 0,5 s con CPU ×4) después del LCP, que suma al TBT y explica el CLS de 0,03.
+- **Causa del retraso de render:** (1) el CSS era una petición aparte que bloqueaba el primer pintado hasta
+  ≈ 1,5 s; (2) el primer layout de la página completa tarda ≈ 0,9 s con CPU ×4 (≈ 900 cajas, con la fuente de
+  respaldo porque la definitiva aún no llega).
+
+Cambios aplicados y su efecto (traza propia, mismas condiciones, 4 corridas por variante):
+
+| Cambio | Efecto en el LCP |
+|---|---|
+| CSS incrustado en el HTML (`experimental.inlineCss`) | De ≈ 3,1 s a ≈ 2,1 s (mediana). El HTML comprimido pasa de 30 KB a 55 KB |
+| Quitar `content-visibility: auto` de las capas (lo había agregado yo) | El layout antes del primer pintado bajó a un tercio |
+| Precarga en la imagen del hero y no en el escudo | La imagen se pide con el `<head>`, sin esperar al resto del HTML |
+
+Lo que queda por hacer si el CI confirma que sigue bajo 90:
+
+1. Reducir el costo del primer layout (menos nodos en la portada o diferir capas bajo el pliegue de otra forma).
+2. Reducir el JavaScript de hidratación (TBT), por ejemplo quitando `NavLink` como componente de cliente.
+3. Revisar el peso de la fuente (88 KB): compite por el ancho de banda con los scripts.
+
+`inlineCss` es una opción experimental de Next: si da problemas se apaga en `next.config.ts` sin otro cambio.
+
+**Medición sin carga:** el CI tiene ahora un job «Lighthouse móvil de la portada (informativo)» que carga el
+seed, corre 5 veces, publica la tabla de puntajes y el desglose del LCP en el resumen del workflow y sube los
+informes como artefacto `lighthouse`. No bloquea el PR. Se revisa de nuevo en la Fase 5 sobre el servidor real.
 
 ## Qué falta
 
-1. **Rendimiento de Lighthouse** (arriba).
+1. **Rendimiento de Lighthouse** (arriba): la meta sigue en 90; se revisa con el job del CI y, en la Fase 5, sobre el servidor real.
 2. **Foto del hero:** el escudo que dejaste en `public/placeholder/escudo.svg` ya está en uso; no había foto, así
    que el hero usa una imagen de ejemplo. Para cambiarla: deja `public/placeholder/hero.jpg` (y, opcional,
    `hero-movil.jpg`) y corre `pnpm db:seed`.
-3. **Aprobar el ADR 0007** (render sin *streaming*).
+3. Confirmar con la directiva el color de acento y el ADR 0007 (ambos aprobados por ti el 8 de octubre de 2026).
 4. La imagen Docker pesa **323 MB** (311 MB en la Fase 0; objetivo ≤ 250 MB en la Fase 5).
 
 ## Desviaciones y ADRs
 
-- **[ADR 0007](../adr/0007-render-publico-sin-streaming.md) — pendiente de tu aprobación.** La especificación pide
+- **[ADR 0007](../adr/0007-render-publico-sin-streaming.md) — aprobado.** La especificación pide
   `<Suspense>` con *skeletons* (3.6) y, a la vez, páginas públicas que funcionen sin JavaScript (3.3). Con
   *streaming*, sin JavaScript la portada se queda en los *skeletons*. Apliqué un único `<Suspense>` en el layout
   raíz: el HTML llega completo. Por eso no hay `loading.tsx` público. Es reversible.
@@ -107,7 +149,9 @@ Además de los 10 defaults del plan, ya aceptados:
     `.env` dejaban de apuntar a `data/uploads`.
 12. **Ícono del sitio** (`src/app/icon.png`) generado desde el escudo; los íconos de la PWA son de la Fase 4.
 13. **Biome no revisa `public/`** (son archivos del club).
-14. **Lighthouse con red y CPU aplicadas** (`throttlingMethod: 'devtools'`), no simuladas: en localhost la
+14. **Lighthouse en el puerto 3210 y e2e en el 3100:** con `pnpm dev` abierto en el 3000, ambas herramientas
+    medían el servidor de desarrollo sin avisar.
+15. **Lighthouse con red y CPU aplicadas** (`throttlingMethod: 'devtools'`), no simuladas: en localhost la
     simulación daba un LCP irreal. Con la simulada el rendimiento fue 0,64–0,83.
 
 ## Cómo probarlo

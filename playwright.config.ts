@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = Number(process.env.E2E_PORT ?? 3000)
+// Puerto propio, distinto del de `pnpm dev` (3000): las pruebas nunca corren contra otro servidor.
+const PORT = Number(process.env.E2E_PORT ?? 3100)
 const baseURL = `http://localhost:${PORT}`
 
 /**
@@ -33,8 +34,10 @@ export default defineConfig({
   webServer: {
     command: 'pnpm start',
     url: `${baseURL}/api/health`,
-    reuseExistingServer: !process.env.CI,
+    // Siempre levanta el build recién compilado; si el puerto está ocupado, falla en vez de reutilizarlo.
+    reuseExistingServer: false,
     timeout: 60_000,
-    env: { PORT: String(PORT), HOSTNAME: 'localhost' },
+    // SITE_URL debe coincidir con el puerto: Better Auth valida el origen y arma con ella los enlaces de correo.
+    env: { PORT: String(PORT), HOSTNAME: 'localhost', SITE_URL: baseURL },
   },
 })

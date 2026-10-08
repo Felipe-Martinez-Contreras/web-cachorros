@@ -61,11 +61,11 @@ detrás de Cloudflare.
 | `pnpm check` / `pnpm check:fix` | Biome (lint + formato) + `tsc --noEmit` / corrige formato y lint |
 | `pnpm test` | Pruebas unitarias (Vitest) |
 | `pnpm test:integration` | Integración contra PostgreSQL 18 real (base aparte `cachorros_test`, con el rol restringido) |
-| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes) |
+| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes), en el puerto 3100 |
 | `pnpm db:generate` | Genera migraciones SQL con `drizzle-kit generate` (se revisan y se commitean) |
 | `pnpm db:migrate` | Aplica migraciones con el migrador de `drizzle-orm` |
 | `pnpm db:seed` / `pnpm db:reset` | Carga datos de ejemplo (idempotente; `--en-vivo`, `--hoy=AAAA-MM-DD`) / recrea la BD (solo desarrollo) |
-| `pnpm lighthouse` | Lighthouse móvil de la portada (`pnpm build` y seed antes) |
+| `pnpm lighthouse` | Lighthouse móvil de la portada (`pnpm build` y seed antes), en el puerto 3210; meta 90 / 95 / 95 / 95 |
 | `pnpm admin:create` | Crea un administrador (no hay registro público); `--restablecer` cambia su contraseña |
 | `pnpm content:pending` | Regenera `docs/pendientes-contenido.md` |
 | `pnpm build:scripts` | Empaqueta `scripts/` con esbuild a `.mjs` autocontenidos |

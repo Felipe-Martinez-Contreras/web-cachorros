@@ -86,14 +86,14 @@ En desarrollo no se envía ningún correo real: todos quedan en Mailpit. Ahí ll
 | `pnpm check:fix` | Corrige formato y lint automáticamente |
 | `pnpm test` | Pruebas unitarias |
 | `pnpm test:integration` | Pruebas contra PostgreSQL real (usa una base aparte, `cachorros_test`) |
-| `pnpm test:e2e` | Pruebas de navegador a 360 px y 1280 px. Requiere `pnpm build` antes |
+| `pnpm test:e2e` | Pruebas de navegador a 360 px y 1280 px contra el build (puerto 3100). Requiere `pnpm build` antes |
 | `pnpm db:generate` | Genera una migración SQL a partir de los cambios en `src/db/schema` |
 | `pnpm db:migrate` | Aplica las migraciones pendientes |
 | `pnpm db:seed` | Carga los datos de ejemplo. Se puede repetir: no duplica nada |
 | `pnpm db:seed --en-vivo` | Lo mismo, dejando un partido de Honor en curso para ver la franja EN VIVO |
 | `pnpm db:reset` | **Borra todo** (base e imágenes procesadas) y recrea la base (solo desarrollo) |
 | `pnpm content:pending` | Lista lo que falta completar y regenera `docs/pendientes-contenido.md` |
-| `pnpm lighthouse` | Mide la portada con Lighthouse móvil. Requiere `pnpm build` y el seed cargado |
+| `pnpm lighthouse` | Mide la portada con Lighthouse móvil (puerto 3210). Requiere `pnpm build` y el seed cargado |
 | `pnpm admin:create` | Crea un administrador |
 | `pnpm admin:create --restablecer` | Cambia la contraseña de un administrador que ya existe |
 | `pnpm build:scripts` | Empaqueta los scripts de consola para la imagen Docker |

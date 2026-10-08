@@ -1,6 +1,6 @@
 # ADR 0007 — El sitio público entrega el HTML completo, sin *streaming* de `<Suspense>`
 
-- **Estado:** propuesto (aplicado en la Fase 1; pendiente de aprobación)
+- **Estado:** aprobado el 8 de octubre de 2026 (pendiente de confirmación de la directiva)
 - **Fecha:** 8 de octubre de 2026
 
 ## Contexto
@@ -38,6 +38,8 @@ reemplazo. Reglas que se derivan:
   `connection()` y a sus consultas con `"use cache"`; todas se resuelven en paralelo.
 - Una dirección inexistente no pasa por una ruta comodín: no coincide con ninguna ruta y la atiende el
   `not-found` estático, con estado 404 real.
+- El layout público declara `export const instant = false`: es la forma que documenta Next para indicar que
+  una ruta bloquea en el servidor a propósito (sin eso, el modo desarrollo lo reporta como error).
 - El panel (`/admin`) sí puede usar `<Suspense>` y *skeletons*: exige JavaScript de todos modos.
 
 ## Consecuencias

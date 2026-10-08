@@ -43,15 +43,9 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href?: strin
 
 function Section({ className, children, label }: { className?: string; children: ReactNode; label: string }) {
   return (
-    // `content-visibility` posterga el layout y el pintado de las capas que están bajo el pliegue; el tamaño
-    // intrínseco reservado evita saltos de la barra de desplazamiento.
-    <section
-      aria-label={label}
-      className={cn(
-        'py-12 [contain-intrinsic-size:auto_700px] [content-visibility:auto] md:py-20',
-        className,
-      )}
-    >
+    // Sin `content-visibility: auto`: se probó y en esta página triplica el tiempo de layout antes del
+    // primer pintado (medido con CPU ×4), en vez de reducirlo.
+    <section aria-label={label} className={cn('py-12 md:py-20', className)}>
       <div className="container-site">{children}</div>
     </section>
   )
