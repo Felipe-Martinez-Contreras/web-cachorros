@@ -4,11 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { type FieldValues, type Path, type Resolver, useForm } from 'react-hook-form'
+import { Controller, type FieldValues, type Path, type Resolver, useForm } from 'react-hook-form'
 import type { ZodType } from 'zod'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
 import { CheckboxField, Field, SelectField, TextareaField } from '@/components/ui/field'
+import { MediaPicker } from '@/features/media/components/media-picker'
+import type { MediaThumbDTO } from '@/features/media/dto'
 import type { ActionResult } from '@/lib/action-result'
 import { useToast } from './toast'
 
@@ -38,6 +40,7 @@ export type FieldDef =
       emptyLabel?: string
     })
   | (Base & { type: 'checkbox' })
+  | (Base & { type: 'media'; kind?: 'photo' | 'logo' })
 
 type EntityFormProps<T extends FieldValues> = {
   /** El mismo esquema que valida la Server Action. */
@@ -50,6 +53,8 @@ type EntityFormProps<T extends FieldValues> = {
   /** A dónde ir al guardar (normalmente la lista); sin ella se queda en la pantalla. */
   redirectTo?: string
   cancelHref?: string
+  /** Miniatura de la imagen ya guardada en cada campo `media` (el formulario solo guarda su id). */
+  mediaPreviews?: Record<string, MediaThumbDTO | null>
 }
 
 /**
@@ -66,10 +71,12 @@ export function EntityForm<T extends FieldValues>({
   successMessage = 'Guardado.',
   redirectTo,
   cancelHref,
+  mediaPreviews,
 }: EntityFormProps<T>) {
   const router = useRouter()
   const toast = useToast()
   const [formError, setFormError] = useState<string | null>(null)
+  const [previews, setPreviews] = useState(mediaPreviews ?? {})
   const form = useForm<T>({
     // El resolver valida; a la acción se envían los valores tal como están en el formulario y el servidor
     // los vuelve a validar y transformar con el mismo esquema.
@@ -101,6 +108,29 @@ export function EntityForm<T extends FieldValues>({
       {formError && <Alert variant="danger">{formError}</Alert>}
       {fields.map((field) => {
         const error = errors[field.name]?.message
+        if (field.type === 'media') {
+          return (
+            <Controller
+              key={field.name}
+              control={form.control}
+              name={field.name as Path<T>}
+              render={({ field: control }) => (
+                <MediaPicker
+                  label={field.label}
+                  help={field.help}
+                  required={field.required}
+                  kind={field.kind}
+                  error={typeof error === 'string' ? error : undefined}
+                  value={previews[field.name] ?? null}
+                  onChange={(media) => {
+                    setPreviews((current) => ({ ...current, [field.name]: media }))
+                    control.onChange(media?.id ?? '')
+                  }}
+                />
+              )}
+            />
+          )
+        }
         const shared = {
           label: field.label,
           help: field.help,

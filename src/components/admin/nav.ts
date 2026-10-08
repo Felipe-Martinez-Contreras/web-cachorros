@@ -1,4 +1,4 @@
-import { House, type LucideIcon, Palette } from 'lucide-react'
+import { House, Images, type LucideIcon, Palette } from 'lucide-react'
 import type { Permission } from '@/lib/permissions'
 
 export type AdminNavItem = {
@@ -17,6 +17,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'General',
     items: [{ href: '/admin', label: 'Inicio', icon: House, permission: 'panel:access', primary: true }],
+  },
+  {
+    label: 'Contenido',
+    items: [
+      { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write', primary: true },
+    ],
   },
   {
     label: 'Sistema',

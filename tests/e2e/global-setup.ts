@@ -9,10 +9,16 @@ function run(args: string[], env: Record<string, string> = {}) {
 }
 
 /**
- * Deja la base lista para las pruebas: datos de ejemplo del seed (sin partido en vivo) y los usuarios de
+ * Deja la base lista para las pruebas: borra lo que crearon las pruebas anteriores, datos de ejemplo del seed (sin partido en vivo) y los usuarios de
  * prueba con una contraseña conocida (los crea o los restablece).
  */
 export default function globalSetup() {
+  const clean = run(['e2e-clean'])
+  if (clean.status !== 0) {
+    throw new Error(`No se pudo limpiar lo que dejaron las pruebas anteriores:
+${clean.stdout}${clean.stderr}`)
+  }
+
   const seed = run(['seed'])
   if (seed.status !== 0) {
     throw new Error(
