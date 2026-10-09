@@ -145,7 +145,9 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   *streaming* necesita JavaScript para colocarse y la página quedaría en el *skeleton* sin JS. El único límite está
   en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
 - Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
-  como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`.
+  como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`. La página 404
+  (`src/app/not-found.tsx`) lleva el marco del sitio (`SiteFrame`) y lee los datos del club con
+  `loadSiteOrFallback()`: si la base falla usa el respaldo, nunca responde 500.
 - Las páginas de detalle (`/noticias/[slug]`, `/partidos/[slug]`, `/jugadores/[slug]`, `/plantel/[serie]`) reciben
   su 404 y su 301 desde `proxy.ts` (ADR 0008), que llama a `src/features/<dominio>/slug.ts`: **una sola consulta
   indexada**, con la misma regla de visibilidad que el DTO público; si la base falla, deja pasar. La página

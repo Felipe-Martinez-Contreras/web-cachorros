@@ -24,6 +24,13 @@ function collectErrors(page: Page): string[] {
 
 const NOT_FOUND = 'Este balón se fue fuera de la cancha'
 
+/** La página 404 del club lleva el encabezado y el pie del sitio (especificación 3.6). */
+async function expectClubNotFound(page: Page) {
+  await expect(page.getByRole('heading', { level: 1, name: NOT_FOUND })).toBeVisible()
+  await expect(page.getByRole('banner')).toBeVisible()
+  await expect(page.getByRole('contentinfo')).toBeVisible()
+}
+
 // Direcciones de detalle que no existen: el proxy las responde con 404 real (ADR 0008).
 const MISSING_PATHS = [
   '/partidos/no-existe-este-partido',
@@ -163,7 +170,7 @@ test.describe('partidos', () => {
     for (const path of MISSING_PATHS) {
       const response = await page.goto(path)
       expect(response?.status(), `${path} responde 404`).toBe(404)
-      await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+      await expectClubNotFound(page)
     }
   })
 })
@@ -219,7 +226,7 @@ test.describe('sin JavaScript', () => {
     for (const path of MISSING_PATHS) {
       const response = await page.goto(path)
       expect(response?.status(), `${path} responde 404`).toBe(404)
-      await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+      await expectClubNotFound(page)
     }
 
     const juvenile = (await seedJuveniles())[testInfo.project.name === 'celular' ? 0 : 1]
@@ -227,7 +234,7 @@ test.describe('sin JavaScript', () => {
     if (!juvenile) return
     const response = await page.goto(`/jugadores/${juvenile.slug}`)
     expect(response?.status(), 'la ficha de un menor responde 404').toBe(404)
-    await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+    await expectClubNotFound(page)
     expect(await page.content()).not.toContain(`${juvenile.first_name} ${juvenile.last_name}`)
 
     // Las rutas fijas que comparten el prefijo siguen respondiendo.
@@ -308,7 +315,7 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
 
   // Su ficha no existe.
   expect((await page.goto(`/jugadores/${juvenile.slug}`))?.status()).toBe(404)
-  await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+  await expectClubNotFound(page)
   expect(await page.content()).not.toContain(surname)
 
   // Goleadores y partidos de la serie juvenil: nadie con apellido ni ficha.
@@ -338,5 +345,5 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
   await expect(card).toBeVisible()
   await expect(card.getByRole('link')).toHaveCount(0)
   await page.goto(`/jugadores/${juvenile.slug}`)
-  await expect(page.getByRole('heading', { name: NOT_FOUND })).toBeVisible()
+  await expectClubNotFound(page)
 })
