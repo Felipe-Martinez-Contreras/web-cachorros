@@ -28,6 +28,10 @@ module.exports = {
         // defecto («simulate») no sirve: todo llega en milisegundos, los scripts se ejecutan antes del primer
         // pintado y el LCP estimado sale mucho peor que con una red real.
         throttlingMethod: process.env.LH_THROTTLING || 'devtools',
+        // Fuera de producción todo el sitio lleva `noindex` a propósito (especificación 11), y esta medición
+        // corre como desarrollo (ahí Node sirve las imágenes). Que producción sí se deja indexar lo verifica
+        // `tests/e2e/seo.spec.ts`.
+        skipAudits: ['is-crawlable'],
       },
     },
     assert: {

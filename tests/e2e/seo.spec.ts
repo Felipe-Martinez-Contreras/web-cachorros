@@ -18,6 +18,9 @@ test.beforeAll(async () => {
   const match = (series: string) => sql<{ slug: string }[]>`
     select m.slug from matches m join series s on s.id = m.series_id
     where s.slug = ${series} and m.club_side <> 'ninguno' and m.status = 'finalizado'
+      -- Solo partidos del seed (las pruebas crean los suyos desde la fecha 40): la segunda instancia es
+      -- otro proceso, con su propia caché en memoria, y no se entera de lo que se crea por el panel de la primera.
+      and coalesce(m.round_number, 0) < 40
     order by m.kickoff_at desc limit 1`
   const [[honor], [juvenil], [adult], juveniles] = await Promise.all([
     match('honor'),
