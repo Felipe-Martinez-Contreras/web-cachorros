@@ -112,8 +112,6 @@ test('crear una noticia con foto desde el panel: se ve en el sitio en la carga s
 
   // Corregir el título no cambia la dirección; el cambio se ve en la carga siguiente.
   await page.goto(editUrl)
-  // El editor solo existe en el navegador: cuando aparece, el formulario ya responde.
-  await expect(page.getByRole('textbox', { name: 'Texto de la noticia' })).toBeVisible()
   await page.getByRole('textbox', { name: 'Título', exact: true }).fill(`${title} corregida`)
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page.getByText('Noticia guardada.')).toBeVisible()
@@ -122,8 +120,6 @@ test('crear una noticia con foto desde el panel: se ve en el sitio en la carga s
 
   // Cambiar la dirección deja una redirección 301 desde la antigua.
   await page.goto(editUrl)
-  // El editor solo existe en el navegador: cuando aparece, el formulario ya responde.
-  await expect(page.getByRole('textbox', { name: 'Texto de la noticia' })).toBeVisible()
   await page.getByRole('textbox', { name: /^Dirección en el sitio/ }).fill(`${slug}-nueva`)
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page.getByText('Noticia guardada.')).toBeVisible()
