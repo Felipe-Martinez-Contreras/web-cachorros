@@ -593,6 +593,14 @@ export async function seedSport({ tx, now, live, media }: Options): Promise<Spor
   await upsert(tx, matchLineups, lineupRows)
   await upsert(tx, matchEvents, eventRows)
   await upsert(tx, standingsTables, tableDefs)
+  // Las filas también se reemplazan: si alguien guardó la tabla desde el panel, sus filas tienen otros ids
+  // y chocarían con la unicidad (tabla, equipo).
+  await tx.delete(standingsRows).where(
+    inArray(
+      standingsRows.tableId,
+      tableDefs.map((table) => must(table.id, 'tabla')),
+    ),
+  )
   await upsert(tx, standingsRows, tableRows)
 
   // ── Temporada anterior: solo estadísticas históricas, sin partidos ficticios ─────────────────

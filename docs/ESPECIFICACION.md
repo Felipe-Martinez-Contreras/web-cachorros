@@ -117,7 +117,7 @@ Todo lo descrito en las secciones 4 a 13. Lo que queda fuera está en la secció
 | Capa | Decisión | Notas |
 |---|---|---|
 | Runtime | Node.js 24 LTS | Imagen `node:24-alpine`. Node 26 pasa a LTS a fines de octubre de 2026: adoptarlo vía Renovate cuando lo esté. |
-| Framework | Next.js 16.x: App Router, React Server Components, Server Actions, Cache Components (`cacheComponents: true`), `output: 'standalone'` | `proxy.ts` (ex `middleware.ts`) solo para redirecciones optimistas y cabeceras del panel; su *matcher* excluye `/api`, `/_next` y `/media` (ver 16). Si al iniciar existe una versión mayor estable, evaluarla vía ADR. |
+| Framework | Next.js 16.x: App Router, React Server Components, Server Actions, Cache Components (`cacheComponents: true`), `output: 'standalone'` | `proxy.ts` (ex `middleware.ts`) solo para redirecciones optimistas y cabeceras del panel y para el estado HTTP (404 / 301) de las páginas de detalle públicas (ADR 0008); su *matcher* excluye `/api`, `/_next` y `/media` (ver 16). Si al iniciar existe una versión mayor estable, evaluarla vía ADR. |
 | Lenguaje | TypeScript en modo estricto ampliado | Sección 3.2. |
 | Estilos | Tailwind CSS v4 (configuración CSS-first con `@theme`) | Tokens en `src/styles/tokens.css`. |
 | Componentes | shadcn/ui (sobre Radix Primitives), copiados al repo y adaptados a la marca | Todos los textos traducidos al español. |
@@ -185,7 +185,7 @@ Todo lo descrito en las secciones 4 a 13. Lo que queda fuera está en la secció
 - Sesiones en BD; cookies `HttpOnly`, `Secure`, `SameSite=Lax`; rate limit con almacenamiento persistente; recuperación de contraseña por email (enlace válido 1 h); listado y revocación de sesiones; Turnstile en el login (opcional, vía plugin de captcha).
 - Contraseñas de ≥ 12 caracteres; verificación contra contraseñas filtradas si el plugin está disponible; 2FA TOTP `[DECIDIR: ¿obligatorio para admins? Default: recomendado, no obligatorio]`.
 - Autorización: columna `role` (texto gestionado por el plugin admin; desactivar una cuenta = `banned`) + matriz de permisos en código (`can(user, 'matches:live')`). v1 habilita solo `admin` (todos los permisos); la estructura queda lista para `editor`, `delegado` (acotado por serie) y `prensa`.
-- La autorización se verifica **en cada Server Action, Route Handler y layout del panel**. `proxy.ts` solo hace redirecciones optimistas: no es una barrera de seguridad.
+- La autorización se verifica **en cada Server Action, Route Handler y layout del panel**. `proxy.ts` solo hace redirecciones optimistas y decide el estado HTTP de las páginas de detalle públicas (ADR 0008): no es una barrera de seguridad.
 
 ### 2.6 Tiempo real: polling con micro-caché en el borde
 
@@ -1679,7 +1679,7 @@ SEED_ADMIN_PASSWORD=
 3. Rocket Loader y Email Address Obfuscation de Cloudflare reescriben el HTML y rompen la hidratación de React: desactivarlos.
 4. Cloudflare ignora `Vary` al cachear: no cachear HTML/RSC en el borde en v1.
 5. Detrás del proxy, Caddy debe conservar `Host` y enviar `X-Forwarded-Proto/Host`; si no, Next rechaza las Server Actions por origen distinto.
-6. `proxy.ts` no es una barrera de autorización (precedente: CVE-2025-29927): verificar en cada acción. Además, toda petición que pasa por el proxy tiene su cuerpo limitado (10 MB por defecto, `experimental.proxyClientMaxBodySize`) y lo excedido se trunca **sin error**: por eso el *matcher* excluye `/api` (subidas de medios).
+6. `proxy.ts` no es una barrera de autorización (precedente: CVE-2025-29927): verificar en cada acción. Además, toda petición que pasa por el proxy tiene su cuerpo limitado (10 MB por defecto, `experimental.proxyClientMaxBodySize`) y lo excedido se trunca **sin error**: por eso el *matcher* excluye `/api` (subidas de medios). El proxy también responde el 404 y el 301 de las páginas de detalle públicas (ADR 0008): una consulta indexada por petición y, si la base falla, deja pasar.
 7. Mantener Next.js y React parchados: hubo vulnerabilidades críticas en React Server Components en diciembre de 2025.
 8. Satori (`next/og`): solo flexbox; fuentes TTF/OTF/WOFF estáticas (no WOFF2 ni variables); imágenes PNG/JPEG con URL absoluta o *data URI*; incluir fuentes y escudos en el output standalone.
 9. Los binarios precompilados de sharp no decodifican HEIC: convertir en el navegador.

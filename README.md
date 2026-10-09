@@ -9,8 +9,9 @@ administración propio, pensado para usarse desde el celular.
 - **Decisiones de arquitectura:** [`docs/adr/`](docs/adr/)
 - **Avance por fases:** [`docs/fases/`](docs/fases/)
 
-> **Estado:** Fase 0 (cimientos). Hay proyecto ejecutable, base de datos, login del panel, pruebas, CI e imagen
-> Docker. El diseño, la portada y el contenido llegan desde la Fase 1.
+> **Estado:** Fase 2a (panel deportivo y secciones de partidos y plantel). Ya funcionan la portada, el panel
+> para programar partidos, cargar resultados, tablas, plantel y medios, y las páginas públicas de Partidos y
+> Plantel. Noticias, historia, configuración y SEO llegan en la Fase 2b; el resto, en las fases siguientes.
 
 ## Qué necesitas
 

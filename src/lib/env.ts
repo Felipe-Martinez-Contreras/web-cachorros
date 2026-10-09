@@ -41,6 +41,8 @@ export const env = createEnv({
 
     // Carpeta de las imágenes procesadas. En la VM es el volumen /data/uploads, que Caddy sirve en /media.
     UPLOADS_DIR: z.string().default('./data/uploads'),
+    // Tope por archivo subido; Caddy corta en 15 MB como red de seguridad (especificación 9.5).
+    MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(50).default(12),
   },
   experimental__runtimeEnv: {},
   emptyStringAsUndefined: true,

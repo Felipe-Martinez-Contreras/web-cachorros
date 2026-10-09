@@ -10,9 +10,14 @@ export const PERMISSIONS = [
   'settings:write',
   'users:manage',
   'audit:read',
+  'sport:write', // series, temporadas, competencias, rivales y canchas
+  'players:write', // jugadores, inscripciones y cuerpo técnico
   'matches:write',
   'matches:live',
+  'standings:write',
   'news:write',
+  'history:write',
+  'pages:write',
   'media:write',
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]

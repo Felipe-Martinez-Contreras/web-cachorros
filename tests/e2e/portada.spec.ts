@@ -30,7 +30,10 @@ test.describe('portada', () => {
     const matchday = page.getByRole('region', { name: 'Próximo partido' })
     await expect(matchday.getByText('Próximo partido')).toBeVisible()
     await expect(matchday.getByText(/^Honor · /)).toBeVisible()
-    await expect(matchday.getByText(/^Comienza el \w+ \d+ de \w+ de \d{4}, \d{2}:\d{2} h\.$/)).toBeAttached()
+    // `\p{L}`: los días y meses llevan tildes («sábado», «miércoles») que `\w` no reconoce.
+    await expect(
+      matchday.getByText(/^Comienza el \p{L}+ \d+ de \p{L}+ de \d{4}, \d{2}:\d{2} h\.$/u),
+    ).toBeAttached()
     await expect(matchday.locator('[aria-hidden="true"] >> text=/^\\d{2}$/').first()).toBeVisible()
     await expect(matchday.getByText(/^Cancha /)).toBeVisible()
     // «Cómo llegar» solo aparece si la cancha del partido tiene coordenadas (la del club las tiene).

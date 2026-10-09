@@ -1,0 +1,93 @@
+import {
+  CalendarDays,
+  CalendarRange,
+  ClipboardList,
+  House,
+  Images,
+  ListOrdered,
+  type LucideIcon,
+  MapPin,
+  Palette,
+  Shield,
+  ShieldHalf,
+  Trophy,
+  Users,
+} from 'lucide-react'
+import type { Permission } from '@/lib/permissions'
+
+export type AdminNavItem = {
+  href: string
+  label: string
+  icon: LucideIcon
+  permission: Permission
+  /** Aparece en la barra inferior del celular (máximo 4; el resto va en «Más»). */
+  primary?: boolean
+}
+
+export type AdminNavGroup = { label: string; items: AdminNavItem[] }
+
+/** Módulos del panel (especificación 7.2). Cada módulo se agrega aquí cuando su página existe. */
+export const ADMIN_NAV: AdminNavGroup[] = [
+  {
+    label: 'General',
+    items: [{ href: '/admin', label: 'Inicio', icon: House, permission: 'panel:access', primary: true }],
+  },
+  {
+    label: 'Partidos',
+    items: [
+      {
+        href: '/admin/partidos',
+        label: 'Partidos',
+        icon: CalendarDays,
+        permission: 'matches:write',
+        primary: true,
+      },
+      { href: '/admin/posiciones', label: 'Posiciones', icon: ListOrdered, permission: 'standings:write' },
+    ],
+  },
+  {
+    label: 'Plantel',
+    items: [
+      {
+        href: '/admin/jugadores',
+        label: 'Jugadores',
+        icon: Users,
+        permission: 'players:write',
+        primary: true,
+      },
+      {
+        href: '/admin/cuerpo-tecnico',
+        label: 'Cuerpo técnico',
+        icon: ClipboardList,
+        permission: 'players:write',
+      },
+    ],
+  },
+  {
+    label: 'Competencia',
+    items: [
+      { href: '/admin/series', label: 'Series', icon: Shield, permission: 'sport:write' },
+      { href: '/admin/temporadas', label: 'Temporadas', icon: CalendarRange, permission: 'sport:write' },
+      { href: '/admin/competencias', label: 'Competencias', icon: Trophy, permission: 'sport:write' },
+      { href: '/admin/rivales', label: 'Rivales', icon: ShieldHalf, permission: 'sport:write' },
+      { href: '/admin/canchas', label: 'Canchas', icon: MapPin, permission: 'sport:write' },
+    ],
+  },
+  {
+    label: 'Contenido',
+    items: [
+      { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write', primary: true },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      {
+        href: '/admin/sistema-de-diseno',
+        label: 'Sistema de diseño',
+        icon: Palette,
+        permission: 'panel:access',
+      },
+    ],
+  },
+]

@@ -9,17 +9,17 @@ import {
   mediaAssets,
   series,
   siteSettings,
-  standingsRows,
   standingsTables,
   teams,
   venues,
 } from '@/db/schema'
+import { rankTable } from '@/features/standings/compute'
 import { tags } from '@/lib/cache-tags'
 import { toImageDTO } from '@/lib/images/dto'
 import { directionsUrls } from '@/lib/links'
 import type { MatchDTO, MatchdayDTO, StandingsDTO, TeamDTO } from './dto'
 import { startOfSantiagoDay } from './lib/countdown'
-import { compactStandings, computeStandings, rankStandings, type StandingsRow } from './lib/standings'
+import { compactStandings } from './lib/standings'
 
 const homeTeam = alias(teams, 'home_team')
 const awayTeam = alias(teams, 'away_team')
@@ -51,7 +51,7 @@ const awayCrestSelect = {
 }
 
 /** Una sola consulta por lista de partidos: equipos, escudos, serie, competencia y cancha con joins. */
-function selectMatches() {
+export function selectMatches() {
   return db
     .select({
       id: matches.id,
@@ -91,9 +91,9 @@ function selectMatches() {
     .leftJoin(venues, eq(venues.id, matches.venueId))
 }
 
-type MatchRow = Awaited<ReturnType<typeof selectMatches>>[number]
+export type MatchRow = Awaited<ReturnType<typeof selectMatches>>[number]
 
-function toTeamDTO(team: MatchRow['home'], crest: MatchRow['homeCrest']): TeamDTO {
+export function toTeamDTO(team: MatchRow['home'], crest: MatchRow['homeCrest']): TeamDTO {
   return {
     name: team.name,
     shortName: team.shortName,
@@ -102,7 +102,7 @@ function toTeamDTO(team: MatchRow['home'], crest: MatchRow['homeCrest']): TeamDT
   }
 }
 
-function toMatchDTO(row: MatchRow): MatchDTO {
+export function toMatchDTO(row: MatchRow): MatchDTO {
   return {
     id: row.id,
     slug: row.slug,
@@ -135,10 +135,10 @@ function toMatchDTO(row: MatchRow): MatchDTO {
   }
 }
 
-const isClubMatch = ne(matches.clubSide, 'ninguno')
+export const isClubMatch = ne(matches.clubSide, 'ninguno')
 const NEXT_MATCH_WINDOW_DAYS = 7
 
-async function featuredSeriesId(): Promise<string | null> {
+export async function featuredSeriesId(): Promise<string | null> {
   const [row] = await db
     .select({ id: siteSettings.featuredSeriesId })
     .from(siteSettings)
@@ -263,50 +263,9 @@ export async function getFeaturedStandings(): Promise<StandingsDTO | null> {
     .limit(1)
   if (!table) return null
 
-  const rule = { pointsWin: table.pointsWin, pointsDraw: table.pointsDraw }
-  let ranked: StandingsRow[]
-  if (table.mode === 'calculada') {
-    // Desde los resultados cargados, incluidos los partidos entre rivales (8.6).
-    const finished = await db
-      .select({
-        homeTeamId: matches.homeTeamId,
-        awayTeamId: matches.awayTeamId,
-        homeScore: matches.homeScore,
-        awayScore: matches.awayScore,
-      })
-      .from(matches)
-      .where(
-        and(
-          eq(matches.competitionId, table.competitionId),
-          eq(matches.seriesId, featuredId),
-          eq(matches.status, 'finalizado'),
-        ),
-      )
-    const adjustments = await db
-      .select({
-        teamId: standingsRows.teamId,
-        pointsAdjustment: standingsRows.pointsAdjustment,
-        manualPosition: standingsRows.position,
-      })
-      .from(standingsRows)
-      .where(eq(standingsRows.tableId, table.id))
-    ranked = computeStandings(finished, rule, { adjustments })
-  } else {
-    const rows = await db
-      .select({
-        teamId: standingsRows.teamId,
-        won: standingsRows.won,
-        drawn: standingsRows.drawn,
-        lost: standingsRows.lost,
-        goalsFor: standingsRows.goalsFor,
-        goalsAgainst: standingsRows.goalsAgainst,
-        pointsAdjustment: standingsRows.pointsAdjustment,
-        manualPosition: standingsRows.position,
-      })
-      .from(standingsRows)
-      .where(eq(standingsRows.tableId, table.id))
-    ranked = rankStandings(rows, rule)
-  }
+  // La tabla se invalida sola al guardar su grilla o al cargar un resultado de esa competencia y serie.
+  cacheTag(tags.standings(table.competitionId, featuredId))
+  const ranked = await rankTable({ ...table, seriesId: featuredId })
   if (ranked.length === 0) return null
 
   const teamRows = await db

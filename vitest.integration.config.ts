@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 import { testDb } from './tests/integration/db-urls.ts'
 import { alias } from './vitest.config.ts'
@@ -9,6 +11,7 @@ export default defineConfig({
     include: ['tests/integration/**/*.test.ts'],
     environment: 'node',
     globalSetup: ['tests/integration/global-setup.ts'],
+    setupFiles: ['tests/integration/next-mocks.ts'],
     fileParallelism: false,
     testTimeout: 20_000,
     env: {
@@ -20,6 +23,8 @@ export default defineConfig({
       SMTP_PORT: '1025',
       MAIL_FROM: 'Pruebas <pruebas@cachorros.test>',
       LOG_LEVEL: 'silent',
+      // Las subidas de las pruebas no se mezclan con las de desarrollo.
+      UPLOADS_DIR: path.join(tmpdir(), 'cachorros-test-uploads'),
     },
   },
 })

@@ -132,7 +132,7 @@ async function svgDensity(input: Buffer): Promise<number> {
   return SVG_DENSITIES.at(-1) ?? 72
 }
 
-function isSvg(input: Buffer): boolean {
+export function isSvg(input: Buffer): boolean {
   const head = input.subarray(0, 1024).toString('utf8').trimStart().toLowerCase()
   return head.startsWith('<svg') || (head.startsWith('<?xml') && head.includes('<svg'))
 }
