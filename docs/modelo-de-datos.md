@@ -7,7 +7,7 @@ migraciones revisadas de `drizzle/`.
 
 - PostgreSQL 18, esquema `public`, tablas en plural y `snake_case`.
 - PK `id uuid default uuidv7()`. Excepción: las tablas de Better Auth (`user`, `session`, `account`,
-  `verification`, `rate_limit`) usan ids de texto.
+  `verification`, `rate_limit`, `two_factor`) usan ids de texto.
 - `created_at` y `updated_at` como `timestamptz` en UTC; se muestran en `America/Santiago`.
 - FKs indexadas. `ON DELETE RESTRICT` por defecto; `CASCADE` solo para hijos puros (eventos y nómina de un
   partido, ítems de álbum, variantes e imágenes de producto, clics de auspiciador); `SET NULL` en referencias
@@ -20,7 +20,7 @@ migraciones revisadas de `drizzle/`.
 
 | Archivo | Tablas |
 |---|---|
-| `auth.ts` | `user`, `session`, `account`, `verification`, `rate_limit` (Better Auth) |
+| `auth.ts` | `user`, `session`, `account`, `verification`, `rate_limit` y `two_factor` (Better Auth). `two_factor` guarda cifrados el secreto TOTP y los códigos de respaldo de quien activó la verificación en dos pasos (migración `0003`) |
 | `system.ts` | `audit_log`, `site_settings`, `page_blocks`, `slug_redirects`, `ops_runs` |
 | `media.ts` | `media_assets` |
 | `sport.ts` | `seasons`, `series`, `competitions`, `teams`, `venues`, `matches`, `match_events`, `match_lineups`, `players`, `squad_registrations`, `staff_members`, `staff_assignments`, `player_stat_adjustments`, `standings_tables`, `standings_rows`, `training_schedules` y la vista `v_player_season_stats` |

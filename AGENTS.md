@@ -61,7 +61,7 @@ detrás de Cloudflare.
 | `pnpm check` / `pnpm check:fix` | Biome (lint + formato) + `tsc --noEmit` / corrige formato y lint |
 | `pnpm test` | Pruebas unitarias (Vitest) |
 | `pnpm test:integration` | Integración contra PostgreSQL 18 real (base aparte `cachorros_test`, con el rol restringido) |
-| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes), en el puerto 3100 |
+| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes), en el puerto 3100; `seo.spec.ts` usa además una segunda instancia de la misma build en el 3101 (otro `SITE_URL`, `SITE_ENV=production`) |
 | `pnpm db:generate` | Genera migraciones SQL con `drizzle-kit generate` (se revisan y se commitean) |
 | `pnpm db:migrate` | Aplica migraciones con el migrador de `drizzle-orm` |
 | `pnpm db:seed` / `pnpm db:reset` | Carga datos de ejemplo (idempotente; `--en-vivo`, `--hoy=AAAA-MM-DD`) / recrea la BD (solo desarrollo) |
@@ -240,12 +240,35 @@ Ningún DTO público se arma leyendo `players` directamente.
   explica en español.
 - Los datos del club viven en la BD (panel → Configuración), **no** en `.env`.
 
+### SEO (11)
+
+- Los metadatos se generan en runtime: el layout raíz usa `rootMetadata()` (`metadataBase` desde `SITE_URL`,
+  `noindex` si `SITE_ENV ≠ production`) y cada página pública exporta `generateMetadata` con
+  `pageMetadata({ title, description, path })` (`src/features/seo/metadata.ts`): canonical, Open Graph y Twitter
+  con direcciones relativas que `metadataBase` vuelve absolutas. Nunca `export const metadata` con URLs.
+- JSON-LD con los constructores puros de `src/features/seo/lib/json-ld.ts` y el componente `<JsonLd>` (el JSON
+  va escapado como texto, sin `dangerouslySetInnerHTML`). Reciben DTOs públicos: un dato privado o un marcador
+  `[COMPLETAR]` nunca llega a los datos estructurados.
+- Una sección pública nueva se agrega a `getSitemapEntries()` (`src/features/seo/sitemap.ts`) con la misma regla
+  de visibilidad que su página. Los jugadores pasan por `loadMinorIds`: ningún menor en el sitemap.
+
+### Usuarios y seguridad (7.6)
+
+- Las cuentas se invitan desde el panel (`invitarAdministrador`); no hay registro público.
+- Lo que reemplaza la cookie de sesión (activar o desactivar los dos pasos, verificar el código al entrar) lo hace
+  el navegador contra `/api/auth` y se audita en los *hooks* de `src/lib/auth/index.ts`. Todo lo demás (invitar,
+  desactivar, cambiar la contraseña, cerrar sesiones) son Server Actions con `mutate()`.
+- La auditoría guarda quién hizo qué, nunca valores sensibles: ni correos, ni datos bancarios, ni contraseñas.
+- En un formulario, un marcador `[COMPLETAR: …]` se acepta tal cual (`isContentMarker`): el dato sigue en los
+  pendientes hasta que el club lo complete.
+
 ### Fechas, dinero y formatos chilenos (3.8)
 
 - Persistir `timestamptz` en UTC; mostrar y razonar en `America/Santiago` con `timeZone` explícito.
 - Un único módulo `src/lib/format.ts` (`Intl` `es-CL`); cálculos con date-fns v4 + `@date-fns/tz`; reloj inyectable
   en `src/lib/clock.ts`.
-- Dinero en CLP como `integer` → «$15.000». Teléfonos en E.164. RUT con módulo 11 y formato `12.345.678-5`.
+- Dinero en CLP como `integer` → «$15.000». Teléfonos en E.164 (`toE164()` en `src/lib/phone.ts`, o
+  `optionalPhone()` en un esquema). RUT con módulo 11 y formato `12.345.678-5`.
 
 ### Idioma y nombres (3.9)
 
