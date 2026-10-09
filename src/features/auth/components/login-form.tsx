@@ -1,6 +1,7 @@
 'use client' // Cliente: envía las credenciales a /api/auth (con rate limit) y muestra el resultado.
 
 import { type FormEvent, useState } from 'react'
+import { FormBody } from '@/components/admin/form-body'
 import { authClient } from '@/lib/auth/client'
 import { authErrorMessage } from '@/lib/auth/errors'
 import { z } from '@/lib/zod'
@@ -65,66 +66,70 @@ export function LoginForm() {
   if (secondStep) {
     const backup = secondStep === 'respaldo'
     return (
-      <form onSubmit={onCode} noValidate className="grid gap-4">
-        <p className="text-neutral-600">
-          {backup
-            ? 'Escribe uno de los códigos de respaldo que guardaste al activar los dos pasos.'
-            : 'Tu cuenta tiene verificación en dos pasos. Escribe el código de 6 dígitos de tu app autenticadora.'}
-        </p>
-        <Field
-          // Cambiar de método vacía el campo.
-          key={secondStep}
-          name="code"
-          label={backup ? 'Código de respaldo' : 'Código de la app'}
-          inputMode={backup ? 'text' : 'numeric'}
-          autoComplete="one-time-code"
-          required
-        />
-        <button type="submit" disabled={pending} className={primaryButtonClass}>
-          {pending ? 'Verificando…' : 'Verificar y entrar'}
-        </button>
-        <button
-          type="button"
-          className="min-h-12 text-left underline"
-          onClick={() => {
-            setMessage('')
-            setSecondStep(backup ? 'app' : 'respaldo')
-          }}
-        >
-          {backup ? 'Usar el código de la app' : 'No tengo mi celular: usar un código de respaldo'}
-        </button>
-        <p role="alert" className="min-h-6 text-danger">
-          {message}
-        </p>
+      <form onSubmit={onCode} noValidate>
+        <FormBody className="grid gap-4">
+          <p className="text-neutral-600">
+            {backup
+              ? 'Escribe uno de los códigos de respaldo que guardaste al activar los dos pasos.'
+              : 'Tu cuenta tiene verificación en dos pasos. Escribe el código de 6 dígitos de tu app autenticadora.'}
+          </p>
+          <Field
+            // Cambiar de método vacía el campo.
+            key={secondStep}
+            name="code"
+            label={backup ? 'Código de respaldo' : 'Código de la app'}
+            inputMode={backup ? 'text' : 'numeric'}
+            autoComplete="one-time-code"
+            required
+          />
+          <button type="submit" disabled={pending} className={primaryButtonClass}>
+            {pending ? 'Verificando…' : 'Verificar y entrar'}
+          </button>
+          <button
+            type="button"
+            className="min-h-12 text-left underline"
+            onClick={() => {
+              setMessage('')
+              setSecondStep(backup ? 'app' : 'respaldo')
+            }}
+          >
+            {backup ? 'Usar el código de la app' : 'No tengo mi celular: usar un código de respaldo'}
+          </button>
+          <p role="alert" className="min-h-6 text-danger">
+            {message}
+          </p>
+        </FormBody>
       </form>
     )
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-4">
-      <Field
-        name="email"
-        label="Correo"
-        type="email"
-        autoComplete="username"
-        inputMode="email"
-        required
-        error={fieldErrors.email?.[0]}
-      />
-      <Field
-        name="password"
-        label="Contraseña"
-        type="password"
-        autoComplete="current-password"
-        required
-        error={fieldErrors.password?.[0]}
-      />
-      <button type="submit" disabled={pending} className={primaryButtonClass}>
-        {pending ? 'Entrando…' : 'Entrar'}
-      </button>
-      <p role="alert" className="min-h-6 text-danger">
-        {message}
-      </p>
+    <form onSubmit={onSubmit} noValidate>
+      <FormBody className="grid gap-4">
+        <Field
+          name="email"
+          label="Correo"
+          type="email"
+          autoComplete="username"
+          inputMode="email"
+          required
+          error={fieldErrors.email?.[0]}
+        />
+        <Field
+          name="password"
+          label="Contraseña"
+          type="password"
+          autoComplete="current-password"
+          required
+          error={fieldErrors.password?.[0]}
+        />
+        <button type="submit" disabled={pending} className={primaryButtonClass}>
+          {pending ? 'Entrando…' : 'Entrar'}
+        </button>
+        <p role="alert" className="min-h-6 text-danger">
+          {message}
+        </p>
+      </FormBody>
     </form>
   )
 }

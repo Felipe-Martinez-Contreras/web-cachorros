@@ -3,6 +3,7 @@
 import { ImageUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useId, useRef, useState } from 'react'
+import { FormBody } from '@/components/admin/form-body'
 import { useToast } from '@/components/admin/toast'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
@@ -109,7 +110,7 @@ export function Uploader({ kind = 'photo', multiple = true, onUploaded }: Upload
   const total = items.length
 
   return (
-    <div className="grid gap-4">
+    <FormBody className="grid gap-4">
       <Field
         name={`${uid}-alt`}
         label={multiple ? 'Descripción de las fotos' : 'Descripción de la imagen'}
@@ -181,6 +182,6 @@ export function Uploader({ kind = 'photo', multiple = true, onUploaded }: Upload
           )}
         </div>
       )}
-    </div>
+    </FormBody>
   )
 }

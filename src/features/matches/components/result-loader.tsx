@@ -5,6 +5,7 @@ import { Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useId, useRef, useState } from 'react'
 import { type Resolver, useForm } from 'react-hook-form'
+import { FormBody } from '@/components/admin/form-body'
 import { useToast } from '@/components/admin/toast'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
@@ -372,107 +373,109 @@ function EventForm({
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-3 rounded-md border-2 border-ink p-3">
-      <h3 className="font-bold">{KIND_LABELS[kind]}</h3>
-      {formError && <Alert variant="danger">{formError}</Alert>}
-      {variants.length > 1 && (
-        <SelectField id={`${uid}-variant`} label="Tipo" {...form.register('variant')}>
-          {variants.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </SelectField>
-      )}
-      {isComment ? (
-        <TextareaField
-          id={`${uid}-comment`}
-          label="Comentario"
-          help="Hasta 280 caracteres. Se ve en la cronología pública del partido."
-          maxLength={280}
-          rows={3}
-          error={errors.comment?.message}
-          {...form.register('comment')}
-        />
-      ) : (
-        <>
-          {isClub ? (
-            <SelectField
-              id={`${uid}-player`}
-              label={isChange ? 'Sale' : 'Jugador'}
-              required={playerOptional ? false : undefined}
-              error={errors.playerId?.message}
-              {...form.register('playerId')}
-            >
-              <option value="">{playerOptional ? 'Sin especificar' : 'Elige al jugador'}</option>
-              {players.map((player) => (
-                <option key={player.playerId} value={player.playerId}>
-                  {player.shirtNumber ? `${player.shirtNumber} · ` : ''}
-                  {player.name}
-                </option>
-              ))}
-            </SelectField>
-          ) : (
-            <Field
-              id={`${uid}-name`}
-              label="Nombre del jugador rival"
-              required={false}
-              maxLength={80}
-              error={errors.freeTextName?.message}
-              {...form.register('freeTextName')}
-            />
-          )}
-          {isChange && (
-            <SelectField
-              id={`${uid}-related`}
-              label="Entra"
-              error={errors.relatedPlayerId?.message}
-              {...form.register('relatedPlayerId')}
-            >
-              <option value="">Elige al jugador</option>
-              {players.map((player) => (
-                <option key={player.playerId} value={player.playerId}>
-                  {player.shirtNumber ? `${player.shirtNumber} · ` : ''}
-                  {player.name}
-                </option>
-              ))}
-            </SelectField>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              id={`${uid}-minute`}
-              label="Minuto"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={150}
-              required={false}
-              error={errors.minute?.message}
-              {...form.register('minute')}
-            />
-            <Field
-              id={`${uid}-stoppage`}
-              label="Adición"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={30}
-              required={false}
-              help="Para «45+2», escribe 45 y 2."
-              error={errors.stoppageMinute?.message}
-              {...form.register('stoppageMinute')}
-            />
-          </div>
-        </>
-      )}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
-          Registrar
-        </Button>
-        <Button variant="outline" size="lg" onClick={onDone}>
-          Cancelar
-        </Button>
-      </div>
+    <form onSubmit={onSubmit} noValidate>
+      <FormBody className="grid gap-3 rounded-md border-2 border-ink p-3">
+        <h3 className="font-bold">{KIND_LABELS[kind]}</h3>
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        {variants.length > 1 && (
+          <SelectField id={`${uid}-variant`} label="Tipo" {...form.register('variant')}>
+            {variants.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </SelectField>
+        )}
+        {isComment ? (
+          <TextareaField
+            id={`${uid}-comment`}
+            label="Comentario"
+            help="Hasta 280 caracteres. Se ve en la cronología pública del partido."
+            maxLength={280}
+            rows={3}
+            error={errors.comment?.message}
+            {...form.register('comment')}
+          />
+        ) : (
+          <>
+            {isClub ? (
+              <SelectField
+                id={`${uid}-player`}
+                label={isChange ? 'Sale' : 'Jugador'}
+                required={playerOptional ? false : undefined}
+                error={errors.playerId?.message}
+                {...form.register('playerId')}
+              >
+                <option value="">{playerOptional ? 'Sin especificar' : 'Elige al jugador'}</option>
+                {players.map((player) => (
+                  <option key={player.playerId} value={player.playerId}>
+                    {player.shirtNumber ? `${player.shirtNumber} · ` : ''}
+                    {player.name}
+                  </option>
+                ))}
+              </SelectField>
+            ) : (
+              <Field
+                id={`${uid}-name`}
+                label="Nombre del jugador rival"
+                required={false}
+                maxLength={80}
+                error={errors.freeTextName?.message}
+                {...form.register('freeTextName')}
+              />
+            )}
+            {isChange && (
+              <SelectField
+                id={`${uid}-related`}
+                label="Entra"
+                error={errors.relatedPlayerId?.message}
+                {...form.register('relatedPlayerId')}
+              >
+                <option value="">Elige al jugador</option>
+                {players.map((player) => (
+                  <option key={player.playerId} value={player.playerId}>
+                    {player.shirtNumber ? `${player.shirtNumber} · ` : ''}
+                    {player.name}
+                  </option>
+                ))}
+              </SelectField>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                id={`${uid}-minute`}
+                label="Minuto"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={150}
+                required={false}
+                error={errors.minute?.message}
+                {...form.register('minute')}
+              />
+              <Field
+                id={`${uid}-stoppage`}
+                label="Adición"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={30}
+                required={false}
+                help="Para «45+2», escribe 45 y 2."
+                error={errors.stoppageMinute?.message}
+                {...form.register('stoppageMinute')}
+              />
+            </div>
+          </>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
+            Registrar
+          </Button>
+          <Button variant="outline" size="lg" onClick={onDone}>
+            Cancelar
+          </Button>
+        </div>
+      </FormBody>
     </form>
   )
 }
@@ -635,51 +638,52 @@ function FinishSection({ match, actions }: ResultLoaderProps) {
       </h2>
       <form
         noValidate
-        className="grid gap-3"
         onSubmit={async (event) => {
           event.preventDefault()
           // Primero se valida; si está bien, se pide confirmar el marcador final.
           if (await form.trigger()) dialogRef.current?.showModal()
         }}
       >
-        {formError && <Alert variant="danger">{formError}</Alert>}
-        <SelectField
-          id={`${uid}-resolution`}
-          label="Cómo se definió"
-          error={errors.resolution?.message}
-          {...form.register('resolution')}
-        >
-          {optionsFromLabels(matchResolutionLabels).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectField>
-        {manual ? (
-          <div className="grid grid-cols-2 gap-3">
-            {score('homeScore', `Goles de ${match.homeName}`)}
-            {score('awayScore', `Goles de ${match.awayName}`)}
+        <FormBody className="grid gap-3">
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          <SelectField
+            id={`${uid}-resolution`}
+            label="Cómo se definió"
+            error={errors.resolution?.message}
+            {...form.register('resolution')}
+          >
+            {optionsFromLabels(matchResolutionLabels).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectField>
+          {manual ? (
+            <div className="grid grid-cols-2 gap-3">
+              {score('homeScore', `Goles de ${match.homeName}`)}
+              {score('awayScore', `Goles de ${match.awayName}`)}
+            </div>
+          ) : (
+            <p className="text-neutral-600">
+              El marcador sale de los goles registrados:{' '}
+              <span className="font-bold text-ink">
+                {match.homeName} {match.homeScore} – {match.awayScore} {match.awayName}
+              </span>
+              . Si no calza, revisa los goles de arriba.
+            </p>
+          )}
+          {resolution === 'penales' && (
+            <div className="grid grid-cols-2 gap-3">
+              {score('homePenalties', `Penales de ${match.homeName}`)}
+              {score('awayPenalties', `Penales de ${match.awayName}`)}
+            </div>
+          )}
+          <div>
+            <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
+              {finished ? 'Guardar corrección' : 'Finalizar partido'}
+            </Button>
           </div>
-        ) : (
-          <p className="text-neutral-600">
-            El marcador sale de los goles registrados:{' '}
-            <span className="font-bold text-ink">
-              {match.homeName} {match.homeScore} – {match.awayScore} {match.awayName}
-            </span>
-            . Si no calza, revisa los goles de arriba.
-          </p>
-        )}
-        {resolution === 'penales' && (
-          <div className="grid grid-cols-2 gap-3">
-            {score('homePenalties', `Penales de ${match.homeName}`)}
-            {score('awayPenalties', `Penales de ${match.awayName}`)}
-          </div>
-        )}
-        <div>
-          <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
-            {finished ? 'Guardar corrección' : 'Finalizar partido'}
-          </Button>
-        </div>
+        </FormBody>
       </form>
 
       <dialog
@@ -717,7 +721,8 @@ export function ResultLoader(props: ResultLoaderProps) {
   const { match } = props
   const neutral = match.clubSide === 'ninguno'
   return (
-    <div className="grid max-w-3xl gap-4">
+    // La nómina y los eventos tienen controles fuera de un <form>: todo espera a que la pantalla esté lista.
+    <FormBody className="grid max-w-3xl gap-4">
       <p
         role="status"
         aria-label="Marcador actual"
@@ -737,6 +742,6 @@ export function ResultLoader(props: ResultLoaderProps) {
         </>
       )}
       <FinishSection {...props} />
-    </div>
+    </FormBody>
   )
 }

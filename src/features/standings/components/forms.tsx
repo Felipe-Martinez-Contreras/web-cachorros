@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { type Resolver, useFieldArray, useForm } from 'react-hook-form'
 import { EntityForm } from '@/components/admin/entity-form'
+import { FormBody } from '@/components/admin/form-body'
 import { useToast } from '@/components/admin/toast'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
@@ -138,126 +139,128 @@ export function StandingsEditor({ action, defaults, teams, pointsWin, pointsDraw
   )
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid max-w-3xl gap-4">
-      {formError && <Alert variant="danger">{formError}</Alert>}
-      <SelectField id={`${uid}-mode`} label="Cómo se arma" {...form.register('mode')}>
-        {MODE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </SelectField>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          id={`${uid}-asOf`}
-          label="Actualizada al"
-          type="date"
-          required={false}
-          error={errors.asOf?.message}
-          {...form.register('asOf')}
-        />
-        <Field
-          id={`${uid}-source`}
-          label="Fuente"
-          required={false}
-          error={errors.sourceNote?.message}
-          {...form.register('sourceNote')}
-        />
-      </div>
+    <form onSubmit={onSubmit} noValidate className="max-w-3xl">
+      <FormBody className="grid gap-4">
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        <SelectField id={`${uid}-mode`} label="Cómo se arma" {...form.register('mode')}>
+          {MODE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </SelectField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            id={`${uid}-asOf`}
+            label="Actualizada al"
+            type="date"
+            required={false}
+            error={errors.asOf?.message}
+            {...form.register('asOf')}
+          />
+          <Field
+            id={`${uid}-source`}
+            label="Fuente"
+            required={false}
+            error={errors.sourceNote?.message}
+            {...form.register('sourceNote')}
+          />
+        </div>
 
-      <fieldset className="grid gap-3">
-        <legend className="mb-1 font-medium">Equipos</legend>
-        {!manual && (
-          <Alert title="Tabla calculada">
-            Los partidos, goles y puntos salen de los resultados cargados (incluidos los partidos entre
-            rivales). Aquí solo se agregan los equipos y, si hace falta, un ajuste de puntos o de posición.
-          </Alert>
-        )}
-        {fields.length === 0 && <p className="text-neutral-600">Agrega los equipos de la tabla.</p>}
-        {fields.map((field, index) => {
-          const row = rows[index]
-          const team = nameOf.get(field.teamId) ?? 'Equipo'
-          const played = number(row?.won) + number(row?.drawn) + number(row?.lost)
-          const diff = number(row?.goalsFor) - number(row?.goalsAgainst)
-          const points =
-            number(row?.won) * pointsWin + number(row?.drawn) * pointsDraw + number(row?.pointsAdjustment)
-          return (
-            <div key={field.id} className="grid gap-2 rounded-lg border border-neutral-300 bg-paper p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold">{team}</p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Quitar a ${team}`}
-                  onClick={() => remove(index)}
-                >
-                  <Trash2 aria-hidden="true" />
-                </Button>
-              </div>
-              <input type="hidden" {...form.register(`rows.${index}.teamId`)} />
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-7">
+        <fieldset className="grid gap-3">
+          <legend className="mb-1 font-medium">Equipos</legend>
+          {!manual && (
+            <Alert title="Tabla calculada">
+              Los partidos, goles y puntos salen de los resultados cargados (incluidos los partidos entre
+              rivales). Aquí solo se agregan los equipos y, si hace falta, un ajuste de puntos o de posición.
+            </Alert>
+          )}
+          {fields.length === 0 && <p className="text-neutral-600">Agrega los equipos de la tabla.</p>}
+          {fields.map((field, index) => {
+            const row = rows[index]
+            const team = nameOf.get(field.teamId) ?? 'Equipo'
+            const played = number(row?.won) + number(row?.drawn) + number(row?.lost)
+            const diff = number(row?.goalsFor) - number(row?.goalsAgainst)
+            const points =
+              number(row?.won) * pointsWin + number(row?.drawn) * pointsDraw + number(row?.pointsAdjustment)
+            return (
+              <div key={field.id} className="grid gap-2 rounded-lg border border-neutral-300 bg-paper p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{team}</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Quitar a ${team}`}
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </div>
+                <input type="hidden" {...form.register(`rows.${index}.teamId`)} />
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-7">
+                  {manual && (
+                    <>
+                      {cell(index, 'won', 'PG', team)}
+                      {cell(index, 'drawn', 'PE', team)}
+                      {cell(index, 'lost', 'PP', team)}
+                      {cell(index, 'goalsFor', 'GF', team)}
+                      {cell(index, 'goalsAgainst', 'GC', team)}
+                    </>
+                  )}
+                  {cell(index, 'pointsAdjustment', 'Ajuste', team, -99)}
+                  {cell(index, 'position', 'Pos. manual', team, 1)}
+                </div>
                 {manual && (
-                  <>
-                    {cell(index, 'won', 'PG', team)}
-                    {cell(index, 'drawn', 'PE', team)}
-                    {cell(index, 'lost', 'PP', team)}
-                    {cell(index, 'goalsFor', 'GF', team)}
-                    {cell(index, 'goalsAgainst', 'GC', team)}
-                  </>
+                  <p className="text-sm text-neutral-600" role="status">
+                    PJ {played} · DIF {diff > 0 ? `+${diff}` : diff} ·{' '}
+                    <span className="font-bold text-ink">PTS {points}</span>
+                  </p>
                 )}
-                {cell(index, 'pointsAdjustment', 'Ajuste', team, -99)}
-                {cell(index, 'position', 'Pos. manual', team, 1)}
               </div>
-              {manual && (
-                <p className="text-sm text-neutral-600" role="status">
-                  PJ {played} · DIF {diff > 0 ? `+${diff}` : diff} ·{' '}
-                  <span className="font-bold text-ink">PTS {points}</span>
-                </p>
-              )}
-            </div>
-          )
-        })}
-        {available.length > 0 && (
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="grid min-w-0 flex-1 basis-56 gap-1 font-medium">
-              Agregar equipo
-              <select
-                value={teamToAdd}
-                onChange={(event) => setTeamToAdd(event.target.value)}
-                className="block min-h-12 w-full rounded-md border border-neutral-500 bg-paper px-3 text-base font-normal"
+            )
+          })}
+          {available.length > 0 && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="grid min-w-0 flex-1 basis-56 gap-1 font-medium">
+                Agregar equipo
+                <select
+                  value={teamToAdd}
+                  onChange={(event) => setTeamToAdd(event.target.value)}
+                  className="block min-h-12 w-full rounded-md border border-neutral-500 bg-paper px-3 text-base font-normal"
+                >
+                  <option value="">Elige un equipo</option>
+                  {available.map((team) => (
+                    <option key={team.value} value={team.value}>
+                      {team.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button
+                variant="outline"
+                size="lg"
+                disabled={!teamToAdd}
+                onClick={() => {
+                  append({ teamId: teamToAdd, ...EMPTY_ROW })
+                  setTeamToAdd('')
+                }}
               >
-                <option value="">Elige un equipo</option>
-                {available.map((team) => (
-                  <option key={team.value} value={team.value}>
-                    {team.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Button
-              variant="outline"
-              size="lg"
-              disabled={!teamToAdd}
-              onClick={() => {
-                append({ teamId: teamToAdd, ...EMPTY_ROW })
-                setTeamToAdd('')
-              }}
-            >
-              Agregar
-            </Button>
-          </div>
-        )}
-        <p className="text-sm text-neutral-600">
-          «Ajuste» suma o resta puntos (por ejemplo, −3 por una sanción). «Pos. manual» solo decide cuando dos
-          equipos quedan iguales en puntos, diferencia y goles a favor.
-        </p>
-      </fieldset>
+                Agregar
+              </Button>
+            </div>
+          )}
+          <p className="text-sm text-neutral-600">
+            «Ajuste» suma o resta puntos (por ejemplo, −3 por una sanción). «Pos. manual» solo decide cuando
+            dos equipos quedan iguales en puntos, diferencia y goles a favor.
+          </p>
+        </fieldset>
 
-      <div>
-        <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
-          Guardar tabla
-        </Button>
-      </div>
+        <div>
+          <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
+            Guardar tabla
+          </Button>
+        </div>
+      </FormBody>
     </form>
   )
 }

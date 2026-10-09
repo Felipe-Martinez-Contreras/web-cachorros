@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useState } from 'react'
+import { FormBody } from '@/components/admin/form-body'
 import { useToast } from '@/components/admin/toast'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
@@ -100,73 +101,77 @@ export function TwoFactorPanel({ enabled }: { enabled: boolean }) {
   if (step.kind === 'scan') {
     const { setup } = step
     return (
-      <form onSubmit={(event) => verify(event, setup)} noValidate className="grid max-w-md gap-4">
-        <ol className="grid list-decimal gap-4 pl-5">
-          <li>
-            Abre tu app autenticadora (Google Authenticator, Microsoft Authenticator u otra) y escanea este
-            código con el celular.
-            {/* biome-ignore lint/performance/noImgElement: SVG generado en el servidor, incrustado como data: */}
-            <img
-              src={setup.qr}
-              alt="Código QR para configurar la app autenticadora"
-              width={220}
-              height={220}
-              className="mt-3 rounded-md border border-neutral-300 bg-paper p-2"
-            />
-            <p className="mt-3 text-sm text-neutral-600">
-              ¿Estás en el mismo celular?{' '}
-              <a href={setup.uri} className="font-medium text-ink underline">
-                Abrir en la app autenticadora
-              </a>
-              . O escribe esta clave a mano:
-            </p>
-            <p className="mt-1 font-mono break-all">{setup.secret}</p>
-          </li>
-          <li>Escribe el código de 6 dígitos que muestra la app.</li>
-        </ol>
-        <Field
-          name="code"
-          label="Código de la app"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={7}
-          error={error}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" variant="dark" size="lg" loading={pending}>
-            Activar
-          </Button>
-          <Button variant="outline" size="lg" onClick={() => setStep({ kind: 'idle' })}>
-            Cancelar
-          </Button>
-        </div>
+      <form onSubmit={(event) => verify(event, setup)} noValidate className="max-w-md">
+        <FormBody className="grid gap-4">
+          <ol className="grid list-decimal gap-4 pl-5">
+            <li>
+              Abre tu app autenticadora (Google Authenticator, Microsoft Authenticator u otra) y escanea este
+              código con el celular.
+              {/* biome-ignore lint/performance/noImgElement: SVG generado en el servidor, incrustado como data: */}
+              <img
+                src={setup.qr}
+                alt="Código QR para configurar la app autenticadora"
+                width={220}
+                height={220}
+                className="mt-3 rounded-md border border-neutral-300 bg-paper p-2"
+              />
+              <p className="mt-3 text-sm text-neutral-600">
+                ¿Estás en el mismo celular?{' '}
+                <a href={setup.uri} className="font-medium text-ink underline">
+                  Abrir en la app autenticadora
+                </a>
+                . O escribe esta clave a mano:
+              </p>
+              <p className="mt-1 font-mono break-all">{setup.secret}</p>
+            </li>
+            <li>Escribe el código de 6 dígitos que muestra la app.</li>
+          </ol>
+          <Field
+            name="code"
+            label="Código de la app"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={7}
+            error={error}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="dark" size="lg" loading={pending}>
+              Activar
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => setStep({ kind: 'idle' })}>
+              Cancelar
+            </Button>
+          </div>
+        </FormBody>
       </form>
     )
   }
 
   return (
-    <form onSubmit={enabled ? disable : start} noValidate className="grid max-w-md gap-4">
-      <p className="text-neutral-600">
-        {enabled
-          ? 'Está activada: al entrar se pide, además de la contraseña, un código de tu app autenticadora.'
-          : 'Recomendada: aunque alguien adivine tu contraseña, no podrá entrar sin el código de tu celular.'}
-      </p>
-      <Field
-        name="password"
-        label={enabled ? 'Tu contraseña, para desactivarla' : 'Tu contraseña, para activarla'}
-        type="password"
-        autoComplete="current-password"
-        error={error}
-      />
-      <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className={buttonVariants({ variant: enabled ? 'outline' : 'dark', size: 'lg' })}
-        >
-          {enabled ? 'Desactivar los dos pasos' : 'Activar los dos pasos'}
-        </button>
-      </div>
+    <form onSubmit={enabled ? disable : start} noValidate className="max-w-md">
+      <FormBody className="grid gap-4">
+        <p className="text-neutral-600">
+          {enabled
+            ? 'Está activada: al entrar se pide, además de la contraseña, un código de tu app autenticadora.'
+            : 'Recomendada: aunque alguien adivine tu contraseña, no podrá entrar sin el código de tu celular.'}
+        </p>
+        <Field
+          name="password"
+          label={enabled ? 'Tu contraseña, para desactivarla' : 'Tu contraseña, para activarla'}
+          type="password"
+          autoComplete="current-password"
+          error={error}
+        />
+        <div>
+          <button
+            type="submit"
+            disabled={pending}
+            className={buttonVariants({ variant: enabled ? 'outline' : 'dark', size: 'lg' })}
+          >
+            {enabled ? 'Desactivar los dos pasos' : 'Activar los dos pasos'}
+          </button>
+        </div>
+      </FormBody>
     </form>
   )
 }

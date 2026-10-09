@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Controller, type FieldValues, type Path, type Resolver, useForm } from 'react-hook-form'
 import type { ZodType } from 'zod'
+import { FormBody } from '@/components/admin/form-body'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
 import { CheckboxField, Field, SelectField, TextareaField } from '@/components/ui/field'
@@ -170,150 +171,156 @@ export function EntityForm<T extends FieldValues>({
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid max-w-2xl gap-4">
-      {formError && <Alert variant="danger">{formError}</Alert>}
-      {fields.map((field) => {
-        const error = errors[field.name]?.message
-        if (field.type === 'media') {
-          return (
-            <Controller
-              key={field.name}
-              control={form.control}
-              name={field.name as Path<T>}
-              render={({ field: control }) => (
-                <MediaPicker
-                  label={field.label}
-                  help={field.help}
-                  required={field.required}
-                  kind={field.kind}
-                  error={typeof error === 'string' ? error : undefined}
-                  value={previews[field.name] ?? null}
-                  onChange={(media) => {
-                    setPreviews((current) => ({ ...current, [field.name]: media }))
-                    control.onChange(media?.id ?? '')
-                  }}
-                />
-              )}
-            />
-          )
-        }
-        if (field.type === 'richtext') {
-          return (
-            <Controller
-              key={field.name}
-              control={form.control}
-              name={field.name as Path<T>}
-              render={({ field: control }) => (
-                <RichTextEditor
-                  label={field.label}
-                  help={field.help}
-                  required={field.required}
-                  error={typeof error === 'string' ? error : undefined}
-                  value={control.value ?? null}
-                  onChange={control.onChange}
-                />
-              )}
-            />
-          )
-        }
-        if (field.type === 'checkboxes') {
-          return (
-            <Controller
-              key={field.name}
-              control={form.control}
-              name={field.name as Path<T>}
-              render={({ field: control }) => {
-                const selected: string[] = Array.isArray(control.value) ? control.value : []
-                return (
-                  <fieldset className="grid gap-1">
-                    <legend className="font-medium">
-                      {field.label}
-                      {field.required === false && (
-                        <span className="font-normal text-neutral-600"> (opcional)</span>
+    <form onSubmit={onSubmit} noValidate className="max-w-2xl">
+      <FormBody className="grid gap-4">
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        {fields.map((field) => {
+          const error = errors[field.name]?.message
+          if (field.type === 'media') {
+            return (
+              <Controller
+                key={field.name}
+                control={form.control}
+                name={field.name as Path<T>}
+                render={({ field: control }) => (
+                  <MediaPicker
+                    label={field.label}
+                    help={field.help}
+                    required={field.required}
+                    kind={field.kind}
+                    error={typeof error === 'string' ? error : undefined}
+                    value={previews[field.name] ?? null}
+                    onChange={(media) => {
+                      setPreviews((current) => ({ ...current, [field.name]: media }))
+                      control.onChange(media?.id ?? '')
+                    }}
+                  />
+                )}
+              />
+            )
+          }
+          if (field.type === 'richtext') {
+            return (
+              <Controller
+                key={field.name}
+                control={form.control}
+                name={field.name as Path<T>}
+                render={({ field: control }) => (
+                  <RichTextEditor
+                    label={field.label}
+                    help={field.help}
+                    required={field.required}
+                    error={typeof error === 'string' ? error : undefined}
+                    value={control.value ?? null}
+                    onChange={control.onChange}
+                  />
+                )}
+              />
+            )
+          }
+          if (field.type === 'checkboxes') {
+            return (
+              <Controller
+                key={field.name}
+                control={form.control}
+                name={field.name as Path<T>}
+                render={({ field: control }) => {
+                  const selected: string[] = Array.isArray(control.value) ? control.value : []
+                  return (
+                    <fieldset className="grid gap-1">
+                      <legend className="font-medium">
+                        {field.label}
+                        {field.required === false && (
+                          <span className="font-normal text-neutral-600"> (opcional)</span>
+                        )}
+                      </legend>
+                      <div className="grid gap-x-4 sm:grid-cols-2">
+                        {field.options.map((option) => (
+                          <CheckboxField
+                            key={option.value}
+                            id={`${uid}-${field.name}-${option.value}`}
+                            name={`${field.name}-${option.value}`}
+                            label={option.label}
+                            checked={selected.includes(option.value)}
+                            onChange={(event) =>
+                              control.onChange(
+                                event.target.checked
+                                  ? [...selected, option.value]
+                                  : selected.filter((value) => value !== option.value),
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
+                      {field.help && <p className="text-sm text-neutral-600">{field.help}</p>}
+                      {typeof error === 'string' && (
+                        <p className="text-sm font-medium text-danger">{error}</p>
                       )}
-                    </legend>
-                    <div className="grid gap-x-4 sm:grid-cols-2">
-                      {field.options.map((option) => (
-                        <CheckboxField
-                          key={option.value}
-                          id={`${uid}-${field.name}-${option.value}`}
-                          name={`${field.name}-${option.value}`}
-                          label={option.label}
-                          checked={selected.includes(option.value)}
-                          onChange={(event) =>
-                            control.onChange(
-                              event.target.checked
-                                ? [...selected, option.value]
-                                : selected.filter((value) => value !== option.value),
-                            )
-                          }
-                        />
-                      ))}
-                    </div>
-                    {field.help && <p className="text-sm text-neutral-600">{field.help}</p>}
-                    {typeof error === 'string' && <p className="text-sm font-medium text-danger">{error}</p>}
-                  </fieldset>
-                )
-              }}
+                    </fieldset>
+                  )
+                }}
+              />
+            )
+          }
+          const shared = {
+            id: `${uid}-${field.name}`,
+            label: field.label,
+            help: field.help,
+            required: field.required,
+            error: typeof error === 'string' ? error : undefined,
+            ...form.register(field.name as Path<T>),
+          }
+          if (field.type === 'textarea') {
+            return (
+              <TextareaField key={field.name} {...shared} rows={field.rows} maxLength={field.maxLength} />
+            )
+          }
+          if (field.type === 'select') {
+            return (
+              <SelectField key={field.name} {...shared}>
+                {field.emptyLabel !== undefined && <option value="">{field.emptyLabel}</option>}
+                {field.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectField>
+            )
+          }
+          if (field.type === 'checkbox') return <CheckboxField key={field.name} {...shared} />
+          return (
+            <Field
+              key={field.name}
+              {...shared}
+              type={field.type}
+              placeholder={field.placeholder}
+              min={field.min}
+              max={field.max}
+              step={field.step}
+              inputMode={field.inputMode}
+              autoComplete={field.autoComplete ?? 'off'}
             />
           )
-        }
-        const shared = {
-          id: `${uid}-${field.name}`,
-          label: field.label,
-          help: field.help,
-          required: field.required,
-          error: typeof error === 'string' ? error : undefined,
-          ...form.register(field.name as Path<T>),
-        }
-        if (field.type === 'textarea') {
-          return <TextareaField key={field.name} {...shared} rows={field.rows} maxLength={field.maxLength} />
-        }
-        if (field.type === 'select') {
-          return (
-            <SelectField key={field.name} {...shared}>
-              {field.emptyLabel !== undefined && <option value="">{field.emptyLabel}</option>}
-              {field.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectField>
-          )
-        }
-        if (field.type === 'checkbox') return <CheckboxField key={field.name} {...shared} />
-        return (
-          <Field
-            key={field.name}
-            {...shared}
-            type={field.type}
-            placeholder={field.placeholder}
-            min={field.min}
-            max={field.max}
-            step={field.step}
-            inputMode={field.inputMode}
-            autoComplete={field.autoComplete ?? 'off'}
-          />
-        )
-      })}
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
-          {isSubmitting ? 'Guardando…' : submitLabel}
-        </Button>
-        {cancelHref && (
-          <Link href={cancelHref} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-            Cancelar
-          </Link>
+        })}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
+            {isSubmitting ? 'Guardando…' : submitLabel}
+          </Button>
+          {cancelHref && (
+            <Link href={cancelHref} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+              Cancelar
+            </Link>
+          )}
+        </div>
+        {autosave && (
+          <p role="status" className="min-h-5 text-sm text-neutral-600">
+            {autosaveState.kind === 'saving' && 'Guardando el borrador…'}
+            {autosaveState.kind === 'saved' && `Borrador guardado a las ${formatTime(autosaveState.at)}.`}
+            {autosaveState.kind === 'error' &&
+              'No se pudo guardar el borrador automáticamente. Revisa tu conexión y toca «Guardar».'}
+          </p>
         )}
-      </div>
-      {autosave && (
-        <p role="status" className="min-h-5 text-sm text-neutral-600">
-          {autosaveState.kind === 'saving' && 'Guardando el borrador…'}
-          {autosaveState.kind === 'saved' && `Borrador guardado a las ${formatTime(autosaveState.at)}.`}
-          {autosaveState.kind === 'error' &&
-            'No se pudo guardar el borrador automáticamente. Revisa tu conexión y toca «Guardar».'}
-        </p>
-      )}
+      </FormBody>
     </form>
   )
 }
