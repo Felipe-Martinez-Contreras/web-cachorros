@@ -24,6 +24,9 @@ try {
     await sql`delete from staff_members where full_name like 'E2E%'`
     await sql`delete from teams where name like 'E2E%' and not is_own_club`
     await sql`delete from venues where name like 'E2E%'`
+    // Cuentas invitadas por las pruebas (su auditoría las referencia).
+    await sql`delete from audit_log where user_id in (select id from "user" where email like 'e2e-invitada-%')`
+    await sql`delete from "user" where email like 'e2e-invitada-%'`
     await sql`delete from news where title like 'E2E%'`
     await sql`delete from news_categories where name like 'E2E%'`
     await sql`delete from history_milestones where title like 'E2E%'`

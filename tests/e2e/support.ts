@@ -9,7 +9,18 @@ export function recoveryUser(project: string) {
   return { name: `Recuperación ${project}`, email: `e2e-recuperar-${project}@cachorros.test` }
 }
 
-export const E2E_USERS = [ADMIN, recoveryUser('celular'), recoveryUser('escritorio')]
+/** Cada proyecto activa los dos pasos en una cuenta propia (cambia cómo se entra). */
+export function twoFactorUser(project: string) {
+  return { name: `Dos Pasos ${project}`, email: `e2e-dos-pasos-${project}@cachorros.test` }
+}
+
+export const E2E_USERS = [
+  ADMIN,
+  recoveryUser('celular'),
+  recoveryUser('escritorio'),
+  twoFactorUser('celular'),
+  twoFactorUser('escritorio'),
+]
 
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 
