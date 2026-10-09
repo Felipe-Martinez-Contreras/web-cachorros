@@ -40,7 +40,7 @@ Una migración nueva: `0003_dos_pasos.sql` (tabla `two_factor` y columna `user.t
 | `pnpm test` | **190** pruebas en 20 archivos; cobertura de `src/features/*/lib` ≈ 99 % |
 | `pnpm test:integration` | **141** pruebas en 17 archivos |
 | `pnpm build` | En verde, también contra una base inexistente |
-| `pnpm test:e2e` | **116** pruebas (58 por viewport), todas en verde y ninguna omitida, en ≈ 15 min |
+| `pnpm test:e2e` | **122** pruebas (61 por viewport), todas en verde y ninguna omitida, en ≈ 16 min |
 | `pnpm lighthouse` (portada, móvil) | Accesibilidad, buenas prácticas y SEO sobre la meta. Rendimiento **59–67 en esta máquina** (ver «Lighthouse») |
 | `pnpm audit --prod` | Sin vulnerabilidades conocidas |
 
@@ -168,10 +168,48 @@ clave). Las que aparecieron al construir:
 - Lighthouse marcaba como error de SEO el `noindex` intencional de los entornos que no son producción.
 - La prueba de migraciones contaba 52 tablas; ahora son 53.
 
-Sin corregir, para que lo decidas: **en una carga completa del panel, lo que se escribe antes de que la página
-termine de activarse puede perderse** (lo vi en la e2e al rellenar un campo apenas cargada la pantalla de
-edición; es de todos los formularios del panel, no solo de noticias). En una red lenta podría pasarle a una
-persona. No lo toqué porque es anterior a este PR y cambia el formulario genérico.
+## Formularios: nada se pierde antes de que la pantalla esté lista
+
+**El problema.** El HTML del panel llega antes que su JavaScript. En ese intervalo los campos ya se veían y se
+podía escribir, pero el formulario todavía no los controlaba: al activarse reponía los valores guardados (lo
+tecleado se perdía o quedaba pegado al valor anterior, como se vio en la e2e) y un «Enter» podía enviar el
+formulario como uno nativo, por GET y sin validar (en el login, eso pondría la contraseña en la dirección). Afectaba a todos los formularios del panel.
+
+**La solución: los campos esperan.** Todo formulario envuelve sus campos y botones en `<FormBody>`
+(`src/components/admin/form-body.tsx`), un `<fieldset disabled>` con el aviso «Preparando el formulario…»
+que se habilita cuando React termina de tomar el control. No existe un momento en que se pueda escribir algo
+que después no se guarde, ni enviar antes de tiempo.
+
+**Por qué esta y no «tomar del DOM lo ya escrito».** La evalué y la descarté porque no puede garantizar el
+«nunca»:
+
+- Solo sirve para campos simples. Las casillas controladas (series de una noticia), las filas de la tabla de
+  posiciones y de la jornada, la nómina del resultado, el selector de imágenes y el editor de texto no tienen un
+  valor en el DOM que se pueda rescatar: antes de la hidratación sus botones no hacen nada o quedan desalineados
+  con el estado.
+- No resuelve el envío nativo antes de tiempo.
+- Depende de detalles internos de React y de react-hook-form (el orden en que cada uno escribe el valor del
+  campo), que pueden cambiar con una actualización.
+- En una pantalla de edición, el HTML del servidor trae los campos vacíos (react-hook-form los llena al
+  activarse): la persona estaría escribiendo sobre un campo en blanco que en realidad tiene un valor.
+
+Deshabilitar es una sola regla, igual para todos los formularios (el genérico `EntityForm`, jornada, tabla de
+posiciones, medios y subida de fotos, carga de resultados completa, dos pasos y las tres pantallas de acceso), y
+no depende de ninguna librería. El costo: en una red lenta la persona ve el formulario atenuado con el aviso
+durante el instante que tarda en cargar, en vez de poder escribir de inmediato.
+
+**La prueba** (`tests/e2e/formularios.spec.ts`, 360 px y 1280 px) retiene los scripts de la página para alargar
+ese intervalo:
+
+1. Con la hidratación retenida, los campos y «Guardar» están deshabilitados y se ve el aviso; aunque se toque
+   el campo, se escriba y se pulse Enter, no entra nada y la página no se envía. Al soltarla, los campos traen
+   los valores guardados, se escribe, se guarda y el dato queda.
+2. Tres cargas completas seguidas escribiendo apenas se puede: lo guardado es exactamente lo tecleado.
+3. Login, jornada, configuración, tabla de posiciones y «Mi cuenta» también esperan; la contraseña nunca viaja
+   en la dirección.
+
+Además, la e2e de noticias ya no espera a que el editor aparezca antes de escribir (era el parche que tapaba
+este problema).
 
 ## Prueba guiada
 

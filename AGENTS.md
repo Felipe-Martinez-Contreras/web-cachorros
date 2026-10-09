@@ -204,6 +204,11 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
 - Formularios: `EntityForm` (`src/components/admin/entity-form.tsx`, react-hook-form + Zod) con el **mismo
   esquema** que valida la acción; el formulario envía los valores tal como están y el servidor los vuelve a validar.
   Las piezas de esquema están en `src/lib/form-schemas.ts` (un campo vacío llega como `''` y se guarda `null`).
+- **Todo formulario del panel envuelve sus campos y botones en `<FormBody>`**
+  (`src/components/admin/form-body.tsx`; `EntityForm` ya lo trae): nacen deshabilitados, con el aviso
+  «Preparando el formulario…», y se habilitan cuando React toma el control. Así nada de lo que se escribe puede
+  perderse ni enviarse como formulario nativo antes de la hidratación. Vale también para controles con estado
+  fuera de un `<form>`. Lo cubre `tests/e2e/formularios.spec.ts`, que retiene los scripts de la página.
   `EntityForm` también trae los campos `richtext` (editor Tiptap, cargado con `import()` dinámico), `checkboxes`
   y el autoguardado (`autosave`, solo para borradores).
 - Texto enriquecido: el documento del editor se valida y se reduce a la lista blanca con `richTextField()`
