@@ -11,6 +11,15 @@ const MESSAGES: Record<string, string> = {
   INVALID_TOKEN: 'El enlace ya no es válido o venció. Pide uno nuevo.',
   SESSION_EXPIRED: 'Tu sesión venció. Vuelve a entrar.',
   EMAIL_AND_PASSWORD_SIGN_UP_IS_NOT_ENABLED: 'El registro no está disponible.',
+  // Verificación en dos pasos
+  INVALID_CODE: 'Ese código no es correcto. Revisa la app y vuelve a intentarlo.',
+  INVALID_BACKUP_CODE: 'Ese código de respaldo no es válido o ya se usó.',
+  INVALID_TWO_FACTOR_COOKIE: 'Pasó mucho tiempo. Vuelve a escribir tu correo y tu contraseña.',
+  TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Demasiados intentos. Vuelve a escribir tu correo y tu contraseña.',
+  ACCOUNT_TEMPORARILY_LOCKED: 'Demasiados intentos fallidos. Espera unos minutos y vuelve a intentarlo.',
+  TOTP_NOT_ENABLED: 'La verificación en dos pasos no está activada en esta cuenta.',
+  TWO_FACTOR_NOT_ENABLED: 'La verificación en dos pasos no está activada en esta cuenta.',
+  TOTP_ALREADY_ENABLED: 'La verificación en dos pasos ya está activada.',
 }
 
 const FALLBACK = 'No pudimos completar la acción. Inténtalo de nuevo en unos segundos.'
