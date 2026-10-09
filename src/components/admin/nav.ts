@@ -7,6 +7,7 @@ import {
   ListOrdered,
   type LucideIcon,
   MapPin,
+  Newspaper,
   Palette,
   Shield,
   ShieldHalf,
@@ -76,7 +77,14 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'Contenido',
     items: [
-      { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write', primary: true },
+      {
+        href: '/admin/noticias',
+        label: 'Noticias',
+        icon: Newspaper,
+        permission: 'news:write',
+        primary: true,
+      },
+      { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write' },
     ],
   },
   {
