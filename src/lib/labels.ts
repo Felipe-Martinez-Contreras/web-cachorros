@@ -219,6 +219,33 @@ export const socialPlatformLabels: Labels<typeof socialPlatform> = {
   x: 'X',
 }
 
+/** Sobre qué fue cada acción registrada en «Actividad» (`audit_log.entity_type`). */
+export const auditEntityLabels: Record<string, string> = {
+  competition: 'Competencias',
+  hall_of_fame: 'Salón de la fama',
+  historic_kit: 'Camisetas históricas',
+  history_milestone: 'Línea de tiempo',
+  honour: 'Títulos',
+  match: 'Partidos',
+  match_event: 'Goles, tarjetas y cambios',
+  media_asset: 'Medios',
+  news: 'Noticias',
+  news_category: 'Categorías de noticias',
+  page_block: 'Textos de páginas',
+  player: 'Jugadores',
+  player_stat_adjustment: 'Estadísticas históricas',
+  season: 'Temporadas',
+  series: 'Series',
+  site_settings: 'Configuración',
+  squad_registration: 'Inscripciones',
+  staff_assignment: 'Cargos del cuerpo técnico',
+  staff_member: 'Cuerpo técnico',
+  standings_table: 'Tablas de posiciones',
+  team: 'Rivales',
+  user: 'Usuarios y seguridad',
+  venue: 'Canchas',
+}
+
 export const weekdayLabels: Record<number, string> = {
   1: 'Lunes',
   2: 'Martes',

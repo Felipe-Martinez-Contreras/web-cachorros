@@ -3,8 +3,10 @@ import {
   CalendarRange,
   ClipboardList,
   FileText,
+  History,
   House,
   Images,
+  KeyRound,
   Landmark,
   ListOrdered,
   type LucideIcon,
@@ -15,6 +17,7 @@ import {
   Shield,
   ShieldHalf,
   Trophy,
+  UserCog,
   Users,
 } from 'lucide-react'
 import type { Permission } from '@/lib/permissions'
@@ -101,6 +104,9 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: Settings,
         permission: 'settings:write',
       },
+      { href: '/admin/usuarios', label: 'Usuarios', icon: UserCog, permission: 'users:manage' },
+      { href: '/admin/actividad', label: 'Actividad', icon: History, permission: 'audit:read' },
+      { href: '/admin/cuenta', label: 'Mi cuenta', icon: KeyRound, permission: 'panel:access' },
       {
         href: '/admin/sistema-de-diseno',
         label: 'Sistema de diseño',
