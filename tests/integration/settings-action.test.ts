@@ -13,7 +13,8 @@ vi.mock('next/navigation', () => ({
 
 const { db, sql } = await import('@/db/client')
 const { auditLog, siteSettings, user } = await import('@/db/schema')
-const { actualizarIdentidadClub } = await import('@/features/settings/actions')
+const { guardarConfiguracion } = await import('@/features/settings/actions')
+const actualizarIdentidadClub = (input: unknown) => guardarConfiguracion('club', input)
 const { getAuth } = await import('@/lib/auth')
 const { createAdmin } = await import('@/lib/auth/create-admin')
 const { requirePanelUser } = await import('@/lib/auth/session')
@@ -54,7 +55,7 @@ afterAll(async () => {
   await sql.end()
 })
 
-describe('actualizarIdentidadClub (Server Action protegida)', () => {
+describe('guardarConfiguracion (Server Action protegida)', () => {
   const input = { clubName: 'Club Deportivo Los Cachorros', shortName: 'Los Cachorros' }
 
   it('rechaza la llamada sin sesión y no escribe nada', async () => {
@@ -84,7 +85,7 @@ describe('actualizarIdentidadClub (Server Action protegida)', () => {
 
   it('con sesión de admin valida los datos y responde errores por campo en español', async () => {
     request.headers = await sessionHeadersFor(ADMIN)
-    const result = await actualizarIdentidadClub({ clubName: '', shortName: 'L' })
+    const result = await actualizarIdentidadClub({ clubName: '', shortName: ' ' })
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.fieldErrors).toEqual({
@@ -99,14 +100,11 @@ describe('actualizarIdentidadClub (Server Action protegida)', () => {
 
     const result = await actualizarIdentidadClub(input)
 
-    expect(result).toEqual({
-      ok: true,
-      data: { clubName: input.clubName, shortName: input.shortName, foundedOn: '1934-04-01' },
-    })
+    expect(result).toEqual({ ok: true, data: { id: '1' } })
     expect((await readSettings())?.shortName).toBe('Los Cachorros')
     expect(await countAudit()).toBe(auditBefore + 1)
-    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'settings.identity.update'))
-    expect(entry).toMatchObject({ entityType: 'site_settings', entityId: '1', meta: input })
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'settings.club.update'))
+    expect(entry).toMatchObject({ entityType: 'site_settings', entityId: '1', meta: { section: 'club' } })
     expect(request.updateTag).toHaveBeenCalledWith('settings')
   })
 })

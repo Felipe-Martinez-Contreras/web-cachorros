@@ -7,21 +7,7 @@ import type { SocialLinkDTO, SocialPlatform } from '@/features/social/dto'
 import { tags } from '@/lib/cache-tags'
 import { toImageDTO } from '@/lib/images/dto'
 import { safeExternalUrl } from '@/lib/links'
-import { type ClubIdentityDTO, type SiteDTO, toClubIdentityDTO } from './dto'
-
-/** Lectura sin caché para el panel. */
-export async function getClubIdentity(): Promise<ClubIdentityDTO | null> {
-  const [row] = await db
-    .select({
-      clubName: siteSettings.clubName,
-      shortName: siteSettings.shortName,
-      foundedOn: siteSettings.foundedOn,
-    })
-    .from(siteSettings)
-    .where(eq(siteSettings.id, 1))
-    .limit(1)
-  return row ? toClubIdentityDTO(row) : null
-}
+import type { SiteDTO } from './dto'
 
 const imageSelect = {
   id: mediaAssets.id,

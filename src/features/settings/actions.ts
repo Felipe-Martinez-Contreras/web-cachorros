@@ -1,54 +1,109 @@
 'use server'
 
 import { eq } from 'drizzle-orm'
-import { updateTag } from 'next/cache'
-import { db } from '@/db/client'
+import type { ZodType } from 'zod'
+import type { Tx } from '@/db/client'
 import { siteSettings } from '@/db/schema'
-import { type ActionResult, fail, ok } from '@/lib/action-result'
-import { audit } from '@/lib/audit'
-import { requirePermission } from '@/lib/auth/session'
+import { assertPublishableMedia } from '@/features/media/guards'
+import { parseCoordinates } from '@/features/teams/lib/parse-coordinates'
+import { type ActionResult, fail } from '@/lib/action-result'
 import { tags } from '@/lib/cache-tags'
-import { runAction } from '@/lib/run-action'
-import { type ClubIdentityDTO, toClubIdentityDTO } from './dto'
-import { updateClubIdentitySchema } from './schemas'
+import { mutate, Rejection } from '@/lib/entity-action'
+import {
+  clubSettingsSchema,
+  contactSettingsSchema,
+  featuredSettingsSchema,
+  heroSettingsSchema,
+  locationSettingsSchema,
+  seoSettingsSchema,
+  socialSettingsSchema,
+  supportSettingsSchema,
+} from './schemas'
+import { isSettingsSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
 
-export async function actualizarIdentidadClub(input: unknown): Promise<ActionResult<ClubIdentityDTO>> {
-  return runAction('settings.identity.update', async () => {
-    const user = await requirePermission('settings:write') // 1. autorización (siempre aquí)
-    const parsed = updateClubIdentitySchema.safeParse(input) // 2. validación
-    if (!parsed.success) return fail(parsed.error)
+type Result = Promise<ActionResult<{ id: string }>>
+type Values = Partial<typeof siteSettings.$inferInsert>
 
-    const updated = await db.transaction(async (tx) => {
-      // 3. escritura atómica
-      const [row] = await tx.update(siteSettings).set(parsed.data).where(eq(siteSettings.id, 1)).returning({
-        clubName: siteSettings.clubName,
-        shortName: siteSettings.shortName,
-        foundedOn: siteSettings.foundedOn,
-      })
-      if (!row) return null
-      await audit(tx, user, 'settings.identity.update', {
-        // 4. auditoría
-        entityType: 'site_settings',
-        entityId: '1',
-        summary: 'Actualizó el nombre del club',
-        meta: parsed.data,
-      })
-      return row
-    })
-    if (!updated) return fail('No encontramos la configuración del club. Avisa a soporte.')
-
-    updateTag(tags.settings()) // 5. invalidación mínima
-    return ok(toClubIdentityDTO(updated)) // 6. resultado tipado
-  })
+/** Quita las claves vacías de un `jsonb`: lo que no se sabe no se guarda. */
+function compact<T extends Record<string, unknown>>(value: T): { [K in keyof T]?: NonNullable<T[K]> } {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== null && item !== '')) as {
+    [K in keyof T]?: NonNullable<T[K]>
+  }
 }
 
-/** Adaptador para `useActionState`: recibe el formulario y delega en la acción tipada. */
-export async function actualizarIdentidadClubForm(
-  _prev: ActionResult<ClubIdentityDTO> | null,
-  formData: FormData,
-): Promise<ActionResult<ClubIdentityDTO>> {
-  return actualizarIdentidadClub({
-    clubName: formData.get('clubName'),
-    shortName: formData.get('shortName'),
-  })
+/** Cada sección valida con su esquema y dice qué columnas de `site_settings` escribe. */
+function section<T>(schema: ZodType<T>, values: (data: T, tx: Tx) => Promise<Values> | Values) {
+  return (key: SettingsSection, input: unknown): Result =>
+    mutate({
+      action: `settings.${key}.update`,
+      permission: 'settings:write',
+      entityType: 'site_settings',
+      schema,
+      input,
+      // La serie destacada cambia los filtros y la portada de Partidos.
+      tags: key === 'destacados' ? [tags.settings(), tags.matches()] : [tags.settings()],
+      write: async (tx, data) => {
+        const [row] = await tx
+          .update(siteSettings)
+          .set(await values(data, tx))
+          .where(eq(siteSettings.id, 1))
+          .returning({ id: siteSettings.id })
+        if (!row) throw new Rejection('No encontramos la configuración del club. Avisa a soporte.')
+        // La auditoría no guarda los valores: pueden ser datos de contacto o bancarios.
+        return {
+          id: '1',
+          summary: `Cambió la configuración: ${SETTINGS_SECTIONS[key].label}`,
+          meta: { section: key },
+        }
+      },
+    })
+}
+
+const handlers: Record<SettingsSection, (key: SettingsSection, input: unknown) => Result> = {
+  club: section(clubSettingsSchema, (data) => data),
+  contacto: section(contactSettingsSchema, (data) => ({
+    whatsappE164: data.whatsapp,
+    phoneE164: data.phone,
+    publicEmail: data.publicEmail,
+    notifyRecipients: {
+      socios: data.notifySocios,
+      auspicios: data.notifyAuspicios,
+      contacto: data.notifyContacto,
+    },
+  })),
+  redes: section(socialSettingsSchema, (data) => ({ socialLinks: compact(data) })),
+  ubicacion: section(locationSettingsSchema, ({ location, ...data }) => {
+    const coordinates = location ? parseCoordinates(location) : null
+    return { ...data, geoLat: coordinates?.lat ?? null, geoLng: coordinates?.lng ?? null }
+  }),
+  aportes: section(supportSettingsSchema, ({ donationUrl, email, ...bank }) => ({
+    donationUrl,
+    bankDetails:
+      bank.holder && bank.rut && bank.bank && bank.accountType && bank.accountNumber
+        ? {
+            holder: bank.holder,
+            rut: bank.rut,
+            bank: bank.bank,
+            accountType: bank.accountType,
+            accountNumber: bank.accountNumber,
+            ...(email ? { email } : null),
+          }
+        : null,
+  })),
+  portada: section(heroSettingsSchema, async (data, tx) => {
+    await assertPublishableMedia(tx, data.mediaId, 'mediaId')
+    await assertPublishableMedia(tx, data.mobileMediaId, 'mobileMediaId')
+    return { hero: compact(data) }
+  }),
+  destacados: section(featuredSettingsSchema, (data) => data),
+  seo: section(seoSettingsSchema, async (data, tx) => {
+    await assertPublishableMedia(tx, data.ogMediaId, 'ogMediaId')
+    return { seoDefaults: compact(data) }
+  }),
+}
+
+/** Guarda una sección de Configuración (especificación 7.7). */
+export async function guardarConfiguracion(sectionKey: string, input: unknown): Result {
+  if (!isSettingsSection(sectionKey)) return fail('Esa sección de Configuración no existe.')
+  return handlers[sectionKey](sectionKey, input)
 }
