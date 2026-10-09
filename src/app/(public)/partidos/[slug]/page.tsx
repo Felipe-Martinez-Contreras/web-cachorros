@@ -11,6 +11,9 @@ import { EventTimeline } from '@/features/matches/components/event-timeline'
 import { LiveBadge, Scoreboard } from '@/features/matches/components/scoreboard'
 import { hasScore, type LineupPlayerDTO, scoreText } from '@/features/matches/dto'
 import { getMatchDetail, resolveSlugRedirect } from '@/features/matches/public-queries'
+import { JsonLd } from '@/features/seo/components/json-ld'
+import { sportsEventJsonLd } from '@/features/seo/lib/json-ld'
+import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
 import { env } from '@/lib/env'
 import { formatLongDateTime } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
@@ -31,12 +34,13 @@ async function loadMatch(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { match } = await loadMatch((await params).slug)
   const versus = `${match.home.shortName} vs ${match.away.shortName}`
-  return {
+  return pageMetadata({
     title: `${versus} · ${match.seriesName}`,
     description: hasScore(match)
       ? `${scoreText(match)}. ${match.seriesName}, ${match.competitionName}.`
       : `${versus}: ${formatLongDateTime(match.kickoffAt)}. ${match.seriesName}, ${match.competitionName}.`,
-  }
+    path: `/partidos/${match.slug}`,
+  })
 }
 
 function PlayerList({ title, players }: { title: string; players: (LineupPlayerDTO & { note?: string })[] }) {
@@ -74,6 +78,12 @@ export default async function MatchPage({ params }: Props) {
 
   return (
     <article>
+      <JsonLd
+        data={sportsEventJsonLd(
+          { ...match, venue: venue ? { name: venue.name, address: venue.address } : null },
+          siteBaseUrl(),
+        )}
+      />
       <header className="theme-dark">
         <div className="container-site grid grid-cols-1 gap-4 pt-4 pb-10 md:pb-14">
           <Breadcrumbs

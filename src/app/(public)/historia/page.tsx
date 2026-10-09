@@ -11,12 +11,16 @@ import { HistoryNav } from '@/features/history/components/history-nav'
 import { decadeOf, decadesOf, resolveDecade } from '@/features/history/lib/dates'
 import { getTimeline, type MilestoneDTO } from '@/features/history/queries'
 import { getPageBlock } from '@/features/pages/queries'
+import { pageMetadata } from '@/features/seo/metadata'
 import { cn } from '@/lib/cn'
 
-export const metadata: Metadata = {
-  title: 'Historia',
-  description:
-    'La historia del Club Deportivo Los Cachorros, fundado el 1 de abril de 1934 en Sagrada Familia.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Historia',
+    description:
+      'La historia del Club Deportivo Los Cachorros, fundado el 1 de abril de 1934 en Sagrada Familia.',
+    path: '/historia',
+  })
 }
 
 type Props = { searchParams: Promise<{ decada?: string | string[] }> }

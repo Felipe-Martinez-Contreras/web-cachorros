@@ -4,11 +4,16 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { connection } from 'next/server'
 import { Breadcrumbs } from '@/components/site/page-shell'
 import { ShareBar } from '@/components/site/share-bar'
+import { loadSiteOrFallback } from '@/components/site/site-frame'
 import { badgeVariants } from '@/components/ui/badge'
 import { NewsArticle } from '@/features/news/components/news-article'
 import { NewsCard } from '@/features/news/components/news-card'
 import { newsListHref } from '@/features/news/lib/public-params'
 import { getNewsDetail, resolveNewsRedirect } from '@/features/news/public-queries'
+import { JsonLd } from '@/features/seo/components/json-ld'
+import { newsArticleJsonLd } from '@/features/seo/lib/json-ld'
+import { ogImageOf } from '@/features/seo/lib/og-image'
+import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
 import { env } from '@/lib/env'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -26,14 +31,18 @@ async function loadNews(slug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const news = await loadNews((await params).slug)
-  return {
+  return pageMetadata({
     title: news.seoTitle ?? news.title,
-    description: news.seoDescription ?? news.excerpt ?? undefined,
-  }
+    description: news.seoDescription ?? news.excerpt,
+    path: `/noticias/${news.slug}`,
+    image: news.shareImage,
+    article: { publishedTime: news.publishedAt, modifiedTime: news.updatedAt, section: news.categoryName },
+  })
 }
 
 export default async function NewsPage({ params }: Props) {
   const news = await loadNews((await params).slug)
+  const site = await loadSiteOrFallback()
 
   return (
     <NewsArticle
@@ -50,6 +59,13 @@ export default async function NewsPage({ params }: Props) {
         />
       }
     >
+      <JsonLd
+        data={newsArticleJsonLd(
+          { ...news, image: ogImageOf(news.shareImage)?.url ?? null },
+          { clubName: site.clubName, logo: site.crest?.src ?? null },
+          siteBaseUrl(),
+        )}
+      />
       {news.series.length > 0 && (
         <ul aria-label="Series de esta noticia" className="flex flex-wrap gap-2">
           {news.series.map((item) => (

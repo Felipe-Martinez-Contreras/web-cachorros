@@ -7,10 +7,14 @@ import { SportsNav } from '@/features/matches/components/sports-nav'
 import type { MatchDTO } from '@/features/matches/dto'
 import { resolveSportsParams } from '@/features/matches/lib/public-params'
 import { getFixture, getSportsNav } from '@/features/matches/public-queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Partidos',
-  description: 'Fixture y resultados de todas las series del Club Deportivo Los Cachorros.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Partidos',
+    description: 'Fixture y resultados de todas las series del Club Deportivo Los Cachorros.',
+    path: '/partidos',
+  })
 }
 
 type Props = { searchParams: Promise<{ serie?: string | string[]; temporada?: string | string[] }> }

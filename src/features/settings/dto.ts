@@ -6,6 +6,8 @@ export type SiteDTO = {
   clubName: string
   shortName: string
   foundedYear: number
+  /** Fecha de fundación `AAAA-MM-DD` (JSON-LD). */
+  foundedOn: string
   crest: ImageDTO | null
   whatsapp: string | null
   phone: string | null
@@ -23,4 +25,6 @@ export type SiteDTO = {
     mobileImage: ImageDTO | null
   }
   seoDescription: string | null
+  /** Imagen por defecto al compartir el sitio. */
+  seoImage: ImageDTO | null
 }

@@ -11,6 +11,7 @@ const FALLBACK_SITE: SiteDTO = {
   clubName: 'Club Deportivo Los Cachorros',
   shortName: 'Cachorros',
   foundedYear: 1934,
+  foundedOn: '1934-04-01',
   crest: null,
   whatsapp: null,
   phone: null,
@@ -21,6 +22,7 @@ const FALLBACK_SITE: SiteDTO = {
   socialLinks: [],
   hero: { title: null, subtitle: null, ctaLabel: null, ctaHref: null, image: null, mobileImage: null },
   seoDescription: null,
+  seoImage: null,
 }
 
 /** Datos del club para el marco del sitio. Llamar después de `connection()`: el build no toca la BD. */

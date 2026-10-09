@@ -5,10 +5,14 @@ import { PageHero } from '@/components/site/page-shell'
 import { EmptyState } from '@/components/ui/feedback'
 import { HistoryNav } from '@/features/history/components/history-nav'
 import { getHallOfFame } from '@/features/history/queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Salón de la fama',
-  description: 'Las personas que marcaron la historia del Club Deportivo Los Cachorros.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Salón de la fama',
+    description: 'Las personas que marcaron la historia del Club Deportivo Los Cachorros.',
+    path: '/historia/salon-de-la-fama',
+  })
 }
 
 export default async function HallOfFamePage() {

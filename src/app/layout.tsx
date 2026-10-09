@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Archivo } from 'next/font/google'
 import { type ReactNode, Suspense } from 'react'
+import { rootMetadata } from '@/features/seo/metadata'
 import '@/styles/globals.css'
 
 // Una sola familia variable (peso y ancho), autoalojada por next/font (especificación 4.3).
@@ -11,12 +12,9 @@ const archivo = Archivo({
   variable: '--font-archivo',
 })
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Club Deportivo Los Cachorros',
-    template: '%s | Club Deportivo Los Cachorros',
-  },
-  description: 'Club Deportivo Los Cachorros de Sagrada Familia. Desde 1934.',
+// Nada que dependa del dominio o de la base se resuelve en el build (especificación 3.7).
+export function generateMetadata(): Promise<Metadata> {
+  return rootMetadata()
 }
 
 export const viewport: Viewport = {

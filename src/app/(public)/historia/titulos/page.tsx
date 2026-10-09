@@ -5,10 +5,14 @@ import { PageHero } from '@/components/site/page-shell'
 import { EmptyState } from '@/components/ui/feedback'
 import { HistoryNav } from '@/features/history/components/history-nav'
 import { getHonours } from '@/features/history/queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Títulos',
-  description: 'Títulos y campeonatos del Club Deportivo Los Cachorros.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Títulos',
+    description: 'Títulos y campeonatos del Club Deportivo Los Cachorros.',
+    path: '/historia/titulos',
+  })
 }
 
 export default async function HonoursPage() {

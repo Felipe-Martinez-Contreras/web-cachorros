@@ -6,11 +6,18 @@ import { Pagination } from '@/components/ui/pagination'
 import { NewsCard } from '@/features/news/components/news-card'
 import { newsListHref, resolveNewsParams } from '@/features/news/lib/public-params'
 import { getNewsFilters, getNewsPage } from '@/features/news/public-queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Noticias',
-  description: 'Crónicas, comunicados y novedades de todas las series del Club Deportivo Los Cachorros.',
-  alternates: { types: { 'application/rss+xml': '/noticias/rss.xml' } },
+export async function generateMetadata(): Promise<Metadata> {
+  const metadata = await pageMetadata({
+    title: 'Noticias',
+    description: 'Crónicas, comunicados y novedades de todas las series del Club Deportivo Los Cachorros.',
+    path: '/noticias',
+  })
+  return {
+    ...metadata,
+    alternates: { ...metadata.alternates, types: { 'application/rss+xml': '/noticias/rss.xml' } },
+  }
 }
 
 type Param = string | string[] | undefined

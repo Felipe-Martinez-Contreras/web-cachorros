@@ -5,10 +5,14 @@ import { PageHero } from '@/components/site/page-shell'
 import { EmptyState } from '@/components/ui/feedback'
 import { HistoryNav } from '@/features/history/components/history-nav'
 import { getHistoricKits } from '@/features/history/queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Camisetas históricas',
-  description: 'Las camisetas que ha vestido el Club Deportivo Los Cachorros a lo largo de su historia.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Camisetas históricas',
+    description: 'Las camisetas que ha vestido el Club Deportivo Los Cachorros a lo largo de su historia.',
+    path: '/historia/camisetas',
+  })
 }
 
 export default async function HistoricKitsPage() {
