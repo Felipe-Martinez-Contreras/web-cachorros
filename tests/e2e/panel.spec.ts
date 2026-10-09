@@ -45,11 +45,12 @@ test.describe('acceso al panel', () => {
     await expect(page.getByText(ADMIN.name)).toBeVisible()
 
     // Server Action protegida: guarda y confirma.
-    const shortName = page.getByLabel('Nombre corto')
+    await page.goto('/admin/configuracion/club')
+    await expect(page.getByRole('heading', { name: 'Datos del club', level: 1 })).toBeVisible()
+    const shortName = page.getByRole('textbox', { name: 'Nombre corto' })
     await expect(shortName).toHaveValue(/.+/)
-    await shortName.fill('Cachorros')
     await page.getByRole('button', { name: 'Guardar' }).click()
-    await expect(page.getByRole('status')).toHaveText('Guardado.')
+    await expect(page.getByText('Configuración guardada.')).toBeVisible()
 
     await page.getByRole('button', { name: 'Cerrar sesión' }).click()
     await expect(page).toHaveURL(/\/admin\/login$/)
