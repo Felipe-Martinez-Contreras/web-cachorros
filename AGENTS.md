@@ -170,6 +170,8 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `updateTag()` en Server Actions; `revalidateTag(tag, 'max')` en Route Handlers y tareas programadas.
 - **`next build` no toca la BD:** las rutas con datos se resuelven en runtime (`await connection()` o APIs dinámicas
   dentro de `<Suspense>`). El CI compila sin BD.
+- Tareas programadas: `GET /api/cron/tick` con `Authorization: Bearer $CRON_SECRET` (publica las noticias
+  programadas). La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.
 - Cero N+1; seleccionar solo las columnas necesarias. Pool `max: 5`.
 - Migraciones con `drizzle-kit generate`, compatibles hacia atrás (*expand/contract*).
   **Prohibido `drizzle-kit push` fuera de desarrollo.**
@@ -202,6 +204,12 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
 - Formularios: `EntityForm` (`src/components/admin/entity-form.tsx`, react-hook-form + Zod) con el **mismo
   esquema** que valida la acción; el formulario envía los valores tal como están y el servidor los vuelve a validar.
   Las piezas de esquema están en `src/lib/form-schemas.ts` (un campo vacío llega como `''` y se guarda `null`).
+  `EntityForm` también trae los campos `richtext` (editor Tiptap, cargado con `import()` dinámico), `checkboxes`
+  y el autoguardado (`autosave`, solo para borradores).
+- Texto enriquecido: el documento del editor se valida y se reduce a la lista blanca con `richTextField()`
+  (`src/lib/rich-text/`); se dibuja con `<RichText>` (`src/components/site/rich-text.tsx`), nodo por nodo, sin
+  `dangerouslySetInnerHTML`. Un nodo nuevo se agrega en los tres lugares: `document.ts`, el editor y el render.
+  Los videos van detrás de una fachada: nada de terceros se carga antes del clic.
 - Listas con `ResourceList` / `ResourceRow` (tarjetas en el celular), filtros como formulario GET (`ListToolbar`),
   acciones con `ActionButton` (confirmación en `<dialog>` para lo destructivo) y avisos con `useToast()`.
 - Slugs: `resolveSlug()` + `recordSlugChange()` (`src/lib/slug-redirects.ts`) dentro de la transacción.

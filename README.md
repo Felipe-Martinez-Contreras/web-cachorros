@@ -114,6 +114,8 @@ Todas están explicadas en [`.env.example`](.env.example). Las que la app exige 
 | `BETTER_AUTH_SECRET` | Secreto de las sesiones (32+ caracteres) |
 | `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM` | Envío de correos |
 
+Opcional: `CRON_SECRET` (32+ caracteres) protege las tareas programadas; ver «Noticias programadas».
+
 Si falta alguna o tiene un formato incorrecto, **la app no arranca** y dice en español cuál revisar.
 
 Los datos del club (WhatsApp, redes, datos bancarios, dirección) **no** van en `.env`: se editan en el panel.
@@ -133,6 +135,19 @@ pnpm admin:create --restablecer
 ```
 
 Para automatizarlo (sin preguntas), define `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` antes de correrlo.
+
+## Noticias programadas
+
+Una noticia «programada» se publica sola cuando llega su hora. Quien lo hace es la tarea `tick`, que en la VM
+correrá cada 5 minutos (contenedor `ops`, Fase 5). Mientras tanto, o para probarlo en local, se dispara a mano.
+Genera un secreto (hex de 32 bytes, ver `.env.example`), pégalo en `.env` como `CRON_SECRET=` y reinicia el sitio:
+
+```powershell
+$secreto = (Get-Content .env | Where-Object { $_ -like 'CRON_SECRET=*' }) -replace '^CRON_SECRET=', ''
+Invoke-RestMethod http://localhost:3000/api/cron/tick -Headers @{ Authorization = "Bearer $secreto" }
+```
+
+Responde cuántas noticias publicó. Sin `CRON_SECRET` la ruta responde 503 y no hace nada.
 
 ## Imagen Docker
 
