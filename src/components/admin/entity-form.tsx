@@ -26,7 +26,7 @@ type Base = {
 
 export type FieldDef =
   | (Base & {
-      type: 'text' | 'number' | 'date' | 'time' | 'datetime-local' | 'email' | 'tel' | 'url'
+      type: 'text' | 'number' | 'date' | 'time' | 'datetime-local' | 'email' | 'tel' | 'url' | 'password'
       placeholder?: string
       min?: number
       max?: number
