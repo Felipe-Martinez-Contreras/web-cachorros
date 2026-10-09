@@ -24,6 +24,8 @@ try {
     await sql`delete from staff_members where full_name like 'E2E%'`
     await sql`delete from teams where name like 'E2E%' and not is_own_club`
     await sql`delete from venues where name like 'E2E%'`
+    await sql`delete from news where title like 'E2E%'`
+    await sql`delete from news_categories where name like 'E2E%'`
     await sql`delete from slug_redirects where old_slug like 'e2e-%'`
     const media = await sql<{ storage_key: string }[]>`
       delete from media_assets where alt_text like 'E2E %' returning storage_key`
