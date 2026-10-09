@@ -19,6 +19,7 @@ export default defineConfig({
       SITE_URL: 'http://localhost:3000',
       DATABASE_URL: testDb.appUrl,
       BETTER_AUTH_SECRET: 'secreto-solo-para-pruebas-de-integracion-0123456789',
+      CRON_SECRET: 'secreto-de-tareas-solo-para-pruebas-0123456789',
       SMTP_HOST: 'localhost',
       SMTP_PORT: '1025',
       MAIL_FROM: 'Pruebas <pruebas@cachorros.test>',

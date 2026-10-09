@@ -1,6 +1,7 @@
 'use client' // Cliente: pide el enlace de recuperación a /api/auth (con rate limit) y confirma en pantalla.
 
 import { type FormEvent, useState } from 'react'
+import { FormBody } from '@/components/admin/form-body'
 import { authClient } from '@/lib/auth/client'
 import { authErrorMessage } from '@/lib/auth/errors'
 import { z } from '@/lib/zod'
@@ -41,22 +42,24 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-4">
-      <Field
-        name="email"
-        label="Correo"
-        type="email"
-        autoComplete="username"
-        inputMode="email"
-        required
-        error={emailError}
-      />
-      <button type="submit" disabled={pending} className={primaryButtonClass}>
-        {pending ? 'Enviando…' : 'Enviar enlace'}
-      </button>
-      <p role="alert" className="min-h-6 text-danger">
-        {message}
-      </p>
+    <form onSubmit={onSubmit} noValidate>
+      <FormBody className="grid gap-4">
+        <Field
+          name="email"
+          label="Correo"
+          type="email"
+          autoComplete="username"
+          inputMode="email"
+          required
+          error={emailError}
+        />
+        <button type="submit" disabled={pending} className={primaryButtonClass}>
+          {pending ? 'Enviando…' : 'Enviar enlace'}
+        </button>
+        <p role="alert" className="min-h-6 text-danger">
+          {message}
+        </p>
+      </FormBody>
     </form>
   )
 }

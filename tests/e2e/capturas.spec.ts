@@ -1,5 +1,5 @@
 // Capturas para el reporte de fase (360 px y 1280 px). playwright.config.ts las excluye de las pruebas normales:
-//   PowerShell:  $env:CAPTURAS = 'fase-2a'; pnpm test:e2e capturas; Remove-Item Env:CAPTURAS
+//   PowerShell:  $env:CAPTURAS = 'fase-2b'; pnpm test:e2e capturas; Remove-Item Env:CAPTURAS
 import { expect, type Page, test } from '@playwright/test'
 import { ADMIN, login } from './support'
 
@@ -50,7 +50,7 @@ test.describe('capturas del reporte de fase', () => {
   })
 
   test('fase 2a: secciones deportivas públicas y panel deportivo', async ({ page }, testInfo) => {
-    test.skip(!fase.startsWith('fase-2'), 'Estas capturas son de la Fase 2a.')
+    test.skip(fase !== 'fase-2a', 'Estas capturas son de la Fase 2a.')
     test.setTimeout(180_000)
     const width = page.viewportSize()?.width ?? testInfo.project.name
     const shot = async (name: string, fullPage = true) => {
@@ -117,5 +117,51 @@ test.describe('capturas del reporte de fase', () => {
       await expect(page.getByRole('heading', { name: 'Todos los módulos' })).toBeVisible()
       await page.screenshot({ path: `${dir}/panel-menu-${width}.png` })
     }
+  })
+  test('fase 2b: noticias, historia, 404, y panel de contenido y sistema', async ({ page }, testInfo) => {
+    test.skip(fase !== 'fase-2b', 'Estas capturas son de la Fase 2b.')
+    test.setTimeout(240_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    const shot = async (name: string, fullPage = true) => {
+      await loadLazyImages(page)
+      await page.screenshot({ path: `${dir}/${name}-${width}.png`, fullPage })
+    }
+
+    // Sitio público.
+    for (const [path, name] of [
+      ['/noticias', 'noticias'],
+      ['/noticias/cronica-honor', 'noticia-detalle'],
+      ['/historia', 'historia'],
+      ['/historia/salon-de-la-fama', 'salon-de-la-fama'],
+      ['/partidos/no-existe-este-partido', 'pagina-404'],
+    ] as const) {
+      await page.goto(path)
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await shot(name)
+    }
+
+    // Panel.
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+    await shot('panel-inicio')
+    for (const [path, heading, name] of [
+      ['/admin/noticias', 'Noticias', 'panel-noticias'],
+      ['/admin/historia/hitos', 'Historia', 'panel-historia'],
+      ['/admin/textos', 'Textos de páginas', 'panel-textos'],
+      ['/admin/configuracion', 'Configuración', 'panel-configuracion'],
+      ['/admin/configuracion/contacto', 'Contacto y avisos', 'panel-configuracion-contacto'],
+      ['/admin/usuarios', 'Usuarios', 'panel-usuarios'],
+      ['/admin/cuenta', 'Mi cuenta', 'panel-cuenta'],
+      ['/admin/actividad', 'Actividad', 'panel-actividad'],
+    ] as const) {
+      await page.goto(path)
+      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+      await shot(name)
+    }
+    // El editor de una noticia ya publicada.
+    await page.goto('/admin/noticias')
+    await page.getByRole('list', { name: 'Noticias' }).getByRole('link').first().click()
+    await expect(page.getByRole('textbox', { name: 'Texto de la noticia' })).toBeVisible()
+    await shot('panel-noticia-editor')
   })
 })

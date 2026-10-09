@@ -8,6 +8,7 @@ import { resolveSportsParams } from '@/features/matches/lib/public-params'
 import { getSportsNav, resolveSlugRedirect } from '@/features/matches/public-queries'
 import { PlayerCard, StaffCard } from '@/features/players/components/player-card'
 import { getSquad } from '@/features/players/public-queries'
+import { pageMetadata } from '@/features/seo/metadata'
 import { playerPositionGroupLabels } from '@/lib/labels'
 
 type Props = {
@@ -30,10 +31,11 @@ async function loadSquad({ params, searchParams }: Props) {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { squad } = await loadSquad(props)
-  return {
+  return pageMetadata({
     title: `Plantel ${squad.series.name}`,
     description: `Jugadores y cuerpo técnico de la serie ${squad.series.name} del Club Deportivo Los Cachorros, ${squad.seasonName}.`,
-  }
+    path: `/plantel/${squad.series.slug}`,
+  })
 }
 
 const gridClass = 'grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5'

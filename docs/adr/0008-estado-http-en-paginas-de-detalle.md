@@ -82,5 +82,12 @@ propio pool de conexiones: se limita a `max: 2` para no pasar del presupuesto de
 | e2e sin JavaScript: 404 para un slug inexistente y para la ficha de un menor; 301 para un slug cambiado | `tests/e2e/deportes.spec.ts`, bloque «sin JavaScript» (el cambio de slug se hace por el panel) | `pnpm test:e2e` |
 
 Al aplicarlo se agregó un caso: una dirección mal codificada (`%E0%A4%A`) responde 404 sin consultar (antes,
-Next respondía 500 en las rutas dinámicas). La página 404 que entrega el proxy es la estática de la raíz
+Next respondía 500 en las rutas dinámicas). La página 404 que entrega el proxy es la de la raíz
 (`src/app/not-found.tsx`), la misma de cualquier dirección que no existe.
+
+**Actualización (Fase 2b):** esa página dejó de ser estática para llevar el encabezado y el pie del sitio
+(especificación 3.6). El estado 404 lo fija el enrutador antes del render, así que leer los datos del club en
+runtime no lo cambia. Medido sobre el build de producción: `/no-existe` y las cuatro rutas de detalle responden
+**404** con encabezado y pie, en una sola respuesta y sin JavaScript; el build sigue sin tocar la base; con la
+base caída, `/no-existe` responde 404 con el marco de respaldo (nunca 500) y una ruta de detalle se comporta
+como ya describe este ADR (el proxy deja pasar). El proxy no cambió.

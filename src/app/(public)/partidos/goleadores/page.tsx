@@ -6,10 +6,14 @@ import { EmptyState } from '@/components/ui/feedback'
 import { SportsNav } from '@/features/matches/components/sports-nav'
 import { resolveSportsParams } from '@/features/matches/lib/public-params'
 import { getSportsNav, getTopScorers } from '@/features/matches/public-queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Goleadores',
-  description: 'Goleadores de cada serie del Club Deportivo Los Cachorros.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Goleadores',
+    description: 'Goleadores de cada serie del Club Deportivo Los Cachorros.',
+    path: '/partidos/goleadores',
+  })
 }
 
 type Props = { searchParams: Promise<{ serie?: string | string[]; temporada?: string | string[] }> }

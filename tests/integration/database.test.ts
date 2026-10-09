@@ -15,7 +15,8 @@ describe('migraciones', () => {
     const rows = await admin<{ table_name: string; table_type: string }[]>`
       select table_name, table_type from information_schema.tables where table_schema = 'public' order by 1`
     const tables = rows.filter((r) => r.table_type === 'BASE TABLE').map((r) => r.table_name)
-    expect(tables).toHaveLength(52)
+    // 52 del modelo + `two_factor` (verificación en dos pasos, migración 0003).
+    expect(tables).toHaveLength(53)
     expect(tables).toEqual(
       expect.arrayContaining([
         'account',
@@ -28,6 +29,7 @@ describe('migraciones', () => {
         'session',
         'site_settings',
         'sponsors',
+        'two_factor',
         'user',
         'verification',
       ]),

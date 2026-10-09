@@ -7,21 +7,7 @@ import type { SocialLinkDTO, SocialPlatform } from '@/features/social/dto'
 import { tags } from '@/lib/cache-tags'
 import { toImageDTO } from '@/lib/images/dto'
 import { safeExternalUrl } from '@/lib/links'
-import { type ClubIdentityDTO, type SiteDTO, toClubIdentityDTO } from './dto'
-
-/** Lectura sin caché para el panel. */
-export async function getClubIdentity(): Promise<ClubIdentityDTO | null> {
-  const [row] = await db
-    .select({
-      clubName: siteSettings.clubName,
-      shortName: siteSettings.shortName,
-      foundedOn: siteSettings.foundedOn,
-    })
-    .from(siteSettings)
-    .where(eq(siteSettings.id, 1))
-    .limit(1)
-  return row ? toClubIdentityDTO(row) : null
-}
+import type { SiteDTO } from './dto'
 
 const imageSelect = {
   id: mediaAssets.id,
@@ -70,12 +56,14 @@ export async function getSite(): Promise<SiteDTO | null> {
     .where(eq(teams.isOwnClub, true))
     .limit(1)
 
-  const heroIds = [row.hero?.mediaId, row.hero?.mobileMediaId].filter((id): id is string => Boolean(id))
-  const heroMedia =
-    heroIds.length > 0
-      ? await db.select(imageSelect).from(mediaAssets).where(inArray(mediaAssets.id, heroIds))
+  const mediaIds = [row.hero?.mediaId, row.hero?.mobileMediaId, row.seoDefaults?.ogMediaId].filter(
+    (id): id is string => Boolean(id),
+  )
+  const media =
+    mediaIds.length > 0
+      ? await db.select(imageSelect).from(mediaAssets).where(inArray(mediaAssets.id, mediaIds))
       : []
-  const heroImage = (id?: string) => toImageDTO(heroMedia.find((media) => media.id === id))
+  const heroImage = (id?: string) => toImageDTO(media.find((item) => item.id === id))
 
   const socialLinks: SocialLinkDTO[] = SOCIAL_ORDER.flatMap((platform) => {
     const url = safeExternalUrl(row.socialLinks?.[platform])
@@ -86,6 +74,7 @@ export async function getSite(): Promise<SiteDTO | null> {
     clubName: row.clubName,
     shortName: row.shortName,
     foundedYear: Number(row.foundedOn.slice(0, 4)),
+    foundedOn: row.foundedOn,
     crest: toImageDTO(crest),
     whatsapp: row.whatsappE164,
     phone: row.phoneE164,
@@ -103,5 +92,6 @@ export async function getSite(): Promise<SiteDTO | null> {
       mobileImage: heroImage(row.hero?.mobileMediaId),
     },
     seoDescription: row.seoDefaults?.description ?? null,
+    seoImage: heroImage(row.seoDefaults?.ogMediaId),
   }
 }

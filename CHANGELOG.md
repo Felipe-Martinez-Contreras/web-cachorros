@@ -4,6 +4,31 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Fase 2b — Noticias, historia, configuración, usuarios y SEO
+
+- Noticias: editor de texto enriquecido (Tiptap) con lista blanca de nodos, fotos de la biblioteca y videos
+  detrás de una fachada; borradores con autoguardado, vista previa, programación, destacada, categorías y
+  dirección editable con redirección 301. Sitio: listado con filtros y paginación, detalle, compartir y RSS.
+- Tarea `tick` (`GET /api/cron/tick`) que publica las noticias programadas.
+- Historia: línea de tiempo con filtro por década y anclas por año, títulos, salón de la fama y camisetas,
+  administrados desde el panel. Textos de páginas editables.
+- Configuración del club por secciones: contacto y avisos, redes, dirección y mapa, datos bancarios, portada,
+  serie destacada y buscadores.
+- Usuarios: invitar y desactivar administradores, cambiar la contraseña, cerrar sesiones y verificación en dos
+  pasos (TOTP con código QR y códigos de respaldo; migración `0003`). «Actividad» muestra la auditoría con filtros.
+- SEO base generado en runtime desde `SITE_URL`: canonical, Open Graph, JSON-LD (`SportsTeam`, `WebSite`,
+  `BreadcrumbList`, `NewsArticle`, `SportsEvent`), `sitemap.xml` y `robots.txt`; `noindex` fuera de producción.
+- Inicio del panel con los partidos de la semana, lo que falta por cargar y accesos rápidos.
+- La página 404 lleva el encabezado y el pie del sitio, también en las páginas de detalle.
+
+### Fase 2a — Panel deportivo y secciones de partidos y plantel
+
+- Base del panel (shell móvil, listas, formulario genérico, avisos, confirmaciones) y biblioteca de medios.
+- Catálogos deportivos, partidos y «Programar jornada», carga de resultados y tablas de posiciones.
+- Sitio: Partidos (fixture, detalle, posiciones, goleadores, `.ics`), Plantel y fichas de jugadores, con la
+  compuerta única para menores de edad.
+- 404 y 301 reales en las páginas de detalle, resueltos en `proxy.ts` (ADR 0008).
+
 ### Fase 1 — Modelo de datos, seed, sistema de diseño y portada
 
 - Modelo de datos completo (52 tablas): deporte, contenido, club y comunidad y biblioteca de medios, con sus

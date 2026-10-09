@@ -1,6 +1,7 @@
 import 'server-only'
+import { eq } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { auditLog } from '@/db/schema'
+import { auditLog, twoFactor } from '@/db/schema'
 import { getAuth } from '@/lib/auth'
 import { z } from '@/lib/zod'
 import { MIN_PASSWORD_LENGTH } from './constants'
@@ -22,7 +23,7 @@ export type CreateAdminResult =
 
 /**
  * Crea un administrador (no hay registro público). Si el correo ya existe solo actúa con `reset: true`:
- * cambia la contraseña, lo deja como admin y reactiva la cuenta.
+ * cambia la contraseña, lo deja como admin, reactiva la cuenta y quita la verificación en dos pasos.
  * Se usa desde la consola (`admin:create`) y desde las pruebas.
  */
 export async function createAdmin(
@@ -36,7 +37,14 @@ export async function createAdmin(
 
   if (existing) {
     if (!reset) return { status: 'ya_existe', email }
-    await ctx.internalAdapter.updateUser(existing.user.id, { name, role: 'admin', banned: false })
+    await ctx.internalAdapter.updateUser(existing.user.id, {
+      name,
+      role: 'admin',
+      banned: false,
+      // Restablecer desde la consola es la salida de quien perdió su celular y sus códigos de respaldo.
+      twoFactorEnabled: false,
+    })
+    await db.delete(twoFactor).where(eq(twoFactor.userId, existing.user.id))
     await ctx.internalAdapter.updatePassword(existing.user.id, hash)
     await ctx.internalAdapter.deleteUserSessions(existing.user.id)
     await db.insert(auditLog).values({

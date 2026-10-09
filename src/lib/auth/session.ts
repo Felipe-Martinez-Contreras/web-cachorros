@@ -33,6 +33,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return { id, name, email, role: role ?? null, banned: banned ?? false }
 }
 
+/** Id de la sesión de esta petición (para «Mi cuenta»: no se cierra la sesión en uso); `null` sin sesión. */
+export async function getCurrentSessionId(): Promise<string | null> {
+  const session = await getAuth().api.getSession({ headers: await headers() })
+  return session?.session.id ?? null
+}
+
 /**
  * Autorización de Server Actions y Route Handlers (especificación 2.5): se llama dentro de cada una.
  * Lanza `AuthError`; `runAction` lo convierte en un resultado con mensaje en español.

@@ -1,6 +1,6 @@
 import 'server-only'
 import type { BetterAuthOptions } from 'better-auth'
-import { admin } from 'better-auth/plugins'
+import { admin, twoFactor } from 'better-auth/plugins'
 import { env } from '@/lib/env'
 import { logger, maskEmail } from '@/lib/logger'
 import { sendMail } from '@/lib/mail'
@@ -8,6 +8,24 @@ import { MIN_PASSWORD_LENGTH } from './constants'
 
 const RESET_TOKEN_TTL_SECONDS = 60 * 60 // el enlace vale 1 hora
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7 // 7 días, con renovación deslizante
+
+// Correos a los que se acaba de invitar: su enlace para crear la contraseña lleva otro texto. Vive en
+// memoria (instancia única) solo entre la invitación y el envío del correo, que ocurren en la misma acción.
+const pendingInvites = new Set<string>()
+
+/** Marca que el próximo enlace de contraseña para ese correo es una invitación al panel. */
+export function markInvite(email: string): void {
+  pendingInvites.add(email.toLowerCase())
+}
+
+const RESET_LINES = [
+  'Recibimos una solicitud para restablecer tu contraseña del panel del club.',
+  'Abre este enlace para crear una nueva (vale por 1 hora):',
+]
+const INVITE_LINES = [
+  'Te dieron acceso al panel del sitio del club.',
+  'Abre este enlace para crear tu contraseña (vale por 1 hora):',
+]
 
 /**
  * Opciones de Better Auth sin la base de datos (especificación 2.5 y 9.1). No importa nada de Next:
@@ -34,18 +52,22 @@ export function buildAuthOptions() {
       sendResetPassword: async ({ user, token }) => {
         const url = `${env.SITE_URL}/admin/restablecer?token=${encodeURIComponent(token)}`
         // No se espera el envío: la respuesta no se bloquea ni revela si el correo existe.
+        const invited = pendingInvites.delete(user.email.toLowerCase())
         void sendMail({
           to: user.email,
-          subject: 'Restablece tu contraseña · Club Deportivo Los Cachorros',
+          subject: invited
+            ? 'Te invitaron al panel · Club Deportivo Los Cachorros'
+            : 'Restablece tu contraseña · Club Deportivo Los Cachorros',
           text: [
             `Hola${user.name ? ` ${user.name}` : ''}:`,
             '',
-            'Recibimos una solicitud para restablecer tu contraseña del panel del club.',
-            'Abre este enlace para crear una nueva (vale por 1 hora):',
+            ...(invited ? INVITE_LINES : RESET_LINES),
             '',
             url,
             '',
-            'Si no fuiste tú, ignora este correo: tu contraseña no cambia.',
+            invited
+              ? 'Si el enlace venció, pide que te lo envíen de nuevo o usa «Olvidé mi contraseña» en el panel.'
+              : 'Si no fuiste tú, ignora este correo: tu contraseña no cambia.',
           ].join('\n'),
         }).catch((error: unknown) => {
           logger.error(
@@ -68,6 +90,6 @@ export function buildAuthOptions() {
       // Solo Cloudflare llega al origen (firewall + AOP), así que su cabecera es confiable.
       ipAddress: { ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'] },
     },
-    plugins: [admin({ adminRoles: ['admin'] })],
+    plugins: [admin({ adminRoles: ['admin'] }), twoFactor({ issuer: 'Club Deportivo Los Cachorros' })],
   } satisfies BetterAuthOptions
 }

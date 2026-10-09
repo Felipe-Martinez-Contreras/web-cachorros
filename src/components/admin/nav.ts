@@ -2,15 +2,22 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardList,
+  FileText,
+  History,
   House,
   Images,
+  KeyRound,
+  Landmark,
   ListOrdered,
   type LucideIcon,
   MapPin,
+  Newspaper,
   Palette,
+  Settings,
   Shield,
   ShieldHalf,
   Trophy,
+  UserCog,
   Users,
 } from 'lucide-react'
 import type { Permission } from '@/lib/permissions'
@@ -76,12 +83,30 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'Contenido',
     items: [
-      { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write', primary: true },
+      {
+        href: '/admin/noticias',
+        label: 'Noticias',
+        icon: Newspaper,
+        permission: 'news:write',
+        primary: true,
+      },
+      { href: '/admin/historia', label: 'Historia', icon: Landmark, permission: 'history:write' },
+      { href: '/admin/textos', label: 'Textos de páginas', icon: FileText, permission: 'pages:write' },
+      { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write' },
     ],
   },
   {
     label: 'Sistema',
     items: [
+      {
+        href: '/admin/configuracion',
+        label: 'Configuración',
+        icon: Settings,
+        permission: 'settings:write',
+      },
+      { href: '/admin/usuarios', label: 'Usuarios', icon: UserCog, permission: 'users:manage' },
+      { href: '/admin/actividad', label: 'Actividad', icon: History, permission: 'audit:read' },
+      { href: '/admin/cuenta', label: 'Mi cuenta', icon: KeyRound, permission: 'panel:access' },
       {
         href: '/admin/sistema-de-diseno',
         label: 'Sistema de diseño',

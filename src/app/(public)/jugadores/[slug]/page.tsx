@@ -6,6 +6,7 @@ import { ClubImage } from '@/components/site/club-image'
 import { Breadcrumbs } from '@/components/site/page-shell'
 import { resolveSlugRedirect } from '@/features/matches/public-queries'
 import { getPlayerProfile } from '@/features/players/public-queries'
+import { pageMetadata } from '@/features/seo/metadata'
 import { playerPositionLabels, positionDetailLabels } from '@/lib/labels'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -25,10 +26,12 @@ async function loadProfile(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const profile = await loadProfile((await params).slug)
   const series = profile.current.map((item) => item.seriesName).join(', ')
-  return {
+  return pageMetadata({
     title: profile.name,
     description: `${profile.name}, ${playerPositionLabels[profile.position].toLowerCase()} del Club Deportivo Los Cachorros${series ? ` (${series})` : ''}.`,
-  }
+    path: `/jugadores/${profile.slug}`,
+    image: profile.photo,
+  })
 }
 
 const STAT_COLUMNS = [

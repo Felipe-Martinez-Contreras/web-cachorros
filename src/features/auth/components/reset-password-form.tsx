@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { type FormEvent, useState } from 'react'
+import { FormBody } from '@/components/admin/form-body'
 import { authClient } from '@/lib/auth/client'
 import { MIN_PASSWORD_LENGTH } from '@/lib/auth/constants'
 import { authErrorMessage } from '@/lib/auth/errors'
@@ -60,30 +61,32 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-4">
-      <Field
-        name="password"
-        label="Contraseña nueva"
-        type="password"
-        autoComplete="new-password"
-        required
-        help={`Al menos ${MIN_PASSWORD_LENGTH} caracteres. Una frase larga funciona muy bien.`}
-        error={fieldErrors.password?.[0]}
-      />
-      <Field
-        name="confirm"
-        label="Repite la contraseña"
-        type="password"
-        autoComplete="new-password"
-        required
-        error={fieldErrors.confirm?.[0]}
-      />
-      <button type="submit" disabled={pending} className={primaryButtonClass}>
-        {pending ? 'Guardando…' : 'Guardar contraseña'}
-      </button>
-      <p role="alert" className="min-h-6 text-danger">
-        {message}
-      </p>
+    <form onSubmit={onSubmit} noValidate>
+      <FormBody className="grid gap-4">
+        <Field
+          name="password"
+          label="Contraseña nueva"
+          type="password"
+          autoComplete="new-password"
+          required
+          help={`Al menos ${MIN_PASSWORD_LENGTH} caracteres. Una frase larga funciona muy bien.`}
+          error={fieldErrors.password?.[0]}
+        />
+        <Field
+          name="confirm"
+          label="Repite la contraseña"
+          type="password"
+          autoComplete="new-password"
+          required
+          error={fieldErrors.confirm?.[0]}
+        />
+        <button type="submit" disabled={pending} className={primaryButtonClass}>
+          {pending ? 'Guardando…' : 'Guardar contraseña'}
+        </button>
+        <p role="alert" className="min-h-6 text-danger">
+          {message}
+        </p>
+      </FormBody>
     </form>
   )
 }

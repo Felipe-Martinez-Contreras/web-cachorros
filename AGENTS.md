@@ -61,7 +61,7 @@ detrás de Cloudflare.
 | `pnpm check` / `pnpm check:fix` | Biome (lint + formato) + `tsc --noEmit` / corrige formato y lint |
 | `pnpm test` | Pruebas unitarias (Vitest) |
 | `pnpm test:integration` | Integración contra PostgreSQL 18 real (base aparte `cachorros_test`, con el rol restringido) |
-| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes), en el puerto 3100 |
+| `pnpm test:e2e` | Playwright (360×800 y 1280×800) + axe, contra el build de producción (`pnpm build` antes), en el puerto 3100; `seo.spec.ts` usa además una segunda instancia de la misma build en el 3101 (otro `SITE_URL`, `SITE_ENV=production`) |
 | `pnpm db:generate` | Genera migraciones SQL con `drizzle-kit generate` (se revisan y se commitean) |
 | `pnpm db:migrate` | Aplica migraciones con el migrador de `drizzle-orm` |
 | `pnpm db:seed` / `pnpm db:reset` | Carga datos de ejemplo (idempotente; `--en-vivo`, `--hoy=AAAA-MM-DD`) / recrea la BD (solo desarrollo) |
@@ -145,7 +145,9 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   *streaming* necesita JavaScript para colocarse y la página quedaría en el *skeleton* sin JS. El único límite está
   en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
 - Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
-  como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`.
+  como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`. La página 404
+  (`src/app/not-found.tsx`) lleva el marco del sitio (`SiteFrame`) y lee los datos del club con
+  `loadSiteOrFallback()`: si la base falla usa el respaldo, nunca responde 500.
 - Las páginas de detalle (`/noticias/[slug]`, `/partidos/[slug]`, `/jugadores/[slug]`, `/plantel/[serie]`) reciben
   su 404 y su 301 desde `proxy.ts` (ADR 0008), que llama a `src/features/<dominio>/slug.ts`: **una sola consulta
   indexada**, con la misma regla de visibilidad que el DTO público; si la base falla, deja pasar. La página
@@ -168,6 +170,8 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `updateTag()` en Server Actions; `revalidateTag(tag, 'max')` en Route Handlers y tareas programadas.
 - **`next build` no toca la BD:** las rutas con datos se resuelven en runtime (`await connection()` o APIs dinámicas
   dentro de `<Suspense>`). El CI compila sin BD.
+- Tareas programadas: `GET /api/cron/tick` con `Authorization: Bearer $CRON_SECRET` (publica las noticias
+  programadas). La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.
 - Cero N+1; seleccionar solo las columnas necesarias. Pool `max: 5`.
 - Migraciones con `drizzle-kit generate`, compatibles hacia atrás (*expand/contract*).
   **Prohibido `drizzle-kit push` fuera de desarrollo.**
@@ -200,6 +204,17 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
 - Formularios: `EntityForm` (`src/components/admin/entity-form.tsx`, react-hook-form + Zod) con el **mismo
   esquema** que valida la acción; el formulario envía los valores tal como están y el servidor los vuelve a validar.
   Las piezas de esquema están en `src/lib/form-schemas.ts` (un campo vacío llega como `''` y se guarda `null`).
+- **Todo formulario del panel envuelve sus campos y botones en `<FormBody>`**
+  (`src/components/admin/form-body.tsx`; `EntityForm` ya lo trae): nacen deshabilitados, con el aviso
+  «Preparando el formulario…», y se habilitan cuando React toma el control. Así nada de lo que se escribe puede
+  perderse ni enviarse como formulario nativo antes de la hidratación. Vale también para controles con estado
+  fuera de un `<form>`. Lo cubre `tests/e2e/formularios.spec.ts`, que retiene los scripts de la página.
+  `EntityForm` también trae los campos `richtext` (editor Tiptap, cargado con `import()` dinámico), `checkboxes`
+  y el autoguardado (`autosave`, solo para borradores).
+- Texto enriquecido: el documento del editor se valida y se reduce a la lista blanca con `richTextField()`
+  (`src/lib/rich-text/`); se dibuja con `<RichText>` (`src/components/site/rich-text.tsx`), nodo por nodo, sin
+  `dangerouslySetInnerHTML`. Un nodo nuevo se agrega en los tres lugares: `document.ts`, el editor y el render.
+  Los videos van detrás de una fachada: nada de terceros se carga antes del clic.
 - Listas con `ResourceList` / `ResourceRow` (tarjetas en el celular), filtros como formulario GET (`ListToolbar`),
   acciones con `ActionButton` (confirmación en `<dialog>` para lo destructivo) y avisos con `useToast()`.
 - Slugs: `resolveSlug()` + `recordSlugChange()` (`src/lib/slug-redirects.ts`) dentro de la transacción.
@@ -230,12 +245,35 @@ Ningún DTO público se arma leyendo `players` directamente.
   explica en español.
 - Los datos del club viven en la BD (panel → Configuración), **no** en `.env`.
 
+### SEO (11)
+
+- Los metadatos se generan en runtime: el layout raíz usa `rootMetadata()` (`metadataBase` desde `SITE_URL`,
+  `noindex` si `SITE_ENV ≠ production`) y cada página pública exporta `generateMetadata` con
+  `pageMetadata({ title, description, path })` (`src/features/seo/metadata.ts`): canonical, Open Graph y Twitter
+  con direcciones relativas que `metadataBase` vuelve absolutas. Nunca `export const metadata` con URLs.
+- JSON-LD con los constructores puros de `src/features/seo/lib/json-ld.ts` y el componente `<JsonLd>` (el JSON
+  va escapado como texto, sin `dangerouslySetInnerHTML`). Reciben DTOs públicos: un dato privado o un marcador
+  `[COMPLETAR]` nunca llega a los datos estructurados.
+- Una sección pública nueva se agrega a `getSitemapEntries()` (`src/features/seo/sitemap.ts`) con la misma regla
+  de visibilidad que su página. Los jugadores pasan por `loadMinorIds`: ningún menor en el sitemap.
+
+### Usuarios y seguridad (7.6)
+
+- Las cuentas se invitan desde el panel (`invitarAdministrador`); no hay registro público.
+- Lo que reemplaza la cookie de sesión (activar o desactivar los dos pasos, verificar el código al entrar) lo hace
+  el navegador contra `/api/auth` y se audita en los *hooks* de `src/lib/auth/index.ts`. Todo lo demás (invitar,
+  desactivar, cambiar la contraseña, cerrar sesiones) son Server Actions con `mutate()`.
+- La auditoría guarda quién hizo qué, nunca valores sensibles: ni correos, ni datos bancarios, ni contraseñas.
+- En un formulario, un marcador `[COMPLETAR: …]` se acepta tal cual (`isContentMarker`): el dato sigue en los
+  pendientes hasta que el club lo complete.
+
 ### Fechas, dinero y formatos chilenos (3.8)
 
 - Persistir `timestamptz` en UTC; mostrar y razonar en `America/Santiago` con `timeZone` explícito.
 - Un único módulo `src/lib/format.ts` (`Intl` `es-CL`); cálculos con date-fns v4 + `@date-fns/tz`; reloj inyectable
   en `src/lib/clock.ts`.
-- Dinero en CLP como `integer` → «$15.000». Teléfonos en E.164. RUT con módulo 11 y formato `12.345.678-5`.
+- Dinero en CLP como `integer` → «$15.000». Teléfonos en E.164 (`toE164()` en `src/lib/phone.ts`, o
+  `optionalPhone()` en un esquema). RUT con módulo 11 y formato `12.345.678-5`.
 
 ### Idioma y nombres (3.9)
 

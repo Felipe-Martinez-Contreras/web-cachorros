@@ -167,14 +167,19 @@ test.describe('portada', () => {
   test('las secciones aún no construidas muestran «Próximamente» y lo inexistente es un 404', async ({
     page,
   }) => {
-    const soon = await page.goto('/noticias')
+    const soon = await page.goto('/tienda')
     expect(soon?.status()).toBe(200)
-    await expect(page.getByRole('heading', { level: 1, name: 'Noticias' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Tienda' })).toBeVisible()
     await expect(page.getByText('Próximamente')).toBeVisible()
 
     const missing = await page.goto('/no-existe')
     expect(missing?.status()).toBe(404)
     await expect(page.getByRole('heading', { name: 'Este balón se fue fuera de la cancha' })).toBeVisible()
+    // La página 404 lleva el encabezado y el pie del sitio (especificación 3.6).
+    await expect(page.getByRole('banner')).toBeVisible()
+    await expect(page.getByRole('contentinfo')).toBeVisible()
+    const { violations } = await new AxeBuilder({ page }).analyze()
+    expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
   })
 
   test('las imágenes se sirven procesadas y fuera de la carpeta de subidas no hay nada', async ({

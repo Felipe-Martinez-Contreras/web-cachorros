@@ -1,3 +1,5 @@
+import { isContentMarker } from '@/lib/markers'
+import { toE164 } from '@/lib/phone'
 import { z } from '@/lib/zod'
 
 // Piezas de Zod para los formularios del panel. Un campo de formulario vacío llega como '' (o `null` si
@@ -70,6 +72,56 @@ export function optionalDate(message = 'Escribe una fecha válida.') {
 /** Hora `HH:MM` (lo que entrega `<input type="time">`). */
 export function requiredTime(message: string) {
   return z.string({ error: message }).regex(/^([01]\d|2[0-3]):[0-5]\d$/, message)
+}
+
+/** Correo opcional, en minúsculas: vacío → `null`. Un marcador `[COMPLETAR: …]` se conserva. */
+export function optionalEmail(message = 'Escribe un correo válido.') {
+  return z.preprocess(
+    blankToNull,
+    z
+      .string()
+      .trim()
+      .max(160, 'Usa como máximo 160 caracteres.')
+      .transform((value) => (isContentMarker(value) ? value : value.toLowerCase()))
+      .refine((value) => isContentMarker(value) || z.email().safeParse(value).success, message)
+      .nullable(),
+  )
+}
+
+/** Teléfono opcional: se guarda en E.164 (`+56912345678`); vacío → `null`. */
+export function optionalPhone(message = 'Escribe el teléfono con su código: +56 9 1234 5678.') {
+  return z.preprocess(
+    blankToNull,
+    z
+      .string()
+      .transform((value, ctx) => {
+        if (isContentMarker(value)) return value.trim()
+        const phone = toE164(value)
+        if (!phone) ctx.addIssue({ code: 'custom', message })
+        return phone ?? value
+      })
+      .nullable(),
+  )
+}
+
+/** Dirección web opcional (`https://…`): vacío → `null`. */
+export function optionalUrl(message = 'Escribe la dirección completa, empezando con https://') {
+  return z.preprocess(
+    blankToNull,
+    z
+      .string()
+      .trim()
+      .max(300, 'Usa como máximo 300 caracteres.')
+      .refine((value) => {
+        if (isContentMarker(value)) return true
+        try {
+          return new URL(value).protocol === 'https:'
+        } catch {
+          return false
+        }
+      }, message)
+      .nullable(),
+  )
 }
 
 /** Casilla: acepta el booleano de react-hook-form y los valores de un formulario nativo. */

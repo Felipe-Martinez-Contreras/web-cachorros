@@ -7,9 +7,9 @@ Marcadores que todavía están en el sitio (especificación, sección 0.3):
 
 | Marcador | Significado | Cantidad |
 |---|---|---|
-| `[COMPLETAR: …]` | Dato del club que aún no tenemos | 187 |
+| `[COMPLETAR: …]` | Dato del club que aún no tenemos | 192 |
 | `[DECIDIR: …]` | Decisión de producto pendiente (rige el default) | 4 |
-| `[VERIFICAR: …]` | Supuesto técnico o normativo por confirmar | 6 |
+| `[VERIFICAR: …]` | Supuesto técnico o normativo por confirmar | 7 |
 
 ## En la base de datos
 
@@ -70,7 +70,6 @@ Es lo que ve el público hoy. Se corrige desde el panel.
 - WhatsApp del club: tiene el número de ejemplo +56900000000.
 - Teléfono del club: sin completar.
 - Correo público: sin completar.
-- Destinatarios de las notificaciones de formularios: sin completar.
 - Redes sociales: sin completar.
 - Link de pago (opcional): sin completar.
 
@@ -81,7 +80,7 @@ y decisiones anotados junto al código que los aplica.
 
 | Marcador | Dónde |
 |---|---|
-| [COMPLETAR: …] | `scripts/content-pending.ts:156`, `scripts/seed/data.ts:2` |
+| [COMPLETAR: …] | `scripts/content-pending.ts:156`, `scripts/seed/data.ts:2`, `src/app/admin/(panel)/configuracion/page.tsx:38`, `src/features/pages/queries.ts:52`, `src/features/seo/lib/json-ld.ts:35`, `src/lib/form-schemas.ts:77`, `src/lib/markers.ts:4` |
 | [COMPLETAR: año, serie y relato del título] | `scripts/seed/content.ts:317` |
 | [COMPLETAR: año] | `scripts/seed/content.ts:283`, `scripts/seed/content.ts:289` |
 | [COMPLETAR: auspiciadores reales, niveles y enlaces] | `scripts/seed/club.ts:145` |
@@ -139,6 +138,7 @@ y decisiones anotados junto al código que los aplica.
 | [DECIDIR: mini-tabla en la portada. Default: sí] | `src/features/matches/queries.ts:235` |
 | [DECIDIR] | `scripts/content-pending.ts:1` |
 | [VERIFICAR: …] | `scripts/content-pending.ts:158` |
+| [VERIFICAR: cabecera X-Robots-Tag noindex en staging desde el Caddyfile, Fase 5] | `src/app/robots.ts:13` |
 | [VERIFICAR: color oficial del club con la directiva] | `src/styles/tokens.css:6` |
 | [VERIFICAR: con asesoría legal, Ley 19.628 y Ley 21.719] | `scripts/seed/content.ts:358` |
 | [VERIFICAR: puntos por triunfo y empate según el reglamento de la asociación] | `src/features/matches/lib/standings.ts:67` |

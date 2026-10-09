@@ -33,6 +33,9 @@ export const env = createEnv({
       z.string().min(32, { error: 'Debe tener al menos 32 caracteres.' }),
     ),
 
+    // Protege las tareas programadas (`/api/cron/*`). Sin ella, esas rutas responden 503.
+    CRON_SECRET: z.string().min(32, { error: 'Debe tener al menos 32 caracteres.' }).optional(),
+
     SMTP_HOST: requerida('En desarrollo usa localhost (Mailpit).'),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
     SMTP_USER: z.string().optional(),

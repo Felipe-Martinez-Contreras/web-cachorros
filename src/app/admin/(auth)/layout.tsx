@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { connection } from 'next/server'
 import type { ReactNode } from 'react'
 
 export const metadata: Metadata = {
@@ -6,7 +7,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function AuthLayout({ children }: { children: ReactNode }) {
+export default async function AuthLayout({ children }: { children: ReactNode }) {
+  // Estas pantallas se resuelven en runtime, igual que los metadatos del layout raíz (que dependen de
+  // `SITE_URL`): nada del dominio queda fijo en el build (especificación 3.7).
+  await connection()
   return (
     <main className="grid min-h-svh place-items-center bg-neutral-50 px-4 py-8">
       <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-paper p-6">

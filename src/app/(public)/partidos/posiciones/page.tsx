@@ -6,10 +6,14 @@ import { SportsNav } from '@/features/matches/components/sports-nav'
 import { StandingsTable } from '@/features/matches/components/standings-table'
 import { resolveSportsParams } from '@/features/matches/lib/public-params'
 import { getSportsNav, getStandings } from '@/features/matches/public-queries'
+import { pageMetadata } from '@/features/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Tabla de posiciones',
-  description: 'Tabla de posiciones de cada serie del Club Deportivo Los Cachorros.',
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: 'Tabla de posiciones',
+    description: 'Tabla de posiciones de cada serie del Club Deportivo Los Cachorros.',
+    path: '/partidos/posiciones',
+  })
 }
 
 type Props = { searchParams: Promise<{ serie?: string | string[]; temporada?: string | string[] }> }

@@ -9,9 +9,10 @@ administración propio, pensado para usarse desde el celular.
 - **Decisiones de arquitectura:** [`docs/adr/`](docs/adr/)
 - **Avance por fases:** [`docs/fases/`](docs/fases/)
 
-> **Estado:** Fase 2a (panel deportivo y secciones de partidos y plantel). Ya funcionan la portada, el panel
-> para programar partidos, cargar resultados, tablas, plantel y medios, y las páginas públicas de Partidos y
-> Plantel. Noticias, historia, configuración y SEO llegan en la Fase 2b; el resto, en las fases siguientes.
+> **Estado:** Fase 2 (panel de administración y secciones deportivas). Ya funcionan la portada; el panel para
+> partidos, resultados, tablas, plantel, medios, noticias, historia, textos, configuración, usuarios y
+> actividad; y las páginas públicas de Noticias, Partidos, Plantel e Historia, con su SEO base. Socios, tienda,
+> eventos y el resto del club llegan en la Fase 3.
 
 ## Qué necesitas
 
@@ -87,7 +88,7 @@ En desarrollo no se envía ningún correo real: todos quedan en Mailpit. Ahí ll
 | `pnpm check:fix` | Corrige formato y lint automáticamente |
 | `pnpm test` | Pruebas unitarias |
 | `pnpm test:integration` | Pruebas contra PostgreSQL real (usa una base aparte, `cachorros_test`) |
-| `pnpm test:e2e` | Pruebas de navegador a 360 px y 1280 px contra el build (puerto 3100). Requiere `pnpm build` antes |
+| `pnpm test:e2e` | Pruebas de navegador a 360 px y 1280 px contra el build (puertos 3100 y 3101). Requiere `pnpm build` antes |
 | `pnpm db:generate` | Genera una migración SQL a partir de los cambios en `src/db/schema` |
 | `pnpm db:migrate` | Aplica las migraciones pendientes |
 | `pnpm db:seed` | Carga los datos de ejemplo. Se puede repetir: no duplica nada |
@@ -114,25 +115,48 @@ Todas están explicadas en [`.env.example`](.env.example). Las que la app exige 
 | `BETTER_AUTH_SECRET` | Secreto de las sesiones (32+ caracteres) |
 | `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM` | Envío de correos |
 
+Opcional: `CRON_SECRET` (32+ caracteres) protege las tareas programadas; ver «Noticias programadas».
+
 Si falta alguna o tiene un formato incorrecto, **la app no arranca** y dice en español cuál revisar.
 
 Los datos del club (WhatsApp, redes, datos bancarios, dirección) **no** van en `.env`: se editan en el panel.
 
 ## Crear o restablecer un administrador
 
-No existe registro público. Las cuentas se crean desde la consola:
+No existe registro público. La primera cuenta se crea desde la consola:
 
 ```powershell
 pnpm admin:create
 ```
 
-Si la persona olvidó su contraseña y no le llega el correo de recuperación:
+Las siguientes se invitan desde el panel (**Usuarios → Invitar a un administrador**): a la persona le llega un
+enlace, válido por 1 hora, para crear su contraseña. Cada quien puede activar la verificación en dos pasos en
+**Mi cuenta** (recomendado): se escanea un código QR con una app autenticadora y se guardan los códigos de respaldo.
+
+Si la persona olvidó su contraseña y no le llega el correo de recuperación, o perdió el celular y los códigos de
+respaldo de los dos pasos:
 
 ```powershell
 pnpm admin:create --restablecer
 ```
 
+Cambia la contraseña, cierra sus sesiones, reactiva la cuenta y **quita la verificación en dos pasos** (después
+puede volver a activarla).
+
 Para automatizarlo (sin preguntas), define `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` antes de correrlo.
+
+## Noticias programadas
+
+Una noticia «programada» se publica sola cuando llega su hora. Quien lo hace es la tarea `tick`, que en la VM
+correrá cada 5 minutos (contenedor `ops`, Fase 5). Mientras tanto, o para probarlo en local, se dispara a mano.
+Genera un secreto (hex de 32 bytes, ver `.env.example`), pégalo en `.env` como `CRON_SECRET=` y reinicia el sitio:
+
+```powershell
+$secreto = (Get-Content .env | Where-Object { $_ -like 'CRON_SECRET=*' }) -replace '^CRON_SECRET=', ''
+Invoke-RestMethod http://localhost:3000/api/cron/tick -Headers @{ Authorization = "Bearer $secreto" }
+```
+
+Responde cuántas noticias publicó. Sin `CRON_SECRET` la ruta responde 503 y no hace nada.
 
 ## Imagen Docker
 

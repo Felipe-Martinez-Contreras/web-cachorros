@@ -14,6 +14,8 @@ export const tags = {
   events: () => 'events',
   store: () => 'store',
   history: () => 'history',
+  /** Textos de páginas editables desde el panel (`page_blocks`). */
+  pages: () => 'pages',
   media: () => 'media',
   social: () => 'social',
 } as const
