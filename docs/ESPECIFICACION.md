@@ -397,7 +397,7 @@ export async function registrarGol(input: unknown): Promise<ActionResult<MatchEv
 ### 3.10 Calidad y automatización
 
 - Biome (lint + formato) con reglas estrictas; lefthook: `biome check` sobre archivos en *staging* + commitlint.
-- Renovate semanal, agrupado; *automerge* solo de parches de dependencias de desarrollo con CI verde. **Parches de seguridad de Next.js y React: aplicar en ≤ 48 h** (en diciembre de 2025 hubo vulnerabilidades críticas en React Server Components).
+- Renovate semanal, agrupado y **sin *automerge***: cada PR lo revisa y lo mergea una persona. **Parches de seguridad de Next.js y React: aplicar en ≤ 48 h** (en diciembre de 2025 hubo vulnerabilidades críticas en React Server Components).
 - CI: `pnpm audit --prod` y escaneo de la imagen con Trivy (falla con severidad CRITICAL).
 
 ### 3.11 Pruebas

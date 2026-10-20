@@ -6,17 +6,12 @@
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
   "rangeStrategy": "bump",
+  "automerge": false,
   "packageRules": [
     {
       "description": "Agrupa actualizaciones menores y de parche",
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "dependencias (menores y parches)"
-    },
-    {
-      "description": "Automerge solo de parches de dependencias de desarrollo con CI verde",
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["patch"],
-      "automerge": true
     },
     {
       "description": "Next.js y React van solos y sin agrupar: sus parches de seguridad se aplican en 48 h o menos",
