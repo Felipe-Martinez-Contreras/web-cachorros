@@ -1,5 +1,16 @@
+import AxeBuilder from '@axe-core/playwright'
 import type { APIRequestContext, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
+
+/**
+ * Sin violaciones serias ni críticas de axe. Antes espera el `<title>`: tras una navegación en el cliente,
+ * Next 16 envía los metadatos por streaming y axe podía revisar la página sin título (`document-title`).
+ */
+export async function expectAccessible(page: Page) {
+  await expect(page).toHaveTitle(/\S/)
+  const { violations } = await new AxeBuilder({ page }).analyze()
+  expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
+}
 
 export const PASSWORD = 'clave-e2e-de-pruebas-2026'
 export const ADMIN = { name: 'Admin E2E', email: 'e2e-admin@cachorros.test' }

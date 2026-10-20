@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
-import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page, test } from '@playwright/test'
+import { expectAccessible } from './support'
 
 /** Errores de consola y de página: un error de hidratación de React aparece aquí. */
 function collectErrors(page: Page): string[] {
@@ -124,8 +124,7 @@ test.describe('portada', () => {
   test('no tiene violaciones de accesibilidad serias ni críticas', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const { violations } = await new AxeBuilder({ page }).analyze()
-    expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
+    await expectAccessible(page)
   })
 
   test('se navega completa con el teclado y el foco siempre se ve', async ({ page }, testInfo) => {
@@ -178,8 +177,7 @@ test.describe('portada', () => {
     // La página 404 lleva el encabezado y el pie del sitio (especificación 3.6).
     await expect(page.getByRole('banner')).toBeVisible()
     await expect(page.getByRole('contentinfo')).toBeVisible()
-    const { violations } = await new AxeBuilder({ page }).analyze()
-    expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
+    await expectAccessible(page)
   })
 
   test('las imágenes se sirven procesadas y fuera de la carpeta de subidas no hay nada', async ({

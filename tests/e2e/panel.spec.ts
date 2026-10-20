@@ -1,6 +1,14 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
-import { ADMIN, deleteMailFor, formAlert, login, PASSWORD, recoveryUser, waitForMail } from './support'
+import {
+  ADMIN,
+  deleteMailFor,
+  expectAccessible,
+  formAlert,
+  login,
+  PASSWORD,
+  recoveryUser,
+  waitForMail,
+} from './support'
 
 test.describe('acceso al panel', () => {
   test('sin sesión, /admin redirige al login', async ({ page }) => {
@@ -28,8 +36,7 @@ test.describe('acceso al panel', () => {
   test('el login es accesible y no se indexa', async ({ page }) => {
     const response = await page.goto('/admin/login')
     expect(response?.headers()['x-robots-tag']).toContain('noindex')
-    const { violations } = await new AxeBuilder({ page }).analyze()
-    expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
+    await expectAccessible(page)
   })
 
   test('credenciales incorrectas muestran el error en español', async ({ page }) => {
