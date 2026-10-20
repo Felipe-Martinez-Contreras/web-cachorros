@@ -2,10 +2,12 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardList,
+  Contact,
   FileText,
   History,
   House,
   Images,
+  Inbox,
   KeyRound,
   Landmark,
   ListOrdered,
@@ -93,6 +95,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { href: '/admin/historia', label: 'Historia', icon: Landmark, permission: 'history:write' },
       { href: '/admin/textos', label: 'Textos de páginas', icon: FileText, permission: 'pages:write' },
       { href: '/admin/medios', label: 'Medios', icon: Images, permission: 'media:write' },
+    ],
+  },
+  {
+    label: 'Comunidad',
+    items: [
+      { href: '/admin/socios', label: 'Socios', icon: Contact, permission: 'members:write' },
+      { href: '/admin/mensajes', label: 'Mensajes', icon: Inbox, permission: 'messages:write' },
     ],
   },
   {
