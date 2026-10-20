@@ -59,6 +59,13 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
         : null),
     },
     featuredSeriesId: sport.seriesId('honor'),
+    // Direcciones de ejemplo (dominio reservado .test): en desarrollo, los avisos llegan a Mailpit.
+    // [COMPLETAR: correos de la directiva que reciben los avisos de cada formulario]
+    notifyRecipients: {
+      socios: ['socios@cachorros.test'],
+      auspicios: ['auspicios@cachorros.test'],
+      contacto: ['contacto@cachorros.test'],
+    },
     seoDefaults: {
       description: `Sitio oficial del ${CLUB.name} de Sagrada Familia. Partidos, resultados, noticias y más. Desde 1934.`,
     },
