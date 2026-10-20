@@ -51,6 +51,7 @@ const TABLES = [
   'members',
   'membership_requests',
   'contact_messages',
+  'sponsorship_inquiries',
   'board_members',
   'documents',
   'site_settings',
@@ -78,7 +79,7 @@ afterAll(async () => {
   await admin.unsafe(`
     UPDATE site_settings SET featured_series_id = NULL, hero = NULL;
     DELETE FROM documents; DELETE FROM board_members;
-    DELETE FROM membership_requests; DELETE FROM contact_messages; DELETE FROM members; DELETE FROM membership_plans;
+    DELETE FROM membership_requests; DELETE FROM contact_messages; DELETE FROM sponsorship_inquiries; DELETE FROM members; DELETE FROM membership_plans;
     DELETE FROM product_images; DELETE FROM product_variants; DELETE FROM products; DELETE FROM product_categories;
     DELETE FROM sponsors; DELETE FROM page_blocks; DELETE FROM historic_kits; DELETE FROM hall_of_fame;
     DELETE FROM honours; DELETE FROM history_milestones; DELETE FROM social_posts; DELETE FROM videos;
@@ -111,6 +112,7 @@ describe('seed de datos de ejemplo (sección 13)', () => {
       members: 3,
       membership_requests: 1,
       contact_messages: 1,
+      sponsorship_inquiries: 1,
       board_members: 6,
       documents: 3,
       albums: 3,

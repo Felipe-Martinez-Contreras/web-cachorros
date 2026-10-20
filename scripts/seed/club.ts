@@ -14,6 +14,7 @@ import {
   productVariants,
   siteSettings,
   sponsors,
+  sponsorshipInquiries,
 } from '@/db/schema'
 import { santiagoDateTime } from '@/features/matches/lib/countdown'
 import { toIsoDate } from '@/lib/format'
@@ -153,6 +154,10 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
       tier: sponsor.tier,
       logoMediaId: media.id(`sponsor:${sponsor.slug}`),
       description: 'Comercio ficticio de ejemplo. [COMPLETAR: auspiciadores reales, niveles y enlaces]',
+      // Enlaces de ejemplo (dominio reservado example.com) para probar el conteo de clics.
+      websiteUrl: sponsor.tier === 'colaborador' ? null : `https://example.com/${sponsor.slug}`,
+      instagramUrl: sponsor.tier === 'principal' ? `https://example.com/instagram/${sponsor.slug}` : null,
+      whatsappE164: sponsor.tier === 'colaborador' ? EXAMPLE_PHONE : null,
       sortOrder: index,
     })),
   )
@@ -261,6 +266,18 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
       commune: 'Sagrada Familia',
       planId: planId('activo'),
       message: 'Mensaje de ejemplo: quiero hacerme socio.',
+      ...consent,
+      notifiedAt: consent.privacyConsentAt,
+    },
+  ])
+  await upsert(tx, sponsorshipInquiries, [
+    {
+      id: seedId('sponsorship-inquiry:1'),
+      businessName: 'Almacén Ejemplo',
+      contactName: 'Contacto Comercial Ejemplo',
+      email: 'auspicio-ejemplo@cachorros.test',
+      tierInterest: 'colaborador' as const,
+      message: 'Mensaje de ejemplo: queremos aparecer en la camiseta de la Senior.',
       ...consent,
       notifiedAt: consent.privacyConsentAt,
     },

@@ -248,6 +248,10 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   filas. La auditoría de datos personales anota números y estados, nunca nombres, RUT ni contacto.
 - Padrón: el número de socio es correlativo (`nextMemberNumber()`, con `pg_advisory_xact_lock`) y no se edita.
   Aprobar una solicitud bloquea su fila (`FOR UPDATE`): dos aprobaciones simultáneas crean un solo socio.
+- Auspiciadores: todo enlace público pasa por `/r/auspiciador/[slug]?a=web|instagram|whatsapp`, que suma el
+  clic del día con un *upsert* (`sponsor_clicks_daily`, sin datos personales; no cuenta precargas ni HEAD) y
+  redirige con 302. La vitrina y el contador usan la misma regla de vigencia (`isSponsorVisible()`). El slug
+  se fija al crear el auspiciador y no cambia al renombrarlo: es el enlace que ya pudo compartirse.
 
 ### Menores de edad (6.3)
 

@@ -361,12 +361,23 @@ export async function seedContent({ tx, now, media, sport, club }: Options): Pro
       'socios.preguntas',
       'Preguntas frecuentes',
       richSections(
+        3,
         [
           '¿Cómo pago la cuota?',
           '[COMPLETAR: medios de pago de la cuota (transferencia, efectivo en la sede…)]',
         ],
         ['¿Puedo cambiar de plan?', '[COMPLETAR: cómo se cambia de plan y desde cuándo rige]'],
         ['¿Cómo me doy de baja?', '[COMPLETAR: procedimiento de renuncia según los estatutos]'],
+      ),
+    ],
+    [
+      'auspiciadores.beneficios',
+      'Beneficios por nivel',
+      richSections(
+        3,
+        ['Auspiciador principal', '[COMPLETAR: beneficios y valor del auspicio principal]'],
+        ['Auspiciador oficial', '[COMPLETAR: beneficios y valor del auspicio oficial]'],
+        ['Colaborador', '[COMPLETAR: beneficios y valor del colaborador]'],
       ),
     ],
     [
@@ -379,6 +390,7 @@ export async function seedContent({ tx, now, media, sport, club }: Options): Pro
       'Política de privacidad',
       // Estructura de la sección 9.6 de la especificación; el texto definitivo lo revisa el club con asesoría.
       richSections(
+        2,
         [
           'Quién es responsable de tus datos',
           `${CLUB.name}. [COMPLETAR: personalidad jurídica, RUT, domicilio y representante legal del club]`,
