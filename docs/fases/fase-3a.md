@@ -44,14 +44,14 @@
 | `pnpm test:integration` | local | 186 de 186 |
 | `pnpm build` (sin BD) | local y CI | en verde |
 | e2e de cada hito (workers=1) | local | hito 2: 12/12 · hito 3: 8/8 · hito 4: 16/16 (con socios) · hito 5: 2/2 |
-| `pnpm test:e2e` completa | CI del PR #8 | ver «CI del cierre» abajo |
+| `pnpm test:e2e` completa | CI del PR #8 | 152 de 152, sin reintentos ni *flaky* |
 | Lighthouse móvil de la portada | CI (job informativo) | en verde; los puntajes están en el resumen de la ejecución del CI |
-| Imagen Docker (build, arranque y memoria con `--memory=512m`) | CI | ver «Imagen Docker y memoria» |
+| Imagen Docker (build, arranque y memoria con `--memory=512m`) | CI | en verde; pico de 217 MB de 512 MB, sin OOM |
 
 Por la RAM del equipo (6,8 GB), la suite e2e completa corre solo en el CI del PR, que se abrió como borrador para
 eso. En local corrieron las e2e de cada hito.
 
-**CI del cierre:** _se completa al final de este documento._
+**CI del cierre:** ejecución 39507204176 (commit `736b900`), los 5 jobs en verde.
 
 ## Imagen Docker y memoria
 
@@ -65,7 +65,8 @@ La imagen no se construye en local (disco). La medición se agregó al job «Ima
 - Se publica en el resumen del job el pico del cgroup (`memory.peak`), el uso final y los eventos OOM.
 - El job falla si hubo OOM, si el contenedor se detuvo o si una petición no respondió lo esperado.
 
-El resultado está en el resumen del job del CI del PR #8.
+Resultado (ejecución 39507204176): **pico de 217 MB de 512 MB** (`memory.peak` del cgroup), sin procesos
+terminados por OOM y con todas las peticiones respondiendo lo esperado. El detalle queda en el resumen del job.
 
 ## Dependencias nuevas
 
