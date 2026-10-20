@@ -211,21 +211,33 @@ test.describe('portada con un partido en vivo', () => {
     if (result.status !== 0) throw new Error(`Falló el seed:\n${result.stdout}${result.stderr}`)
   }
 
+  /**
+   * El seed escribe en la base sin pasar por el panel, así que nada invalida la caché: la franja
+   * (`revalidate` de 30 s) sigue mostrando el estado anterior hasta que vence. Se recarga la portada hasta
+   * que el servidor entregue el estado esperado. Sin esta espera al final, el partido en vivo seguía en
+   * caché cuando el seed tardaba menos de 30 s, y la prueba siguiente (que espera «Próximo partido») fallaba.
+   */
+  async function waitForMatchday(page: Page, region: 'Partidos en vivo' | 'Próximo partido') {
+    await expect(async () => {
+      await page.goto('/')
+      await expect(page.getByRole('region', { name: region })).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 90_000 })
+  }
+
   test.beforeAll(() => {
     test.setTimeout(180_000)
     seed(['--en-vivo'])
   })
-  test.afterAll(() => {
+  test.afterAll(async ({ browser }) => {
     test.setTimeout(180_000)
     seed([])
+    const page = await browser.newPage()
+    await waitForMatchday(page, 'Próximo partido')
+    await page.close()
   })
 
   test('la franja muestra el marcador EN VIVO renderizado en el servidor', async ({ page }) => {
-    // La franja se cachea 30 s: se espera a que el servidor entregue el estado en vivo.
-    await expect(async () => {
-      await page.goto('/')
-      await expect(page.getByRole('region', { name: 'Partidos en vivo' })).toBeVisible({ timeout: 2000 })
-    }).toPass({ timeout: 90_000 })
+    await waitForMatchday(page, 'Partidos en vivo')
 
     const live = page.getByRole('region', { name: 'Partidos en vivo' })
     await expect(live.getByText('En vivo', { exact: true })).toBeVisible()
