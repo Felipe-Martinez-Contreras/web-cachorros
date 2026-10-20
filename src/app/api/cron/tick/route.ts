@@ -1,18 +1,9 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { retryPendingNotifications } from '@/features/inbox/notify'
 import { publishDueNews } from '@/features/news/publish-due'
 import { tags } from '@/lib/cache-tags'
-import { env } from '@/lib/env'
+import { cronRejection } from '@/lib/cron-auth'
 import { logger } from '@/lib/logger'
-
-const digest = (value: string) => createHash('sha256').update(value).digest()
-
-/** Compara en tiempo constante; el hash iguala los largos. */
-function isAuthorized(request: Request, secret: string): boolean {
-  const header = request.headers.get('authorization') ?? ''
-  return timingSafeEqual(digest(header), digest(`Bearer ${secret}`))
-}
 
 /**
  * Tarea `tick` (especificación 12.8): cada 5 minutos el contenedor `ops` llama a esta ruta con
@@ -20,13 +11,8 @@ function isAuthorized(request: Request, secret: string): boolean {
  * los avisos por correo de los formularios que fallaron.
  */
 export async function GET(request: Request) {
-  const secret = env.CRON_SECRET
-  if (!secret) {
-    return Response.json({ ok: false, message: 'Falta configurar CRON_SECRET.' }, { status: 503 })
-  }
-  if (!isAuthorized(request, secret)) {
-    return Response.json({ ok: false, message: 'No autorizado.' }, { status: 401 })
-  }
+  const rejection = cronRejection(request)
+  if (rejection) return rejection
   try {
     const published = await publishDueNews()
     if (published.length > 0) {
