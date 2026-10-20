@@ -217,6 +217,8 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   Los videos van detrás de una fachada: nada de terceros se carga antes del clic.
 - Listas con `ResourceList` / `ResourceRow` (tarjetas en el celular), filtros como formulario GET (`ListToolbar`),
   acciones con `ActionButton` (confirmación en `<dialog>` para lo destructivo) y avisos con `useToast()`.
+  Un módulo con varias pantallas usa `SectionTabs` (enlaces). Una mutación sin tags públicos (bandejas, padrón)
+  igual refresca el panel: `mutate()` llama a `refresh()` cuando no invalida ningún tag.
 - Slugs: `resolveSlug()` + `recordSlugChange()` (`src/lib/slug-redirects.ts`) dentro de la transacción.
 - Imágenes: toda imagen que se asigna a algo visible pasa por `assertPublishableMedia()`
   (`src/features/media/guards.ts`); las subidas van por `POST /api/admin/media`, nunca por una Server Action.
@@ -237,6 +239,15 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   `after()` (`src/features/inbox/notify.ts`); si falla, la tarea `tick` lo reintenta hasta 5 veces.
 - En las e2e, cada prueba envía su propia IP simulada en `x-e2e-client-ip` (solo se acepta con
   `SITE_ENV=development`): el rate limit es por IP y todas las pruebas salen de la misma máquina.
+- La versión de la política de privacidad es la fecha de la última edición del bloque `privacidad.politica`
+  (se muestra en `/privacidad` y se guarda con cada consentimiento).
+- Bandejas del panel: piezas en `src/components/admin/inbox.tsx` (estado, responder por correo o WhatsApp,
+  ficha con el consentimiento) e `InboxUpdateForm`. Las exportaciones CSV se registran en
+  `src/features/inbox/exports.ts` y se descargan por `GET /api/admin/exportar/[lista]`: se generan con
+  `toCsv()` (`src/lib/csv.ts`: `;`, BOM y fórmulas neutralizadas) y cada descarga se audita con el número de
+  filas. La auditoría de datos personales anota números y estados, nunca nombres, RUT ni contacto.
+- Padrón: el número de socio es correlativo (`nextMemberNumber()`, con `pg_advisory_xact_lock`) y no se edita.
+  Aprobar una solicitud bloquea su fila (`FOR UPDATE`): dos aprobaciones simultáneas crean un solo socio.
 
 ### Menores de edad (6.3)
 
