@@ -73,6 +73,10 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
+      # Claves de prueba oficiales de Turnstile («siempre pasa») y una sal sin valor real.
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      IP_HASH_SALT: sal-solo-para-ci-sin-valor-real-0123456789abcdef
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -120,6 +124,10 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
+      # Claves de prueba oficiales de Turnstile («siempre pasa») y una sal sin valor real.
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      IP_HASH_SALT: sal-solo-para-ci-sin-valor-real-0123456789abcdef
       LOG_LEVEL: warn
     steps:
       - uses: actions/checkout@v7
@@ -181,6 +189,9 @@ jobs:
           SMTP_HOST=localhost
           SMTP_PORT=587
           MAIL_FROM=Club <no-responder@cachorros.test>
+          TURNSTILE_SITE_KEY=1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+          IP_HASH_SALT=sal-solo-para-ci-sin-valor-real-0123456789abcdef
           EOF
           for i in $(seq 1 30); do
             docker exec db pg_isready -U cachorros_admin -d cachorros && break

@@ -10,6 +10,11 @@ const ATTEMPTS = 8
 async function loadAuth(siteEnv: string) {
   vi.resetModules()
   vi.stubEnv('SITE_ENV', siteEnv)
+  if (siteEnv === 'production') {
+    // Producción no arranca con las claves de prueba de Turnstile.
+    vi.stubEnv('TURNSTILE_SITE_KEY', '0x4AAAAAAA-integracion')
+    vi.stubEnv('TURNSTILE_SECRET_KEY', '0x4AAAAAAA-integracion-secreto')
+  }
   const { getAuth } = await import('@/lib/auth')
   const { buildAuthOptions } = await import('@/lib/auth/options')
   const { sql } = await import('@/db/client')

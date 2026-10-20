@@ -23,6 +23,9 @@ export default defineConfig({
       SMTP_HOST: 'localhost',
       SMTP_PORT: '1025',
       MAIL_FROM: 'Pruebas <pruebas@cachorros.test>',
+      TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+      TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
+      IP_HASH_SALT: 'sal-solo-para-pruebas-de-integracion-0123456789',
       LOG_LEVEL: 'silent',
       // Las subidas de las pruebas no se mezclan con las de desarrollo.
       UPLOADS_DIR: path.join(tmpdir(), 'cachorros-test-uploads'),
