@@ -32,7 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ list
   }
 
   try {
-    const { csv, rows } = await csvExport.build()
+    const { csv, rows, suffix } = await csvExport.build(new URL(request.url).searchParams)
     await db.transaction((tx) =>
       audit(tx, user, `${csvExport.entityType}.export`, {
         entityType: csvExport.entityType,
@@ -40,7 +40,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ list
         meta: { rows },
       }),
     )
-    const filename = `${csvExport.filename}-${toIsoDate(systemClock.now())}.csv`
+    const filename = `${csvExport.filename}-${suffix ?? toIsoDate(systemClock.now())}.csv`
     return new Response(csv, {
       headers: {
         ...noStore,

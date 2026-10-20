@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Contact,
   FileText,
+  Handshake,
   History,
   House,
   Images,
@@ -102,6 +103,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: '/admin/socios', label: 'Socios', icon: Contact, permission: 'members:write' },
       { href: '/admin/mensajes', label: 'Mensajes', icon: Inbox, permission: 'messages:write' },
+      {
+        href: '/admin/auspiciadores',
+        label: 'Auspiciadores',
+        icon: Handshake,
+        permission: 'sponsors:write',
+      },
     ],
   },
   {

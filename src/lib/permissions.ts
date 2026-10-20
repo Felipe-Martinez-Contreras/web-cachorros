@@ -21,6 +21,7 @@ export const PERMISSIONS = [
   'media:write',
   'members:write', // planes, solicitudes de socio y padrón
   'messages:write', // bandeja de contacto
+  'sponsors:write', // auspiciadores, solicitudes de auspicio y reporte de clics
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]
 

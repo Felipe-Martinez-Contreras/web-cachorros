@@ -1,10 +1,18 @@
 import 'server-only'
 import { asc, desc, eq } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { contactMessages, members, membershipPlans, membershipRequests } from '@/db/schema'
+import {
+  contactMessages,
+  members,
+  membershipPlans,
+  membershipRequests,
+  sponsorshipInquiries,
+} from '@/db/schema'
+import { getClicksReport } from '@/features/sponsors/admin-queries'
+import { reportMonth } from '@/features/sponsors/lib/month'
 import { type CsvColumn, toCsv } from '@/lib/csv'
 import { formatLongDateTime } from '@/lib/format'
-import { contactTopicLabels, inboxStatusLabels, memberStatusLabels } from '@/lib/labels'
+import { contactTopicLabels, inboxStatusLabels, memberStatusLabels, sponsorTierLabels } from '@/lib/labels'
 import type { Permission } from '@/lib/permissions'
 
 type CsvExport = {
@@ -13,7 +21,8 @@ type CsvExport = {
   filename: string
   /** Lo que queda en la auditoría: el conteo de filas, nunca los datos. */
   entityType: string
-  build: () => Promise<{ csv: string; rows: number }>
+  /** Recibe los parámetros de la URL (por ejemplo `?mes=` del reporte de clics). */
+  build: (params: URLSearchParams) => Promise<{ csv: string; rows: number; suffix?: string }>
 }
 
 async function csvOf<T>(rows: Promise<T[]>, columns: CsvColumn<T>[]) {
@@ -117,6 +126,56 @@ const EXPORTS: Record<string, CsvExport> = {
           { header: 'Mensaje', value: (row) => row.message },
         ],
       ),
+  },
+  'solicitudes-auspicio': {
+    permission: 'sponsors:write',
+    filename: 'solicitudes-de-auspicio',
+    entityType: 'sponsorship_inquiry',
+    build: () =>
+      csvOf(
+        db
+          .select({
+            createdAt: sponsorshipInquiries.createdAt,
+            businessName: sponsorshipInquiries.businessName,
+            contactName: sponsorshipInquiries.contactName,
+            email: sponsorshipInquiries.email,
+            phone: sponsorshipInquiries.phoneE164,
+            tier: sponsorshipInquiries.tierInterest,
+            status: sponsorshipInquiries.status,
+            message: sponsorshipInquiries.message,
+          })
+          .from(sponsorshipInquiries)
+          .orderBy(desc(sponsorshipInquiries.createdAt)),
+        [
+          { header: 'Recibida', value: (row) => formatLongDateTime(row.createdAt) },
+          { header: 'Comercio', value: (row) => row.businessName },
+          { header: 'Contacto', value: (row) => row.contactName },
+          { header: 'Correo', value: (row) => row.email },
+          { header: 'Celular', value: (row) => row.phone },
+          { header: 'Nivel de interés', value: (row) => (row.tier ? sponsorTierLabels[row.tier] : null) },
+          { header: 'Estado', value: (row) => inboxStatusLabels[row.status] },
+          { header: 'Mensaje', value: (row) => row.message },
+        ],
+      ),
+  },
+  // Sin datos personales: solo conteos agregados por día.
+  'clics-auspiciadores': {
+    permission: 'sponsors:write',
+    filename: 'clics-auspiciadores',
+    entityType: 'sponsor',
+    async build(params) {
+      const month = reportMonth(params.get('mes'))
+      const report = await getClicksReport(month)
+      const rows = report.sponsors.flatMap((sponsor) =>
+        sponsor.days.map((day) => ({ name: sponsor.name, ...day })),
+      )
+      const { csv } = await csvOf(Promise.resolve(rows), [
+        { header: 'Auspiciador', value: (row) => row.name },
+        { header: 'Día', value: (row) => row.day },
+        { header: 'Clics', value: (row) => row.clicks },
+      ])
+      return { csv, rows: rows.length, suffix: month }
+    },
   },
 }
 
