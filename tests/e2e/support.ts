@@ -52,13 +52,18 @@ export async function deleteMailFor(request: APIRequestContext, email: string) {
 }
 
 /** Espera el correo más reciente para esa dirección en Mailpit y devuelve su texto. */
-export async function waitForMail(request: APIRequestContext, email: string): Promise<string> {
+export function waitForMail(request: APIRequestContext, email: string): Promise<string> {
+  return waitForMailMatching(request, `to:${email}`)
+}
+
+/** Espera el correo más reciente que cumple la búsqueda de Mailpit (`to:… "frase"`) y devuelve su texto. */
+export async function waitForMailMatching(request: APIRequestContext, query: string): Promise<string> {
   let text = ''
   await expect(async () => {
-    const search = await request.get(`${MAILPIT}/api/v1/search`, { params: { query: `to:${email}` } })
+    const search = await request.get(`${MAILPIT}/api/v1/search`, { params: { query } })
     const { messages } = (await search.json()) as { messages: { ID: string }[] }
     const latest = messages[0]
-    expect(latest, `todavía no llega el correo para ${email}`).toBeTruthy()
+    expect(latest, `todavía no llega el correo (${query})`).toBeTruthy()
     const message = await request.get(`${MAILPIT}/api/v1/message/${latest?.ID}`)
     text = ((await message.json()) as { Text: string }).Text
   }).toPass({ timeout: 15_000 })
