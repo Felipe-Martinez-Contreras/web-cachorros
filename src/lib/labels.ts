@@ -222,6 +222,7 @@ export const socialPlatformLabels: Labels<typeof socialPlatform> = {
 /** Sobre qué fue cada acción registrada en «Actividad» (`audit_log.entity_type`). */
 export const auditEntityLabels: Record<string, string> = {
   competition: 'Competencias',
+  contact_message: 'Mensajes de contacto',
   hall_of_fame: 'Salón de la fama',
   historic_kit: 'Camisetas históricas',
   history_milestone: 'Línea de tiempo',
@@ -229,6 +230,9 @@ export const auditEntityLabels: Record<string, string> = {
   match: 'Partidos',
   match_event: 'Goles, tarjetas y cambios',
   media_asset: 'Medios',
+  member: 'Padrón de socios',
+  membership_plan: 'Planes de socio',
+  membership_request: 'Solicitudes de socio',
   news: 'Noticias',
   news_category: 'Categorías de noticias',
   page_block: 'Textos de páginas',

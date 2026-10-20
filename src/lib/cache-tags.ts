@@ -17,5 +17,7 @@ export const tags = {
   /** Textos de páginas editables desde el panel (`page_blocks`). */
   pages: () => 'pages',
   media: () => 'media',
+  /** Planes de socio (`membership_plans`) de la página Hazte socio. */
+  membership: () => 'membership',
   social: () => 'social',
 } as const
