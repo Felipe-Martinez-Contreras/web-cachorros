@@ -69,3 +69,22 @@ export async function waitForMailMatching(request: APIRequestContext, query: str
   }).toPass({ timeout: 15_000 })
   return text
 }
+
+/**
+ * El rate limit cuenta por IP y aquí todas las peticiones llegan desde la misma máquina: cada prueba envía
+ * su propia IP simulada (`x-e2e-client-ip`, que el servidor solo acepta con SITE_ENV=development). Se agrega
+ * solo a `/api/forms/*`: en las peticiones a Cloudflare (Turnstile) rompería CORS.
+ */
+export async function useOwnIp(page: Page, ip: string) {
+  await page.route('**/api/forms/**', (route) =>
+    route.continue({ headers: { ...route.request().headers(), 'x-e2e-client-ip': ip } }),
+  )
+}
+
+export const uniqueIp = (project: string) =>
+  `e2e-${project}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+/** El widget de prueba de Turnstile («siempre pasa») deja su token en el formulario. */
+export async function waitForTurnstile(page: Page) {
+  await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 20_000 })
+}

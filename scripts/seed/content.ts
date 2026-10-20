@@ -20,7 +20,7 @@ import type { ClubSeed } from './club'
 import { CLUB, NEWS_CATEGORIES } from './data'
 import type { SeedMedia } from './media'
 import type { SportSeed } from './sport'
-import { must, plainText, richText, seedId, upsert } from './util'
+import { must, plainText, richSections, richText, seedId, upsert } from './util'
 
 type Options = { tx: Tx; now: Date; media: SeedMedia; sport: SportSeed; club: ClubSeed }
 
@@ -343,19 +343,67 @@ export async function seedContent({ tx, now, media, sport, club }: Options): Pro
     [
       'historia.intro',
       'Nuestra historia',
-      `El ${CLUB.name} nace el 1 de abril de 1934 en Sagrada Familia. [COMPLETAR: relato de la historia del club]`,
+      richText(
+        `El ${CLUB.name} nace el 1 de abril de 1934 en Sagrada Familia. [COMPLETAR: relato de la historia del club]`,
+      ),
     ],
     [
       'formativas.info',
       'Divisiones formativas',
-      '[COMPLETAR: filosofía de la escuela, categorías, edades, horarios, requisitos y costos]',
+      richText('[COMPLETAR: filosofía de la escuela, categorías, edades, horarios, requisitos y costos]'),
     ],
-    ['socios.beneficios', 'Beneficios de ser socio', '[COMPLETAR: beneficios de cada tipo de socio]'],
-    ['donaciones.uso', '¿En qué se usan los aportes?', '[COMPLETAR: destino de los aportes y donaciones]'],
+    [
+      'socios.beneficios',
+      'Beneficios de ser socio',
+      richText('[COMPLETAR: beneficios de cada tipo de socio]'),
+    ],
+    [
+      'socios.preguntas',
+      'Preguntas frecuentes',
+      richSections(
+        [
+          '¿Cómo pago la cuota?',
+          '[COMPLETAR: medios de pago de la cuota (transferencia, efectivo en la sede…)]',
+        ],
+        ['¿Puedo cambiar de plan?', '[COMPLETAR: cómo se cambia de plan y desde cuándo rige]'],
+        ['¿Cómo me doy de baja?', '[COMPLETAR: procedimiento de renuncia según los estatutos]'],
+      ),
+    ],
+    [
+      'donaciones.uso',
+      '¿En qué se usan los aportes?',
+      richText('[COMPLETAR: destino de los aportes y donaciones]'),
+    ],
     [
       'privacidad.politica',
       'Política de privacidad',
-      '[COMPLETAR: datos legales del club (personalidad jurídica, RUT, representante) y texto revisado de la política] [VERIFICAR: con asesoría legal, Ley 19.628 y Ley 21.719]',
+      // Estructura de la sección 9.6 de la especificación; el texto definitivo lo revisa el club con asesoría.
+      richSections(
+        [
+          'Quién es responsable de tus datos',
+          `${CLUB.name}. [COMPLETAR: personalidad jurídica, RUT, domicilio y representante legal del club]`,
+        ],
+        [
+          'Para qué usamos tus datos',
+          'Solo para responder tu mensaje, gestionar tu solicitud de socio o de auspicio y, si lo autorizas, enviarte noticias del club.',
+        ],
+        [
+          'Base de licitud',
+          'Tu consentimiento, que entregas al marcar la casilla de cada formulario. [VERIFICAR: con asesoría legal, Ley 19.628 y Ley 21.719]',
+        ],
+        [
+          'Quién más los recibe',
+          'Los proveedores que hacen funcionar el sitio: el servidor donde se aloja, el servicio de correo y Cloudflare (protección contra abuso). No vendemos ni cedemos tus datos. [COMPLETAR: nombres de los proveedores]',
+        ],
+        [
+          'Cuánto tiempo los guardamos',
+          'Los mensajes de contacto y las solicitudes cerradas se anonimizan a los 12 meses. Los datos del padrón de socios se conservan mientras seas socio. [VERIFICAR: plazos con la directiva]',
+        ],
+        [
+          'Tus derechos',
+          'Puedes pedir acceso, rectificación, supresión, oposición, portabilidad y bloqueo de tus datos escribiéndonos desde la página de contacto. Responderemos en un plazo de [COMPLETAR: plazo] días hábiles.',
+        ],
+      ),
     ],
   ] as const
   await upsert(
@@ -365,7 +413,7 @@ export async function seedContent({ tx, now, media, sport, club }: Options): Pro
       id: seedId(`page-block:${key}`),
       key,
       title,
-      body: richText(body),
+      body,
     })),
   )
 

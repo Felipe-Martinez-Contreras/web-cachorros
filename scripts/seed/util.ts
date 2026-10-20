@@ -95,6 +95,17 @@ export function richText(...paragraphs: string[]): RichTextDoc {
   }
 }
 
+/** Documento con secciones: cada una es un título (h2) seguido de sus párrafos. */
+export function richSections(...sections: [heading: string, ...paragraphs: string[]][]): RichTextDoc {
+  return {
+    type: 'doc',
+    content: sections.flatMap(([heading, ...paragraphs]) => [
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: heading }] },
+      ...paragraphs.map((text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })),
+    ]),
+  }
+}
+
 export function plainText(...paragraphs: string[]): string {
   return paragraphs.join('\n\n')
 }

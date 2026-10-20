@@ -35,6 +35,10 @@ try {
     await sql`delete from historic_kits where description like 'E2E%'`
     await sql`delete from slug_redirects where old_slug like 'e2e-%'`
     await sql`delete from contact_messages where name like 'E2E%'`
+    // Las solicitudes referencian al socio que crearon al aprobarse, y los socios a su plan.
+    await sql`delete from membership_requests where full_name like 'E2E%'`
+    await sql`delete from members where full_name like 'E2E%'`
+    await sql`delete from membership_plans where name like 'E2E%'`
     const media = await sql<{ storage_key: string }[]>`
       delete from media_assets where alt_text like 'E2E %' returning storage_key`
     const uploadsDir = path.resolve(process.env.UPLOADS_DIR || './data/uploads')
