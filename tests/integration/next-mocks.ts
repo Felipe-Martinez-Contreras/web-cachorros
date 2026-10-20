@@ -21,6 +21,7 @@ vi.mock('next/cache', () => ({
   revalidateTag: state.revalidateTag,
   cacheTag: () => {},
   cacheLife: () => {},
+  refresh: () => {},
 }))
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => {
