@@ -1,16 +1,19 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page, test } from '@playwright/test'
 import { totpCode } from '../totp'
-import { ADMIN, deleteMailFor, formAlert, login, PASSWORD, twoFactorUser, waitForMail } from './support'
+import {
+  ADMIN,
+  deleteMailFor,
+  expectAccessible,
+  formAlert,
+  login,
+  PASSWORD,
+  twoFactorUser,
+  waitForMail,
+} from './support'
 
 async function enter(page: Page, email = ADMIN.email, password = PASSWORD) {
   await login(page, email, password)
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
-}
-
-async function expectAccessible(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).analyze()
-  expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 }
 
 async function logout(page: Page) {

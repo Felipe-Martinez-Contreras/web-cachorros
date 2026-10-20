@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import sharp from 'sharp'
-import { ADMIN, login } from './support'
+import { ADMIN, expectAccessible, login } from './support'
 
 let dir: string
 let photos: string[]
@@ -107,11 +107,9 @@ test('subir fotos de 12 MP: se achican en el navegador y suben de a una', async 
 })
 
 test('la biblioteca es accesible', async ({ page }) => {
-  const { default: AxeBuilder } = await import('@axe-core/playwright')
   await login(page, ADMIN.email)
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
   await page.goto('/admin/medios')
   await expect(page.getByRole('heading', { name: 'Biblioteca de medios', level: 1 })).toBeVisible()
-  const { violations } = await new AxeBuilder({ page }).analyze()
-  expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
+  await expectAccessible(page)
 })

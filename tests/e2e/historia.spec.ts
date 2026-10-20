@@ -1,15 +1,9 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page, test } from '@playwright/test'
-import { ADMIN, login } from './support'
+import { ADMIN, expectAccessible, login } from './support'
 
 async function enter(page: Page) {
   await login(page, ADMIN.email)
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
-}
-
-async function expectAccessible(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).analyze()
-  expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 }
 
 async function expectNoHorizontalScroll(page: Page) {

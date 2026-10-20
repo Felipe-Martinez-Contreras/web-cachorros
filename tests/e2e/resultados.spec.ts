@@ -1,17 +1,11 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page, test } from '@playwright/test'
-import { ADMIN, login } from './support'
+import { ADMIN, expectAccessible, login } from './support'
 
 // Los partidos que crean estas pruebas usan fechas desde la 40: `e2e-clean` los borra antes de cada corrida.
 
 async function enter(page: Page) {
   await login(page, ADMIN.email)
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
-}
-
-async function expectAccessible(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).analyze()
-  expect(violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([])
 }
 
 const year = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric' }).format(
