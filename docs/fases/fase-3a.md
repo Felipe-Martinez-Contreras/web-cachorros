@@ -46,7 +46,7 @@
 | e2e de cada hito (workers=1) | local | hito 2: 12/12 · hito 3: 8/8 · hito 4: 16/16 (con socios) · hito 5: 2/2 |
 | `pnpm test:e2e` completa | CI del PR #8 | ver «CI del cierre» abajo |
 | Lighthouse móvil de la portada | CI (job informativo) | en verde; los puntajes están en el resumen de la ejecución del CI |
-| Imagen Docker (build y arranque) | CI | en verde en cada push |
+| Imagen Docker (build, arranque y memoria con `--memory=512m`) | CI | ver «Imagen Docker y memoria» |
 
 Por la RAM del equipo (6,8 GB), la suite e2e completa corre solo en el CI del PR, que se abrió como borrador para
 eso. En local corrieron las e2e de cada hito.
@@ -55,9 +55,17 @@ eso. En local corrieron las e2e de cada hito.
 
 ## Imagen Docker y memoria
 
-El CI construye la imagen y la arranca contra PostgreSQL en cada push (job «Imagen Docker»). **No la construí en
-local:** quedan 9,3 GB libres y la regla es avisar antes de un `docker build` con menos de 10 GB. Por lo mismo,
-falta la medición de memoria con `--memory=512m`. Lo regenerable que podría borrarse está en el reporte del PR.
+La imagen no se construye en local (disco). La medición se agregó al job «Imagen Docker» del CI
+(`.github/scripts/medir-memoria.sh`):
+
+- El contenedor arranca con `--memory=512m --memory-swap=512m`, el límite de producción, sin swap: un exceso
+  es OOM.
+- Se carga el seed y se recorren tres veces seis páginas públicas (portada incluida).
+- Se entra al panel, se recorren cinco pantallas y se suben tres fotos de 12 MP con ruido (el peor caso para sharp).
+- Se publica en el resumen del job el pico del cgroup (`memory.peak`), el uso final y los eventos OOM.
+- El job falla si hubo OOM, si el contenedor se detuvo o si una petición no respondió lo esperado.
+
+El resultado está en el resumen del job del CI del PR #8.
 
 ## Dependencias nuevas
 
@@ -68,7 +76,6 @@ librerías y el bloqueo del padrón es de PostgreSQL.
 
 - **PR 3b:** tienda, eventos (+ `.ics`), directiva y transparencia (subida de PDF), formativas, la cancha,
   donaciones, galería y videos, con sus criterios.
-- Docker en local y la medición de memoria (falta espacio en disco; ver arriba).
 - El contenedor `ops` que llama a `tick` y `daily` llega en la Fase 5. Hasta entonces las rutas existen y están
   probadas, pero nadie las llama en staging.
 - Textos reales: política de privacidad, beneficios de socios y de auspicio, preguntas frecuentes y cuotas
