@@ -18,6 +18,7 @@ import {
   Palette,
   Settings,
   Shield,
+  ShieldCheck,
   ShieldHalf,
   Trophy,
   UserCog,
@@ -122,6 +123,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       },
       { href: '/admin/usuarios', label: 'Usuarios', icon: UserCog, permission: 'users:manage' },
       { href: '/admin/actividad', label: 'Actividad', icon: History, permission: 'audit:read' },
+      {
+        href: '/admin/datos-personales',
+        label: 'Datos personales',
+        icon: ShieldCheck,
+        permission: 'privacy:manage',
+      },
       { href: '/admin/cuenta', label: 'Mi cuenta', icon: KeyRound, permission: 'panel:access' },
       {
         href: '/admin/sistema-de-diseno',

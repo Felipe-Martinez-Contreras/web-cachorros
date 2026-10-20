@@ -236,6 +236,7 @@ export const auditEntityLabels: Record<string, string> = {
   news: 'Noticias',
   news_category: 'Categorías de noticias',
   page_block: 'Textos de páginas',
+  personal_data: 'Datos personales',
   player: 'Jugadores',
   player_stat_adjustment: 'Estadísticas históricas',
   season: 'Temporadas',
