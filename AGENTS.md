@@ -223,6 +223,21 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
 - Una ruta de archivos que se decide en runtime (`UPLOADS_DIR`) lleva `/* turbopackIgnore: true */`; sin eso el
   build rastrea todo el proyecto y lo mete en la imagen.
 
+### Formularios públicos (9.4)
+
+- Socios, auspicios y contacto se envían a `POST /api/forms/[form]` (Route Handler, no Server Action: responde
+  un 429 real y funciona sin JavaScript con PRG, `?enviado=1` / `?error=<código>`). Cada formulario se registra
+  en `src/features/inbox/forms.ts` (bandeja, página, `action` de Turnstile, esquema y guardado).
+- Orden de los controles: `Origin` igual a `SITE_URL` (CSRF) → rate limit (5 cada 10 min por formulario e IP)
+  → campo trampa y tiempo mínimo firmado (3 s) → Turnstile (`success`, `hostname`, `action`) → Zod. Las piezas
+  están en `src/lib/forms/`; los textos de error, en `messages.ts` (los mismos con y sin JavaScript).
+- En la página: `<PublicForm {...publicFormProps('nombre')} …>` después de `connection()` (la clave pública de
+  Turnstile llega desde el servidor y el formulario se firma por petición).
+- Se guarda `ip_hash` (nunca la IP), `privacy_consent_at` y `privacy_policy_version`. El aviso por correo va en
+  `after()` (`src/features/inbox/notify.ts`); si falla, la tarea `tick` lo reintenta hasta 5 veces.
+- En las e2e, cada prueba envía su propia IP simulada en `x-e2e-client-ip` (solo se acepta con
+  `SITE_ENV=development`): el rate limit es por IP y todas las pruebas salen de la misma máquina.
+
 ### Menores de edad (6.3)
 
 Los jugadores llegan al sitio público **solo** a través de `src/features/players/public.ts`
