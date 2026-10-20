@@ -170,8 +170,9 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `updateTag()` en Server Actions; `revalidateTag(tag, 'max')` en Route Handlers y tareas programadas.
 - **`next build` no toca la BD:** las rutas con datos se resuelven en runtime (`await connection()` o APIs dinámicas
   dentro de `<Suspense>`). El CI compila sin BD.
-- Tareas programadas: `GET /api/cron/tick` con `Authorization: Bearer $CRON_SECRET` (publica las noticias
-  programadas). La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.
+- Tareas programadas: `GET /api/cron/tick` y `GET /api/cron/daily` con `Authorization: Bearer $CRON_SECRET`
+  (`cronRejection()` en `src/lib/cron-auth.ts`). `tick` publica las noticias programadas y reintenta avisos;
+  `daily` aplica la retención de datos personales. La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.
 - Cero N+1; seleccionar solo las columnas necesarias. Pool `max: 5`.
 - Migraciones con `drizzle-kit generate`, compatibles hacia atrás (*expand/contract*).
   **Prohibido `drizzle-kit push` fuera de desarrollo.**
@@ -252,6 +253,10 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   clic del día con un *upsert* (`sponsor_clicks_daily`, sin datos personales; no cuenta precargas ni HEAD) y
   redirige con 302. La vitrina y el contador usan la misma regla de vigencia (`isSponsorVisible()`). El slug
   se fija al crear el auspiciador y no cambia al renombrarlo: es el enlace que ya pudo compartirse.
+- Datos personales (9.6): una tabla nueva con datos de personas se agrega a `PERSONAL_DATA_SOURCES`
+  (`src/features/privacy/queries.ts`, para exportar y eliminar) y a la retención (`runRetention()`, tarea
+  `GET /api/cron/daily`). El dato buscado viaja en el cuerpo (Server Action o POST), nunca en la URL.
+  Procedimiento en `docs/seguridad-privacidad.md`.
 
 ### Menores de edad (6.3)
 

@@ -8,7 +8,7 @@ Marcadores que todavía están en el sitio (especificación, sección 0.3):
 | Marcador | Significado | Cantidad |
 |---|---|---|
 | `[COMPLETAR: …]` | Dato del club que aún no tenemos | 210 |
-| `[DECIDIR: …]` | Decisión de producto pendiente (rige el default) | 4 |
+| `[DECIDIR: …]` | Decisión de producto pendiente (rige el default) | 5 |
 | `[VERIFICAR: …]` | Supuesto técnico o normativo por confirmar | 9 |
 
 ## En la base de datos
@@ -154,7 +154,7 @@ y decisiones anotados junto al código que los aplica.
 | [DECIDIR: …] | `scripts/content-pending.ts:157` |
 | [DECIDIR: desempate en la tabla calculada. Default: PTS, DIF, GF y luego manual] | `src/features/matches/lib/standings.ts:33` |
 | [DECIDIR: mini-tabla en la portada. Default: sí] | `src/features/matches/queries.ts:235` |
-| [DECIDIR] | `scripts/content-pending.ts:1` |
+| [DECIDIR] | `scripts/content-pending.ts:1`, `src/features/inbox/retention.ts:7` |
 | [VERIFICAR: …] | `scripts/content-pending.ts:158` |
 | [VERIFICAR: cabecera X-Robots-Tag noindex en staging desde el Caddyfile, Fase 5] | `src/app/robots.ts:13` |
 | [VERIFICAR: color oficial del club con la directiva] | `src/styles/tokens.css:6` |

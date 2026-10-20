@@ -1,7 +1,7 @@
 // Capturas para el reporte de fase (360 px y 1280 px). playwright.config.ts las excluye de las pruebas normales:
 //   PowerShell:  $env:CAPTURAS = 'fase-2b'; pnpm test:e2e capturas; Remove-Item Env:CAPTURAS
 import { expect, type Page, test } from '@playwright/test'
-import { ADMIN, login } from './support'
+import { ADMIN, login, waitForTurnstile } from './support'
 
 const fase = process.env.CAPTURAS ?? ''
 const dir = `docs/fases/capturas/${fase}`
@@ -22,7 +22,7 @@ test.describe('capturas del reporte de fase', () => {
   test('fases 0 y 1: portada, sección provisional, login, panel y sistema de diseño', async ({
     page,
   }, testInfo) => {
-    test.skip(fase.startsWith('fase-2'), 'Estas capturas son de las fases 0 y 1.')
+    test.skip(/^fase-[2-9]/.test(fase), 'Estas capturas son de las fases 0 y 1.')
     test.setTimeout(120_000)
     const width = page.viewportSize()?.width ?? testInfo.project.name
 
@@ -163,5 +163,58 @@ test.describe('capturas del reporte de fase', () => {
     await page.getByRole('list', { name: 'Noticias' }).getByRole('link').first().click()
     await expect(page.getByRole('textbox', { name: 'Texto de la noticia' })).toBeVisible()
     await shot('panel-noticia-editor')
+  })
+
+  test('fase 3a: socios, auspiciadores, contacto, privacidad y bandejas del panel', async ({
+    page,
+  }, testInfo) => {
+    test.skip(fase !== 'fase-3a', 'Estas capturas son de la Fase 3a.')
+    test.setTimeout(240_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    const shot = async (name: string) => {
+      await loadLazyImages(page)
+      await page.screenshot({ path: `${dir}/${name}-${width}.png`, fullPage: true })
+    }
+    await page.goto('/privacidad')
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await shot('privacidad')
+    // Con Turnstile la red nunca queda en reposo: se espera su token en vez de `networkidle`.
+    for (const [path, name] of [
+      ['/socios', 'socios'],
+      ['/auspiciadores', 'auspiciadores'],
+      ['/contacto', 'contacto'],
+    ] as const) {
+      await page.goto(path)
+      await waitForTurnstile(page)
+      await page.evaluate(async () => {
+        for (let y = 0; y < document.body.scrollHeight; y += 600) {
+          window.scrollTo(0, y)
+          await new Promise((resolve) => setTimeout(resolve, 120))
+        }
+        window.scrollTo(0, 0)
+      })
+      await page.screenshot({ path: `${dir}/${name}-${width}.png`, fullPage: true })
+    }
+
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+    for (const [path, heading, name] of [
+      ['/admin/socios', 'Socios', 'panel-socios-solicitudes'],
+      ['/admin/socios/padron', 'Padrón de socios', 'panel-socios-padron'],
+      ['/admin/socios/planes', 'Planes de socio', 'panel-socios-planes'],
+      ['/admin/mensajes', 'Mensajes', 'panel-mensajes'],
+      ['/admin/auspiciadores', 'Auspiciadores', 'panel-auspiciadores'],
+      ['/admin/auspiciadores/reporte', 'Reporte de clics', 'panel-auspiciadores-reporte'],
+      ['/admin/datos-personales', 'Datos personales', 'panel-datos-personales'],
+    ] as const) {
+      await page.goto(path)
+      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+      await shot(name)
+    }
+    // El detalle de una solicitud, con sus datos, respuesta con un toque y aprobación.
+    await page.goto('/admin/socios')
+    await page.getByRole('list', { name: 'Solicitudes de socio' }).getByRole('link').first().click()
+    await expect(page.getByRole('heading', { name: 'Alta en el padrón' })).toBeVisible()
+    await shot('panel-socios-solicitud')
   })
 })
