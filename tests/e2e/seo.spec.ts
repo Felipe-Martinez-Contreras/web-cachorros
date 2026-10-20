@@ -112,6 +112,7 @@ test('solo producción se deja indexar: robots.txt y la etiqueta robots dependen
   expect(production).toMatch(/Allow: \/\s/i)
   expect(production).toMatch(/Disallow: \/admin\s/i)
   expect(production).toMatch(/Disallow: \/api\s/i)
+  expect(production).toMatch(/Disallow: \/r\/\s/i)
   expect(production).toContain(`Sitemap: ${SECOND_SITE.url}/sitemap.xml`)
   expect(robotsMeta(await html(request, `${SECOND_SITE.url}/`))).toBeNull()
   expect(robotsMeta(await html(request, `${SECOND_SITE.url}/noticias/cronica-honor`))).toBeNull()
