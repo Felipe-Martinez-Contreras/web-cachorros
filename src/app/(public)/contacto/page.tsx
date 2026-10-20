@@ -1,18 +1,16 @@
-import { Mail, MessageCircle } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { connection } from 'next/server'
+import { DirectChannels } from '@/components/site/direct-channels'
 import { PageHero } from '@/components/site/page-shell'
 import { type PublicFieldConfig, PublicForm } from '@/components/site/public-form'
 import { loadSite } from '@/components/site/site-frame'
 import { publicFormProps } from '@/features/inbox/form-props'
 import { pageMetadata } from '@/features/seo/metadata'
-import type { SiteDTO } from '@/features/settings/dto'
+import { SocialFollowLinks } from '@/features/social/components/social-post-card'
 import { optionsFromLabels } from '@/lib/form-schemas'
 import { isFormErrorCode } from '@/lib/forms/messages'
 import { contactTopicLabels } from '@/lib/labels'
-import { whatsappUrl } from '@/lib/links'
-import { isContentMarker } from '@/lib/markers'
 
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
@@ -24,30 +22,6 @@ export function generateMetadata(): Promise<Metadata> {
 }
 
 type Props = { searchParams: Promise<{ tema?: string | string[]; enviado?: string; error?: string }> }
-
-/** WhatsApp y correo del club: la salida cuando el formulario no se puede enviar. */
-function DirectChannels({ site }: { site: SiteDTO }) {
-  const email = site.email && !isContentMarker(site.email) ? site.email : null
-  if (!site.whatsapp && !email) return null
-  return (
-    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-      {site.whatsapp && (
-        <li>
-          <a href={whatsappUrl(site.whatsapp)} className="inline-flex min-h-11 items-center gap-1 underline">
-            <MessageCircle aria-hidden="true" className="size-4" /> WhatsApp del club
-          </a>
-        </li>
-      )}
-      {email && (
-        <li>
-          <a href={`mailto:${email}`} className="inline-flex min-h-11 items-center gap-1 underline">
-            <Mail aria-hidden="true" className="size-4" /> {email}
-          </a>
-        </li>
-      )}
-    </ul>
-  )
-}
 
 export default async function ContactPage({ searchParams }: Props) {
   // Por petición: la página firma el momento en que se dibuja el formulario (tiempo mínimo de llenado).
@@ -129,6 +103,12 @@ export default async function ContactPage({ searchParams }: Props) {
             Otros canales
           </h2>
           <DirectChannels site={site} />
+          {site.socialLinks.length > 0 && (
+            <>
+              <h3 className="text-eyebrow text-(--muted)">Síguenos</h3>
+              <SocialFollowLinks links={site.socialLinks} />
+            </>
+          )}
         </aside>
       </div>
     </>

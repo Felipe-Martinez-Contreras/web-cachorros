@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, eq, gt, isNull, lt, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { contactMessages, siteSettings } from '@/db/schema'
+import { contactMessages, membershipPlans, membershipRequests, siteSettings } from '@/db/schema'
 import type { NotifyRecipients } from '@/db/schema/system'
 import { env } from '@/lib/env'
 import { contactTopicLabels } from '@/lib/labels'
@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
 import { type MailMessage, sendMail } from '@/lib/mail'
 
 /** Bandejas que avisan por correo al recibir un envío. */
-export type InboxKind = 'contacto'
+export type InboxKind = 'contacto' | 'socios'
 
 /** Después de esto se deja de reintentar: el envío sigue en la bandeja del panel, sin aviso. */
 export const MAX_NOTIFY_ATTEMPTS = 5
@@ -74,7 +74,7 @@ async function contactMails(id: string): Promise<Mails | null> {
         '',
         row.message,
         '',
-        `Respóndele contestando este correo o desde el panel: ${siteLink('/admin/mensajes')}`,
+        `Respóndele contestando este correo o desde el panel: ${siteLink(`/admin/mensajes/${id}`)}`,
       ].join('\n'),
     },
     ack: {
@@ -93,8 +93,63 @@ async function contactMails(id: string): Promise<Mails | null> {
   }
 }
 
+async function membershipMails(id: string): Promise<Mails | null> {
+  const [row] = await db
+    .select({
+      fullName: membershipRequests.fullName,
+      email: membershipRequests.email,
+      phone: membershipRequests.phoneE164,
+      commune: membershipRequests.commune,
+      rut: membershipRequests.rut,
+      message: membershipRequests.message,
+      planName: membershipPlans.name,
+    })
+    .from(membershipRequests)
+    .leftJoin(membershipPlans, eq(membershipPlans.id, membershipRequests.planId))
+    .where(eq(membershipRequests.id, id))
+    .limit(1)
+  const club = await clubContact()
+  if (!row || !club) return null
+  const to = recipientsFor(club, 'socios')
+  if (to.length === 0) throw new Error('No hay destinatarios para la bandeja de socios.')
+  const plan = row.planName ?? 'sin plan'
+  return {
+    staff: {
+      to,
+      replyTo: row.email,
+      subject: `Nueva solicitud de socio: ${plan}`,
+      text: [
+        `${row.fullName} quiere hacerse socio.`,
+        '',
+        `Plan: ${plan}`,
+        `Correo: ${row.email}`,
+        ...(row.phone ? [`Celular: ${row.phone}`] : []),
+        ...(row.commune ? [`Comuna: ${row.commune}`] : []),
+        ...(row.rut ? [`RUT: ${row.rut}`] : []),
+        ...(row.message ? ['', row.message] : []),
+        '',
+        `Revísala y apruébala desde el panel: ${siteLink(`/admin/socios/solicitudes/${id}`)}`,
+      ].join('\n'),
+    },
+    ack: {
+      to: row.email,
+      subject: `Recibimos tu solicitud de socio · ${club.clubName}`,
+      text: [
+        `Hola, ${row.fullName}:`,
+        '',
+        `Recibimos tu solicitud para hacerte socio (plan ${plan}). La directiva la revisará y te contactará para confirmar tu inscripción y la forma de pago.`,
+        '',
+        'Si no la enviaste tú, ignora este correo.',
+        '',
+        club.clubName,
+      ].join('\n'),
+    },
+  }
+}
+
 const KINDS = {
   contacto: { table: contactMessages, mails: contactMails },
+  socios: { table: membershipRequests, mails: membershipMails },
 } as const satisfies Record<InboxKind, unknown>
 
 /**

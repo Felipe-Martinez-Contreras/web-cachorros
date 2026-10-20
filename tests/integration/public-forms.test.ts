@@ -103,7 +103,7 @@ async function runAfterTasks() {
 let dev: Awaited<ReturnType<typeof loadRoute>>
 
 beforeAll(async () => {
-  await admin`update site_settings set notify_recipients = ${admin.json({ contacto: ['directiva@cachorros.test'] })}`
+  await admin`update site_settings set notify_recipients = ${admin.json({ contacto: ['directiva@cachorros.test'], socios: ['socios@cachorros.test'] })}`
   dev = await loadRoute('development')
 })
 
@@ -288,6 +288,81 @@ describe('reintento de los avisos (tarea tick)', () => {
       insert into contact_messages (name, email, topic, message, created_at)
       values ('Antiguo', 'antiguo@correo.cl', 'general', 'Hola', now() - interval '3 days')`
     expect(await retryPendingNotifications()).toEqual({ sent: 0, failed: 0 })
+  })
+})
+
+describe('POST /api/forms/socios', () => {
+  let activePlan = ''
+  let inactivePlan = ''
+
+  beforeAll(async () => {
+    await admin`delete from membership_requests`
+    const rows = await admin<{ id: string; is_active: boolean }[]>`
+      insert into membership_plans (name, fee_clp, fee_period, is_active)
+      values ('Integración vigente', 3000, 'mensual', true), ('Integración antiguo', 1000, 'anual', false)
+      returning id, is_active`
+    activePlan = rows.find((row) => row.is_active)?.id ?? ''
+    inactivePlan = rows.find((row) => !row.is_active)?.id ?? ''
+  })
+
+  afterAll(async () => {
+    await admin`delete from membership_requests`
+    await admin`delete from membership_plans where name like 'Integración%'`
+  })
+
+  function membershipBody(overrides: Record<string, string | null> = {}) {
+    return contactBody({
+      topic: null,
+      name: null,
+      message: null,
+      fullName: 'Luis Muñoz',
+      email: 'Luis@Correo.cl',
+      phone: '9 1234 5678',
+      commune: 'Sagrada Familia',
+      planId: activePlan,
+      rut: '12345678-5',
+      marketing: 'on',
+      ...overrides,
+    })
+  }
+
+  it('guarda la solicitud con el RUT formateado, el consentimiento y avisa a la bandeja de socios', async () => {
+    const { request, ip, params } = post(membershipBody(), { form: 'socios' })
+    const response = await dev.POST(request, params)
+    expect(response.status).toBe(200)
+    const [row] = await admin<
+      {
+        rut: string
+        email: string
+        marketing_consent: boolean
+        privacy_policy_version: string
+        ip_hash: string
+      }[]
+    >`select rut, email, marketing_consent, privacy_policy_version, ip_hash from membership_requests`
+    expect(row).toMatchObject({ rut: '12.345.678-5', email: 'luis@correo.cl', marketing_consent: true })
+    expect(row?.privacy_policy_version).toBeTruthy()
+    expect(row?.ip_hash).toBe(hashIp(ip, SALT))
+
+    await runAfterTasks()
+    const [staff, ack] = doubles.sendMail.mock.calls.map(([message]) => message)
+    expect(staff).toMatchObject({ to: ['socios@cachorros.test'], replyTo: 'luis@correo.cl' })
+    expect(staff?.subject).toBe('Nueva solicitud de socio: Integración vigente')
+    expect(ack).toMatchObject({ to: 'luis@correo.cl' })
+  })
+
+  it('rechaza un RUT con el dígito verificador equivocado, sin celular o con un plan inactivo', async () => {
+    for (const [overrides, field] of [
+      [{ rut: '12345678-9' }, 'rut'],
+      [{ phone: '' }, 'phone'],
+      [{ planId: inactivePlan }, 'planId'],
+    ] as const) {
+      const { request, params } = post(membershipBody(overrides), { form: 'socios' })
+      const response = await dev.POST(request, params)
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as { fieldErrors?: Record<string, string[]> }
+      expect(Object.keys(body.fieldErrors ?? {})).toContain(field)
+    }
+    expect(await admin`select id from membership_requests where rut = '12.345.678-9'`).toHaveLength(0)
   })
 })
 
