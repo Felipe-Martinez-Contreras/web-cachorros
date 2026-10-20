@@ -103,7 +103,7 @@ async function runAfterTasks() {
 let dev: Awaited<ReturnType<typeof loadRoute>>
 
 beforeAll(async () => {
-  await admin`update site_settings set notify_recipients = ${admin.json({ contacto: ['directiva@cachorros.test'], socios: ['socios@cachorros.test'] })}`
+  await admin`update site_settings set notify_recipients = ${admin.json({ contacto: ['directiva@cachorros.test'], socios: ['socios@cachorros.test'], auspicios: ['auspicios@cachorros.test'] })}`
   dev = await loadRoute('development')
 })
 
@@ -363,6 +363,35 @@ describe('POST /api/forms/socios', () => {
       expect(Object.keys(body.fieldErrors ?? {})).toContain(field)
     }
     expect(await admin`select id from membership_requests where rut = '12.345.678-9'`).toHaveLength(0)
+  })
+})
+
+describe('POST /api/forms/auspicios', () => {
+  afterAll(async () => {
+    await admin`delete from sponsorship_inquiries`
+  })
+
+  it('guarda el interés con consentimiento y avisa a la bandeja de auspicios', async () => {
+    const body = contactBody({
+      topic: null,
+      name: null,
+      businessName: 'Almacén Doña Rosa',
+      contactName: 'Rosa Díaz',
+      tierInterest: 'colaborador',
+    })
+    const { request, params } = post(body, { form: 'auspicios' })
+    expect((await dev.POST(request, params)).status).toBe(200)
+    const [row] = await admin<{ business_name: string; tier_interest: string; privacy_consent_at: Date }[]>`
+      select business_name, tier_interest, privacy_consent_at from sponsorship_inquiries`
+    expect(row).toMatchObject({ business_name: 'Almacén Doña Rosa', tier_interest: 'colaborador' })
+    expect(row?.privacy_consent_at).toBeInstanceOf(Date)
+
+    await runAfterTasks()
+    const [staff] = doubles.sendMail.mock.calls.map(([message]) => message)
+    expect(staff).toMatchObject({
+      to: ['auspicios@cachorros.test'],
+      subject: 'Interés en auspiciar: Almacén Doña Rosa',
+    })
   })
 })
 

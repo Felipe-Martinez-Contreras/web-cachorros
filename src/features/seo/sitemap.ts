@@ -22,6 +22,7 @@ const STATIC_PATHS = [
   '/historia/salon-de-la-fama',
   '/historia/camisetas',
   '/socios',
+  '/auspiciadores',
   '/contacto',
   '/privacidad',
 ]

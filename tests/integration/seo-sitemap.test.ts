@@ -80,8 +80,8 @@ describe('entradas del sitemap', () => {
       expect(paths, `${hidden} no debe estar en el sitemap`).not.toContain(hidden)
     }
     // Ninguna sección que sigue en «Próximamente», ni el panel ni la API.
-    expect(paths.some((path) => /^\/(admin|api|tienda|eventos|auspiciadores)/.test(path))).toBe(false)
-    expect(paths).toEqual(expect.arrayContaining(['/socios', '/contacto', '/privacidad']))
+    expect(paths.some((path) => /^\/(admin|api|tienda|eventos|galeria)/.test(path))).toBe(false)
+    expect(paths).toEqual(expect.arrayContaining(['/socios', '/auspiciadores', '/contacto', '/privacidad']))
     expect(new Set(paths).size).toBe(paths.length)
 
     const news = entries.find((entry) => entry.path === '/noticias/noticia-publicada')

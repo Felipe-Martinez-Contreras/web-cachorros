@@ -1,8 +1,9 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { contactMessages, membershipPlans, membershipRequests } from '@/db/schema'
+import { contactMessages, membershipPlans, membershipRequests, sponsorshipInquiries } from '@/db/schema'
 import { membershipFormSchema } from '@/features/members/schemas'
+import { sponsorshipFormSchema } from '@/features/sponsors/schemas'
 import type { InboxKind } from './notify'
 import { contactFormSchema } from './schemas'
 
@@ -83,6 +84,28 @@ const PUBLIC_FORMS: Record<string, PublicForm> = {
         })
         .returning({ id: membershipRequests.id })
       if (!row) throw new Error('No se guardó la solicitud de socio.')
+      return { ok: true, id: row.id }
+    },
+  },
+  auspicios: {
+    kind: 'auspicios',
+    path: '/auspiciadores',
+    turnstileAction: 'auspicios',
+    async save(values, meta) {
+      const parsed = sponsorshipFormSchema.safeParse(values)
+      if (!parsed.success) return { ok: false, fieldErrors: fieldErrorsOf(parsed.error) }
+      const { privacy: _consent, phone, ...data } = parsed.data
+      const [row] = await db
+        .insert(sponsorshipInquiries)
+        .values({
+          ...data,
+          phoneE164: phone,
+          privacyConsentAt: meta.now,
+          privacyPolicyVersion: meta.policyVersion,
+          ipHash: meta.ipHash,
+        })
+        .returning({ id: sponsorshipInquiries.id })
+      if (!row) throw new Error('No se guardó la solicitud de auspicio.')
       return { ok: true, id: row.id }
     },
   },

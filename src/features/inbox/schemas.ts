@@ -38,6 +38,8 @@ export const MEMBERSHIP_STATUSES = [
   'rechazada',
   'archivada',
 ] as const
+/** Auspicios: «Aprobada» es un acuerdo cerrado; el auspiciador se crea aparte en el panel. */
+export const SPONSORSHIP_STATUSES = MEMBERSHIP_STATUSES
 /** Una solicitud aprobada ya tiene socio en el padrón: solo puede quedar aprobada o archivarse. */
 export const APPROVED_STATUSES = ['aprobada', 'archivada'] as const
 export const PENDING_MEMBERSHIP_STATUSES = [

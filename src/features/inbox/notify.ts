@@ -1,15 +1,21 @@
 import 'server-only'
 import { and, asc, eq, gt, isNull, lt, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { contactMessages, membershipPlans, membershipRequests, siteSettings } from '@/db/schema'
+import {
+  contactMessages,
+  membershipPlans,
+  membershipRequests,
+  siteSettings,
+  sponsorshipInquiries,
+} from '@/db/schema'
 import type { NotifyRecipients } from '@/db/schema/system'
 import { env } from '@/lib/env'
-import { contactTopicLabels } from '@/lib/labels'
+import { contactTopicLabels, sponsorTierLabels } from '@/lib/labels'
 import { logger } from '@/lib/logger'
 import { type MailMessage, sendMail } from '@/lib/mail'
 
 /** Bandejas que avisan por correo al recibir un envío. */
-export type InboxKind = 'contacto' | 'socios'
+export type InboxKind = 'contacto' | 'socios' | 'auspicios'
 
 /** Después de esto se deja de reintentar: el envío sigue en la bandeja del panel, sin aviso. */
 export const MAX_NOTIFY_ATTEMPTS = 5
@@ -147,9 +153,60 @@ async function membershipMails(id: string): Promise<Mails | null> {
   }
 }
 
+async function sponsorshipMails(id: string): Promise<Mails | null> {
+  const [row] = await db
+    .select({
+      businessName: sponsorshipInquiries.businessName,
+      contactName: sponsorshipInquiries.contactName,
+      email: sponsorshipInquiries.email,
+      phone: sponsorshipInquiries.phoneE164,
+      tierInterest: sponsorshipInquiries.tierInterest,
+      message: sponsorshipInquiries.message,
+    })
+    .from(sponsorshipInquiries)
+    .where(eq(sponsorshipInquiries.id, id))
+    .limit(1)
+  const club = await clubContact()
+  if (!row || !club) return null
+  const to = recipientsFor(club, 'auspicios')
+  if (to.length === 0) throw new Error('No hay destinatarios para la bandeja de auspicios.')
+  const tier = row.tierInterest ? sponsorTierLabels[row.tierInterest] : 'Sin definir'
+  return {
+    staff: {
+      to,
+      replyTo: row.email,
+      subject: `Interés en auspiciar: ${row.businessName}`,
+      text: [
+        `${row.contactName}, de ${row.businessName}, quiere auspiciar al club.`,
+        '',
+        `Nivel de interés: ${tier}`,
+        `Correo: ${row.email}`,
+        ...(row.phone ? [`Celular: ${row.phone}`] : []),
+        ...(row.message ? ['', row.message] : []),
+        '',
+        `Respóndele contestando este correo o desde el panel: ${siteLink(`/admin/auspiciadores/solicitudes/${id}`)}`,
+      ].join('\n'),
+    },
+    ack: {
+      to: row.email,
+      subject: `Recibimos tu interés en auspiciar · ${club.clubName}`,
+      text: [
+        `Hola, ${row.contactName}:`,
+        '',
+        `Gracias por querer apoyar al club. La directiva te contactará para conversar sobre el auspicio de ${row.businessName}.`,
+        '',
+        'Si no lo enviaste tú, ignora este correo.',
+        '',
+        club.clubName,
+      ].join('\n'),
+    },
+  }
+}
+
 const KINDS = {
   contacto: { table: contactMessages, mails: contactMails },
   socios: { table: membershipRequests, mails: membershipMails },
+  auspicios: { table: sponsorshipInquiries, mails: sponsorshipMails },
 } as const satisfies Record<InboxKind, unknown>
 
 /**

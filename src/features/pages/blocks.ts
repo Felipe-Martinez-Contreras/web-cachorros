@@ -23,6 +23,11 @@ export const PAGE_BLOCKS = {
     where: 'Página Hazte socio, después del formulario. Cada pregunta como título y su respuesta debajo.',
     href: '/socios#preguntas',
   },
+  'auspiciadores.beneficios': {
+    label: 'Auspiciadores · beneficios por nivel',
+    where: 'Página Auspiciadores, en «¿Quieres auspiciar al club?».',
+    href: '/auspiciadores#auspiciar',
+  },
   'donaciones.uso': {
     label: 'Apoya al club · uso de los aportes',
     where: 'Página Apoya al club.',
