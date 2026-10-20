@@ -29,6 +29,13 @@
       "when": 1791514176384,
       "tag": "0003_dos_pasos",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792504400385,
+      "tag": "0004_consentimiento_y_reintentos",
+      "breakpoints": true
     }
   ]
 }
