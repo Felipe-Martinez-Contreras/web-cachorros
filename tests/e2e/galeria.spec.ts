@@ -59,6 +59,8 @@ test('un álbum nuevo del panel, con una foto de la biblioteca, aparece en la ga
   await fromLibrary.getByText('Agregar una foto de la biblioteca').click()
   await fromLibrary.getByRole('button', { name: 'Elegir imagen' }).click()
   const library = page.getByRole('dialog', { name: 'Elegir imagen' })
+  // Otras pruebas suben fotos antes: la del seed puede no estar en la primera página. Se busca.
+  await library.getByRole('searchbox', { name: 'Buscar en la biblioteca' }).fill('del álbum')
   await library
     .getByRole('button', { name: /^Imagen de ejemplo \d+ del álbum/ })
     .first()
