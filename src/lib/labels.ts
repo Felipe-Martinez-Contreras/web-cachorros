@@ -221,7 +221,12 @@ export const socialPlatformLabels: Labels<typeof socialPlatform> = {
 
 /** Sobre qué fue cada acción registrada en «Actividad» (`audit_log.entity_type`). */
 export const auditEntityLabels: Record<string, string> = {
+  board_member: 'Directiva',
+  album: 'Álbumes de fotos',
+  album_item: 'Fotos de álbumes',
   competition: 'Competencias',
+  document: 'Documentos de transparencia',
+  event: 'Eventos',
   contact_message: 'Mensajes de contacto',
   hall_of_fame: 'Salón de la fama',
   historic_kit: 'Camisetas históricas',
@@ -239,6 +244,10 @@ export const auditEntityLabels: Record<string, string> = {
   personal_data: 'Datos personales',
   player: 'Jugadores',
   player_stat_adjustment: 'Estadísticas históricas',
+  product: 'Productos de la tienda',
+  product_category: 'Categorías de la tienda',
+  product_image: 'Fotos de productos',
+  product_variant: 'Tallas de productos',
   season: 'Temporadas',
   series: 'Series',
   site_settings: 'Configuración',
@@ -249,8 +258,10 @@ export const auditEntityLabels: Record<string, string> = {
   staff_member: 'Cuerpo técnico',
   standings_table: 'Tablas de posiciones',
   team: 'Rivales',
+  training_schedule: 'Horarios de entrenamiento',
   user: 'Usuarios y seguridad',
   venue: 'Canchas',
+  video: 'Videos',
 }
 
 export const weekdayLabels: Record<number, string> = {

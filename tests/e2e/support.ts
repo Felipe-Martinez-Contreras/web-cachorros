@@ -88,3 +88,14 @@ export const uniqueIp = (project: string) =>
 export async function waitForTurnstile(page: Page) {
   await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 20_000 })
 }
+
+/** Abre un módulo desde la navegación del panel: en el celular está dentro de «Más». */
+export async function openModule(page: Page, name: string, isMobile: boolean) {
+  if (isMobile) {
+    await page.getByRole('button', { name: 'Más' }).click()
+    await page.getByRole('navigation', { name: 'Todos los módulos' }).getByRole('link', { name }).click()
+  } else {
+    await page.getByRole('navigation', { name: 'Módulos del panel' }).getByRole('link', { name }).click()
+  }
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
+}

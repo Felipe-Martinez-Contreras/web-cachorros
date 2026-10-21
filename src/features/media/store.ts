@@ -1,14 +1,15 @@
 import 'server-only'
-import { rm } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { db } from '@/db/client'
 import { mediaAssets } from '@/db/schema'
 import { audit } from '@/lib/audit'
 import { env } from '@/lib/env'
-import { processImage } from '@/lib/images/process'
 import { logger } from '@/lib/logger'
 import { type MediaThumbDTO, toMediaThumbDTO } from './dto'
-import { createSerialQueue, sniffImageFormat } from './lib/upload-rules'
+import { removeMediaFiles, uploadsDir } from './files'
+import { createSerialQueue, DOCUMENT_FILENAME, isPdf, sniffImageFormat } from './lib/upload-rules'
 
 /** Un solo archivo a la vez en todo el proceso: sharp no compite consigo mismo por la memoria de la VM. */
 const enqueue = createSerialQueue()
@@ -32,16 +33,54 @@ type StoreInput = {
   userId: string
 }
 
-export function uploadsDir(): string {
-  // La carpeta de subidas se decide en runtime (variable de entorno): el comentario evita que el build
-  // rastree todo el proyecto y lo meta en la imagen.
-  return path.resolve(/* turbopackIgnore: true */ env.UPLOADS_DIR ?? './data/uploads')
-}
+type StoreDocumentInput = { bytes: Buffer; filename: string | null; altText: string | null; userId: string }
 
-export async function removeMediaFiles(storageKey: string): Promise<void> {
-  // La clave es un UUID generado por el servidor; igual se verifica que no salga de la carpeta.
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(storageKey)) return
-  await rm(path.join(/* turbopackIgnore: true */ uploadsDir(), storageKey), { recursive: true, force: true })
+/**
+ * Guarda un PDF de transparencia (especificación 6.12 y 9.5): solo si su firma real es la de un PDF. No se
+ * re-codifica; se sirve con `Content-Security-Policy: sandbox` y `nosniff`, sin ejecutar nada.
+ */
+export async function storeUploadedDocument(input: StoreDocumentInput): Promise<MediaThumbDTO> {
+  const maxBytes = (env.MAX_UPLOAD_MB ?? 12) * 1024 * 1024
+  if (input.bytes.byteLength === 0) throw new UploadError(400, 'El archivo llegó vacío. Vuelve a elegirlo.')
+  if (input.bytes.byteLength > maxBytes) {
+    throw new UploadError(413, `El PDF pesa más de ${env.MAX_UPLOAD_MB ?? 12} MB. Elige uno más liviano.`)
+  }
+  if (!(await isPdf(input.bytes))) {
+    throw new UploadError(415, 'Ese archivo no es un PDF. Los documentos se suben solo en PDF.')
+  }
+
+  const storageKey = randomUUID()
+  const dir = path.join(/* turbopackIgnore: true */ uploadsDir(), storageKey)
+  await mkdir(dir, { recursive: true })
+  await writeFile(path.join(dir, DOCUMENT_FILENAME), input.bytes)
+  const filename = input.filename?.slice(0, 200) ?? null
+  try {
+    return await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(mediaAssets)
+        .values({
+          kind: 'documento',
+          storageKey,
+          originalFilename: filename,
+          mime: 'application/pdf',
+          bytes: input.bytes.byteLength,
+          altText: input.altText,
+          uploadedBy: input.userId,
+        })
+        .returning({ id: mediaAssets.id })
+      if (!row) throw new Error('La biblioteca no devolvió el archivo creado.')
+      await audit(tx, { id: input.userId }, 'media.create', {
+        entityType: 'media_asset',
+        entityId: row.id,
+        summary: 'Subió un documento PDF',
+        meta: { bytes: input.bytes.byteLength },
+      })
+      return { id: row.id, thumb: null, alt: filename ?? 'documento.pdf', containsMinors: false }
+    })
+  } catch (error) {
+    await removeMediaFiles(storageKey)
+    throw error
+  }
 }
 
 /**
@@ -60,6 +99,8 @@ export async function storeUploadedImage(input: StoreInput): Promise<MediaThumbD
   }
 
   return enqueue(async () => {
+    // sharp se carga recién al procesar una imagen: subir un PDF no lo necesita.
+    const { processImage } = await import('@/lib/images/process')
     let processed: Awaited<ReturnType<typeof processImage>>
     try {
       processed = await processImage(input.bytes, { uploadsDir: uploadsDir(), kind: input.kind })

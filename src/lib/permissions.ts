@@ -23,6 +23,10 @@ export const PERMISSIONS = [
   'messages:write', // bandeja de contacto
   'sponsors:write', // auspiciadores, solicitudes de auspicio y reporte de clics
   'privacy:manage', // exportar y eliminar los datos de una persona (9.6)
+  'store:write', // productos, tallas, fotos y categorías de la tienda
+  'events:write',
+  'club:write', // directiva, documentos de transparencia y horarios de entrenamiento
+  'gallery:write', // álbumes y videos
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]
 

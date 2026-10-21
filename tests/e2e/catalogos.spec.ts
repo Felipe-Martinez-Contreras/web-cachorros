@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { ADMIN, expectAccessible, login } from './support'
+import { ADMIN, expectAccessible, login, openModule } from './support'
 
 async function enter(page: Page) {
   await login(page, ADMIN.email)
@@ -7,16 +7,6 @@ async function enter(page: Page) {
 }
 
 /** En el celular los módulos están en la hoja «Más»; en escritorio, en el menú lateral. */
-async function openModule(page: Page, name: string, isMobile: boolean) {
-  if (isMobile) {
-    await page.getByRole('button', { name: 'Más' }).click()
-    await page.getByRole('navigation', { name: 'Todos los módulos' }).getByRole('link', { name }).click()
-  } else {
-    await page.getByRole('navigation', { name: 'Módulos del panel' }).getByRole('link', { name }).click()
-  }
-  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
-}
-
 test('crear un rival y una cancha, con errores claros y sin datos a medias', async ({ page }, testInfo) => {
   const isMobile = testInfo.project.name === 'celular'
   const stamp = `${testInfo.project.name} ${Date.now()}`

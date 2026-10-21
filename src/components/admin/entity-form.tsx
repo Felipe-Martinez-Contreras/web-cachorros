@@ -11,6 +11,7 @@ import { FormBody } from '@/components/admin/form-body'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
 import { CheckboxField, Field, SelectField, TextareaField } from '@/components/ui/field'
+import { DocumentPicker } from '@/features/media/components/document-picker'
 import { MediaPicker } from '@/features/media/components/media-picker'
 import type { MediaThumbDTO } from '@/features/media/dto'
 import type { ActionResult } from '@/lib/action-result'
@@ -45,6 +46,8 @@ export type FieldDef =
   | (Base & { type: 'checkbox' })
   | (Base & { type: 'checkboxes'; options: { value: string; label: string }[] })
   | (Base & { type: 'media'; kind?: 'photo' | 'logo' })
+  /** PDF de un documento: se sube al elegirlo (el servidor valida que sea un PDF). */
+  | (Base & { type: 'document' })
   | (Base & { type: 'richtext' })
 
 type EntityFormProps<T extends FieldValues> = {
@@ -188,6 +191,28 @@ export function EntityForm<T extends FieldValues>({
                     help={field.help}
                     required={field.required}
                     kind={field.kind}
+                    error={typeof error === 'string' ? error : undefined}
+                    value={previews[field.name] ?? null}
+                    onChange={(media) => {
+                      setPreviews((current) => ({ ...current, [field.name]: media }))
+                      control.onChange(media?.id ?? '')
+                    }}
+                  />
+                )}
+              />
+            )
+          }
+          if (field.type === 'document') {
+            return (
+              <Controller
+                key={field.name}
+                control={form.control}
+                name={field.name as Path<T>}
+                render={({ field: control }) => (
+                  <DocumentPicker
+                    label={field.label}
+                    help={field.help}
+                    required={field.required}
                     error={typeof error === 'string' ? error : undefined}
                     value={previews[field.name] ?? null}
                     onChange={(media) => {

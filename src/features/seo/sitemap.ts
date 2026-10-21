@@ -2,7 +2,7 @@ import 'server-only'
 import { asc, desc, eq, max } from 'drizzle-orm'
 import { cacheLife, cacheTag } from 'next/cache'
 import { db } from '@/db/client'
-import { matches, news, players, series } from '@/db/schema'
+import { albums, events, matches, news, players, products, series } from '@/db/schema'
 import { isClubMatch } from '@/features/matches/queries'
 import { isNewsVisible } from '@/features/news/queries'
 import { loadMinorIds } from '@/features/players/public'
@@ -23,6 +23,15 @@ const STATIC_PATHS = [
   '/historia/camisetas',
   '/socios',
   '/auspiciadores',
+  '/tienda',
+  '/eventos',
+  '/club/directiva',
+  '/club/transparencia',
+  '/club/la-cancha',
+  '/formativas',
+  '/apoya-al-club',
+  '/galeria',
+  '/videos',
   '/contacto',
   '/privacidad',
 ]
@@ -36,38 +45,65 @@ const SITEMAP_LIMIT = 5000
  */
 export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   'use cache'
-  cacheTag(tags.news(), tags.matches(), tags.players(), tags.history())
+  cacheTag(
+    tags.news(),
+    tags.matches(),
+    tags.players(),
+    tags.history(),
+    tags.store(),
+    tags.events(),
+    tags.gallery(),
+  )
   cacheLife('hours')
 
-  const [newsRows, matchRows, seriesRows, playerRows, [latest]] = await Promise.all([
-    db
-      .select({ slug: news.slug, updatedAt: news.updatedAt })
-      .from(news)
-      .where(isNewsVisible)
-      .orderBy(desc(news.publishedAt))
-      .limit(SITEMAP_LIMIT),
-    db
-      .select({ slug: matches.slug, updatedAt: matches.updatedAt })
-      .from(matches)
-      .where(isClubMatch)
-      .orderBy(desc(matches.kickoffAt))
-      .limit(SITEMAP_LIMIT),
-    db
-      .select({ slug: series.slug })
-      .from(series)
-      .where(eq(series.isActive, true))
-      .orderBy(asc(series.sortOrder)),
-    db
-      .select({ id: players.id, slug: players.slug, updatedAt: players.updatedAt })
-      .from(players)
-      .where(eq(players.isActive, true))
-      .orderBy(asc(players.slug))
-      .limit(SITEMAP_LIMIT),
-    db
-      .select({ newsAt: max(news.updatedAt) })
-      .from(news)
-      .where(isNewsVisible),
-  ])
+  const [newsRows, matchRows, seriesRows, playerRows, [latest], productRows, eventRows, albumRows] =
+    await Promise.all([
+      db
+        .select({ slug: news.slug, updatedAt: news.updatedAt })
+        .from(news)
+        .where(isNewsVisible)
+        .orderBy(desc(news.publishedAt))
+        .limit(SITEMAP_LIMIT),
+      db
+        .select({ slug: matches.slug, updatedAt: matches.updatedAt })
+        .from(matches)
+        .where(isClubMatch)
+        .orderBy(desc(matches.kickoffAt))
+        .limit(SITEMAP_LIMIT),
+      db
+        .select({ slug: series.slug })
+        .from(series)
+        .where(eq(series.isActive, true))
+        .orderBy(asc(series.sortOrder)),
+      db
+        .select({ id: players.id, slug: players.slug, updatedAt: players.updatedAt })
+        .from(players)
+        .where(eq(players.isActive, true))
+        .orderBy(asc(players.slug))
+        .limit(SITEMAP_LIMIT),
+      db
+        .select({ newsAt: max(news.updatedAt) })
+        .from(news)
+        .where(isNewsVisible),
+      db
+        .select({ slug: products.slug, updatedAt: products.updatedAt })
+        .from(products)
+        .where(eq(products.isActive, true))
+        .orderBy(asc(products.sortOrder), asc(products.slug))
+        .limit(SITEMAP_LIMIT),
+      db
+        .select({ slug: events.slug, updatedAt: events.updatedAt })
+        .from(events)
+        .where(eq(events.isPublished, true))
+        .orderBy(desc(events.startsAt))
+        .limit(SITEMAP_LIMIT),
+      db
+        .select({ slug: albums.slug, updatedAt: albums.updatedAt })
+        .from(albums)
+        .where(eq(albums.isPublished, true))
+        .orderBy(desc(albums.takenOn))
+        .limit(SITEMAP_LIMIT),
+    ])
   const minors = await loadMinorIds(playerRows.map((player) => player.id))
   const iso = (date: Date | null | undefined) => date?.toISOString() ?? null
 
@@ -82,5 +118,8 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     ...playerRows
       .filter((player) => !minors.has(player.id))
       .map((row) => ({ path: `/jugadores/${row.slug}`, lastModified: iso(row.updatedAt) })),
+    ...productRows.map((row) => ({ path: `/tienda/${row.slug}`, lastModified: iso(row.updatedAt) })),
+    ...eventRows.map((row) => ({ path: `/eventos/${row.slug}`, lastModified: iso(row.updatedAt) })),
+    ...albumRows.map((row) => ({ path: `/galeria/${row.slug}`, lastModified: iso(row.updatedAt) })),
   ]
 }

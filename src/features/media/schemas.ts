@@ -10,6 +10,11 @@ export const uploadMediaSchema = z.object({
   kind: z.enum(['photo', 'logo'], { error: 'Indica si es una foto o un escudo.' }).default('photo'),
 })
 
+/** Campos que acompañan a un PDF (`kind=document`): el nombre visible lo pone el documento, no el archivo. */
+export const uploadDocumentSchema = z.object({
+  altText: optionalText(300),
+})
+
 const focal = z.coerce.number({ error: 'Elige el punto focal.' }).min(0).max(1)
 
 export const updateMediaSchema = z

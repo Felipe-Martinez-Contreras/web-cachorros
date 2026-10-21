@@ -17,7 +17,8 @@ type UploaderProps = {
   kind?: 'photo' | 'logo'
   /** Varias fotos de una vez (biblioteca) o una sola (selector de un formulario). */
   multiple?: boolean
-  onUploaded?: (media: MediaThumbDTO) => void
+  /** Se espera antes de seguir con la siguiente (por ejemplo, para agregar la foto a un álbum). */
+  onUploaded?: (media: MediaThumbDTO) => void | Promise<void>
 }
 
 type UploadResponse = { ok: true; data: MediaThumbDTO } | { ok: false; message: string }
@@ -68,7 +69,7 @@ export function Uploader({ kind = 'photo', multiple = true, onUploaded }: Upload
         return false
       }
       update(item.key, { status: 'lista' })
-      onUploaded?.(result.data)
+      await onUploaded?.(result.data)
       return true
     } catch (error) {
       update(item.key, {

@@ -349,7 +349,16 @@ export async function resolveSlugRedirect(entityType: SlugEntity, slug: string):
     .where(and(eq(slugRedirects.entityType, entityType), eq(slugRedirects.oldSlug, slug)))
     .limit(1)
   if (!redirect) return null
-  const table = { match: matches, player: players, series, team: teams, news: null }[entityType]
+  const table = {
+    match: matches,
+    player: players,
+    series,
+    team: teams,
+    news: null,
+    product: null,
+    event: null,
+    album: null,
+  }[entityType]
   if (!table) return null
   const [current] = await db.select({ slug: table.slug }).from(table).where(eq(table.id, redirect.entityId))
   return current?.slug ?? null

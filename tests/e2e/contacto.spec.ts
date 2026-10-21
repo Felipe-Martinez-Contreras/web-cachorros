@@ -38,6 +38,8 @@ test.describe('formulario de contacto', () => {
     await fillContact(page, sender)
     await waitForTurnstile(page)
     await expectAccessible(page)
+    // El servidor exige al menos 3 s desde que se dibujó el formulario.
+    await page.waitForTimeout(3000)
     await page.getByRole('button', { name: 'Enviar mensaje' }).click()
     await expect(page.getByRole('status').filter({ hasText: '¡Mensaje enviado!' })).toBeVisible()
 

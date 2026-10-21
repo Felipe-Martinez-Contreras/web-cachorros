@@ -179,6 +179,41 @@ export function sportsEventJsonLd(match: MatchInput, baseUrl: string): JsonLd {
   })
 }
 
+type ClubEventInput = {
+  slug: string
+  title: string
+  status: 'programado' | 'realizado' | 'cancelado'
+  /** Instantes ISO 8601 (con zona horaria). */
+  startsAt: string
+  endsAt: string | null
+  description: string | null
+  image: string | null
+  locationText: string | null
+  venue: { name: string; address: string | null } | null
+  priceText: string | null
+}
+
+/** Evento del club (especificación 6.11): actividades sociales, no partidos. */
+export function eventJsonLd(event: ClubEventInput, organizer: { clubName: string }, baseUrl: string): JsonLd {
+  const placeName = event.venue?.name ?? real(event.locationText)
+  return compact({
+    '@context': CONTEXT,
+    '@type': 'Event',
+    name: event.title,
+    description: real(event.description),
+    url: absoluteUrl(baseUrl, `/eventos/${event.slug}`),
+    image: event.image ? absoluteUrl(baseUrl, event.image) : null,
+    startDate: event.startsAt,
+    endDate: event.endsAt,
+    eventStatus: `${CONTEXT}/${event.status === 'cancelado' ? 'EventCancelled' : 'EventScheduled'}`,
+    eventAttendanceMode: `${CONTEXT}/OfflineEventAttendanceMode`,
+    location: placeName
+      ? compact({ '@type': 'Place', name: placeName, address: real(event.venue?.address) })
+      : null,
+    organizer: { '@type': 'SportsTeam', name: organizer.clubName, url: absoluteUrl(baseUrl, '/') },
+  })
+}
+
 /**
  * JSON listo para ir dentro de `<script type="application/ld+json">`: los caracteres que podrían cerrar la
  * etiqueta o abrir una entidad (y los separadores de línea Unicode) van como escapes, que para JSON son el

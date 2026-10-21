@@ -217,4 +217,63 @@ test.describe('capturas del reporte de fase', () => {
     await expect(page.getByRole('heading', { name: 'Alta en el padrón' })).toBeVisible()
     await shot('panel-socios-solicitud')
   })
+
+  test('fase 3b: tienda, eventos, club, formativas, la cancha, donaciones, galería y su panel', async ({
+    page,
+  }, testInfo) => {
+    test.skip(fase !== 'fase-3b', 'Estas capturas son de la Fase 3b.')
+    test.setTimeout(300_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    const shot = async (name: string) => {
+      await loadLazyImages(page)
+      await page.screenshot({ path: `${dir}/${name}-${width}.png`, fullPage: true })
+    }
+    for (const [path, name] of [
+      ['/tienda', 'tienda'],
+      ['/tienda/camiseta-oficial-local', 'tienda-producto'],
+      ['/eventos', 'eventos'],
+      ['/eventos/completada-a-beneficio', 'evento'],
+      ['/club/directiva', 'directiva'],
+      ['/club/transparencia', 'transparencia'],
+      ['/formativas', 'formativas'],
+      ['/club/la-cancha', 'la-cancha'],
+      ['/apoya-al-club', 'apoya-al-club'],
+      ['/galeria', 'galeria'],
+      ['/videos', 'videos'],
+    ] as const) {
+      await page.goto(path)
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await shot(name)
+    }
+    await page.goto('/galeria')
+    await page.getByRole('link', { name: /^Aniversario \d+ del club$/ }).click()
+    await expect(page.getByRole('heading', { level: 1, name: /^Aniversario/ })).toBeVisible()
+    await shot('galeria-album')
+    // El visor abierto (la captura de pantalla completa no aplica a un <dialog> modal).
+    await page.getByRole('link', { name: /^Ver foto 1 de/ }).click()
+    await expect(page.getByRole('dialog', { name: /visor de fotos$/ })).toBeVisible()
+    await page.screenshot({ path: `${dir}/galeria-visor-${width}.png` })
+    await page.keyboard.press('Escape')
+
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+    for (const [path, heading, name] of [
+      ['/admin/tienda', 'Tienda', 'panel-tienda'],
+      ['/admin/eventos', 'Eventos', 'panel-eventos'],
+      ['/admin/club', 'Club', 'panel-club-directiva'],
+      ['/admin/club/documentos', 'Documentos', 'panel-club-documentos'],
+      ['/admin/club/horarios', 'Horarios de entrenamiento', 'panel-club-horarios'],
+      ['/admin/galeria', 'Galería y videos', 'panel-galeria'],
+      ['/admin/galeria/videos', 'Videos', 'panel-videos'],
+    ] as const) {
+      await page.goto(path)
+      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+      await shot(name)
+    }
+    // La ficha de un producto en el panel, con tallas y fotos.
+    await page.goto('/admin/tienda')
+    await page.getByRole('list', { name: 'Productos' }).getByRole('link').first().click()
+    await expect(page.getByRole('heading', { name: 'Tallas', level: 2 })).toBeVisible()
+    await shot('panel-tienda-producto')
+  })
 })

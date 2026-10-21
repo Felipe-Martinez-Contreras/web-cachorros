@@ -41,8 +41,16 @@ try {
     await sql`delete from membership_plans where name like 'E2E%'`
     await sql`delete from sponsorship_inquiries where business_name like 'E2E%'`
     await sql`delete from sponsors where name like 'E2E%'`
+    await sql`delete from albums where title like 'E2E%'`
+    await sql`delete from videos where title like 'E2E%'`
+    await sql`delete from events where title like 'E2E%'`
+    await sql`delete from board_members where full_name like 'E2E%'`
+    await sql`delete from training_schedules where notes like 'E2E%'`
+    await sql`delete from documents where title like 'E2E%'`
+    await sql`delete from products where name like 'E2E%'`
+    await sql`delete from product_categories where name like 'E2E%'`
     const media = await sql<{ storage_key: string }[]>`
-      delete from media_assets where alt_text like 'E2E %' returning storage_key`
+      delete from media_assets where alt_text like 'E2E %' or original_filename like 'e2e-%' returning storage_key`
     const uploadsDir = path.resolve(process.env.UPLOADS_DIR || './data/uploads')
     for (const { storage_key } of media) {
       if (/^[a-z0-9][a-z0-9-]*$/.test(storage_key)) {

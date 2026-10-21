@@ -353,6 +353,24 @@ export async function seedContent({ tx, now, media, sport, club }: Options): Pro
       richText('[COMPLETAR: filosofía de la escuela, categorías, edades, horarios, requisitos y costos]'),
     ],
     [
+      'formativas.preguntas',
+      'Preguntas frecuentes',
+      richSections(
+        3,
+        ['¿Desde qué edad pueden entrenar?', '[COMPLETAR: edad mínima y categorías por año de nacimiento]'],
+        ['¿Cuánto cuesta?', '[COMPLETAR: costo mensual o matrícula, si la hay]'],
+        [
+          '¿Publican fotos de los niños?',
+          'No publicamos fotos de menores de edad sin la autorización escrita de su adulto responsable. [VERIFICAR: política de fotos de menores con la directiva]',
+        ],
+      ),
+    ],
+    [
+      'tienda.guia-tallas',
+      'Guía de tallas',
+      richText('[COMPLETAR: medidas de cada talla de adulto e infantil (ancho y largo en centímetros)]'),
+    ],
+    [
       'socios.beneficios',
       'Beneficios de ser socio',
       richText('[COMPLETAR: beneficios de cada tipo de socio]'),

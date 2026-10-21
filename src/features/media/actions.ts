@@ -11,9 +11,9 @@ import { tags } from '@/lib/cache-tags'
 import { requiredUuid } from '@/lib/form-schemas'
 import { logger } from '@/lib/logger'
 import { runAction } from '@/lib/run-action'
+import { removeMediaFiles } from './files'
 import { getMediaUsage } from './queries'
 import { updateMediaSchema } from './schemas'
-import { removeMediaFiles } from './store'
 
 const idSchema = requiredUuid('No encontramos esa imagen.')
 

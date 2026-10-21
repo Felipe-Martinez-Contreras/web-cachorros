@@ -75,6 +75,17 @@ export function requiredTime(message: string) {
   return z.string({ error: message }).regex(/^([01]\d|2[0-3]):[0-5]\d$/, message)
 }
 
+/** Hora opcional: vacío → `null`. */
+export function optionalTime(message = 'Escribe una hora válida.') {
+  return z.preprocess(
+    blankToNull,
+    z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, message)
+      .nullable(),
+  )
+}
+
 /** Correo opcional, en minúsculas: vacío → `null`. Un marcador `[COMPLETAR: …]` se conserva. */
 export function optionalEmail(message = 'Escribe un correo válido.') {
   return z.preprocess(
