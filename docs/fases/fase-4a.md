@@ -44,7 +44,10 @@
 | `pnpm test:integration` | local | 225 de 225 |
 | `pnpm build` (sin BD) | local | en verde |
 | e2e de los hitos (workers=1) | local | en-vivo 6/6 · resultados y panel 18/18 · portada y deportes 40/40 |
-| `pnpm test:e2e` completa e imagen Docker con memoria | CI del PR #11 | _se completa al revisar el CI_ |
+| `pnpm test:e2e` completa (360 y 1280 px) | CI del PR #11 (`0f8bddb`) | 200 de 200, sin *flaky* |
+| Integración y unitarias | CI del PR #11 | 225 de 225 · 282 de 282 |
+| Imagen Docker (`--memory=512m`) | CI del PR #11 | arranca; pico de memoria 231 MB de 512 MB |
+| Lighthouse móvil de la portada | CI del PR #11 | en verde (informativo) |
 
 ## Desviaciones y decisiones
 
