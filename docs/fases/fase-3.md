@@ -56,11 +56,12 @@ persona; retención de 12 meses en `GET /api/cron/daily`.
 | `pnpm test:integration` | local | 215 de 215 |
 | `pnpm build` (sin BD) | local y CI | en verde |
 | e2e de cada hito (workers=1) | local | tienda 10/10 · eventos 8/8 · club (hitos 8 y 9) 14/14 · galería 10/10 |
-| `pnpm test:e2e` completa | CI del PR #9 | _ver «CI del cierre»_ |
+| `pnpm test:e2e` completa | CI del PR #9 | 194 de 194, sin reintentos ni *flaky* |
 | Lighthouse móvil de la portada | CI (job informativo) | en verde |
-| Imagen Docker y memoria con `--memory=512m` | CI | _ver «CI del cierre»_ |
+| Imagen Docker y memoria con `--memory=512m` | CI | en verde; pico de 242 MB de 512 MB, sin OOM (3a: 217 MB) |
 
-**CI del cierre:** _se completa al final._
+**CI del cierre:** ejecución 39533104220 (commit `b3e8740`), los 5 jobs en verde. Unitarias 257 de 257 e
+integración 215 de 215 también en el CI.
 
 ## Desviaciones y ADRs
 
