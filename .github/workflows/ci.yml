@@ -211,7 +211,7 @@ jobs:
       - name: Medir la memoria con --memory=512m (portada, panel y fotos de 12 MP)
         run: bash .github/scripts/medir-memoria.sh
       - name: Revisar los scripts de shell (shellcheck)
-        run: shellcheck -x docker/ops/bin/*.sh docker/ops/lib/*.sh deploy/*.sh .github/scripts/probar-ops.sh .github/scripts/probar-compose.sh
+        run: shellcheck -x docker/ops/bin/*.sh docker/ops/lib/*.sh deploy/*.sh .github/scripts/probar-ops.sh .github/scripts/probar-compose.sh .github/scripts/trivy.sh
       - name: Construir la imagen ops
         uses: docker/build-push-action@v7
         with:
@@ -223,6 +223,10 @@ jobs:
           cache-to: type=gha,scope=ops,mode=max
       - name: Probar respaldos y restauración (imagen ops)
         run: bash .github/scripts/probar-ops.sh
+      - name: Trivy de las dos imágenes (falla con CRITICAL)
+        run: |
+          bash .github/scripts/trivy.sh cachorros-web:ci
+          bash .github/scripts/trivy.sh cachorros-ops:ci
 
   compose:
     name: VM simulada (compose, Caddy y despliegue)
