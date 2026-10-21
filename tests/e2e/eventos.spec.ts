@@ -16,7 +16,7 @@ test('próximos y pasados, detalle con afiche ampliable, WhatsApp y calendario',
   await expect(page.getByRole('heading', { level: 1, name: COMPLETADA })).toBeVisible()
   await expect(page.getByRole('link', { name: /^Consultar por WhatsApp/ })).toHaveAttribute(
     'href',
-    /^https:\/\/wa\.me\/56900000000\?text=/,
+    /^https:\/\/wa\.me\/569\d{8}\?text=/,
   )
   await expectAccessible(page)
 

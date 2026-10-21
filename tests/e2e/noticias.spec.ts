@@ -68,6 +68,10 @@ test('crear una noticia con foto desde el panel: se ve en el sitio en la carga s
   await editor.click()
   await page.keyboard.type(bodyText)
   await page.getByRole('button', { name: 'Negrita' }).click()
+  // El botón devuelve el foco al editor: se escribe recién cuando la negrita quedó activa (si no, en un
+  // CI lento se pierden las primeras teclas).
+  await expect(page.getByRole('button', { name: 'Negrita' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(editor).toBeFocused()
   await page.keyboard.type(' Importante.')
   await expectNoHorizontalScroll(page)
 

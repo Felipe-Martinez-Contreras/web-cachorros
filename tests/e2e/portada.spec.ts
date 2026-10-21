@@ -166,9 +166,9 @@ test.describe('portada', () => {
   test('las secciones aún no construidas muestran «Próximamente» y lo inexistente es un 404', async ({
     page,
   }) => {
-    const soon = await page.goto('/tienda')
+    const soon = await page.goto('/galeria')
     expect(soon?.status()).toBe(200)
-    await expect(page.getByRole('heading', { level: 1, name: 'Tienda' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Galería' })).toBeVisible()
     await expect(page.getByText('Próximamente')).toBeVisible()
 
     const missing = await page.goto('/no-existe')
