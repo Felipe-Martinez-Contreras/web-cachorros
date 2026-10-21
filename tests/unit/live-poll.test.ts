@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { matchPeriod } from '@/db/schema/enums'
-import type { MatchEventDTO } from '@/features/matches/dto'
+import type { MatchDTO, MatchEventDTO } from '@/features/matches/dto'
 import {
   backoffDelay,
   etagMatches,
@@ -9,6 +9,7 @@ import {
   liveEtag,
   MAX_BACKOFF_MS,
   PERIOD_CODES,
+  patchMatch,
   pollInterval,
   toLiveEvent,
 } from '@/features/matches/lib/live-poll'
@@ -111,5 +112,40 @@ describe('eventos compactos de la API en vivo', () => {
       side: null,
       comment: 'Se juega con lluvia.',
     })
+  })
+})
+
+describe('estado en vivo sobre el partido de la página', () => {
+  it('copia lo que cambia en el juego y conserva equipos, escudos y cancha', () => {
+    const match = {
+      id: 'm1',
+      slug: 'honor',
+      status: 'programado',
+      period: 'previa',
+      periodStartedAt: null,
+      homeScore: 0,
+      awayScore: 0,
+      homePenalties: null,
+      awayPenalties: null,
+      home: { name: 'Cachorros', shortName: 'Cachorros', crest: null, isOwnClub: true },
+      venue: { name: 'Cancha', directionsUrl: null },
+    } as unknown as MatchDTO
+    const patched = patchMatch(match, {
+      id: 'm1',
+      slug: 'honor',
+      status: 'en_vivo',
+      period: 'primer_tiempo',
+      periodStartedAt: '2026-10-25T19:00:00.000Z',
+      kickoffAt: '2026-10-25T19:00:00.000Z',
+      halfLengthMinutes: 45,
+      homeScore: 1,
+      awayScore: 0,
+      homePenalties: null,
+      awayPenalties: null,
+      version: 3,
+    })
+    expect(patched).toMatchObject({ status: 'en_vivo', period: 'primer_tiempo', homeScore: 1 })
+    expect(patched.home).toBe(match.home)
+    expect(patched.venue).toBe(match.venue)
   })
 })

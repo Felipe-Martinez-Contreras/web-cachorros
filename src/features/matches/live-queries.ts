@@ -3,8 +3,9 @@ import { and, asc, eq, gte, lte, or } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { matches, series } from '@/db/schema'
 import { loadMinorIds } from '@/features/players/public'
+import { env } from '@/lib/env'
 import type { LiveMatchDTO, LiveMatchStateDTO } from './dto'
-import { LATE_START_MS, SOON_WINDOW_MS, toLiveEvent } from './lib/live-poll'
+import { LATE_START_MS, LIVE_POLL_MS, SOON_WINDOW_MS, toLiveEvent } from './lib/live-poll'
 import { namedPlayerIds, selectEventRows, toEventDTOs } from './public-events'
 import { isClubMatch } from './queries'
 
@@ -86,4 +87,9 @@ export async function getLiveMatch(id: string): Promise<LiveMatchDTO | null> {
   const minors = await loadMinorIds(namedPlayerIds(eventRows))
   const events = toEventDTOs(eventRows, { homeTeamId, awayTeamId }, minors).map(toLiveEvent)
   return { match: toState(state), events }
+}
+
+/** Intervalo base del polling: el de la especificación, salvo en desarrollo si `LIVE_POLL_MS` lo acorta. */
+export function livePollBaseMs(): number {
+  return env.SITE_ENV === 'development' && env.LIVE_POLL_MS ? env.LIVE_POLL_MS : LIVE_POLL_MS
 }

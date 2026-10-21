@@ -1,5 +1,6 @@
 import { MapPin } from 'lucide-react'
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 import { formatLongDateTime, formatMatchDate } from '@/lib/format'
@@ -34,14 +35,16 @@ function Venue({ match }: { match: MatchDTO }) {
   )
 }
 
-function LiveMatch({ match }: { match: MatchDTO }) {
+type MinuteRenderer = (match: MatchDTO) => ReactNode
+
+function LiveMatch({ match, renderMinute }: { match: MatchDTO; renderMinute?: MinuteRenderer }) {
   return (
     <article className="grid w-full shrink-0 snap-center gap-4 p-5 md:p-8">
       <div className="flex justify-center">
         <LiveBadge />
       </div>
       <MatchHeading match={match} eyebrow="Se está jugando" />
-      <Scoreboard match={match} size="lg" />
+      <Scoreboard match={match} size="lg" minute={renderMinute?.(match)} />
       <div className="flex justify-center">
         <Link href={`/partidos/${match.slug}`} className={buttonVariants({ variant: 'primary' })}>
           Seguir el partido
@@ -112,9 +115,18 @@ function LastMatch({ match }: { match: MatchDTO }) {
 
 /**
  * Franja matchday de la portada (especificación 5.3): en vivo → próximo partido → último resultado.
- * Se renderiza en el servidor con el último estado; el polling en vivo llega en la Fase 4.
+ * Se renderiza en el servidor con el último estado; `LiveMatchday` la actualiza con el polling (2.6).
  */
-export function MatchdayStrip({ matchday, className }: { matchday: MatchdayDTO; className?: string }) {
+export function MatchdayStrip({
+  matchday,
+  renderMinute,
+  className,
+}: {
+  matchday: MatchdayDTO
+  /** Minuto en vivo de cada partido (lo aporta la isla de polling). */
+  renderMinute?: MinuteRenderer
+  className?: string
+}) {
   return (
     <section
       aria-label={matchday.kind === 'live' ? 'Partidos en vivo' : 'Próximo partido'}
@@ -130,7 +142,7 @@ export function MatchdayStrip({ matchday, className }: { matchday: MatchdayDTO; 
             : {})}
         >
           {matchday.matches.map((match) => (
-            <LiveMatch key={match.id} match={match} />
+            <LiveMatch key={match.id} match={match} renderMinute={renderMinute} />
           ))}
         </div>
       )}

@@ -42,7 +42,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       // SITE_URL debe coincidir con el puerto: Better Auth valida el origen y arma con ella los enlaces de correo.
-      env: { PORT: String(PORT), HOSTNAME: 'localhost', SITE_URL: baseURL },
+      env: { PORT: String(PORT), HOSTNAME: 'localhost', SITE_URL: baseURL, LIVE_POLL_MS: '2000' },
     },
     {
       // La misma build con otro dominio y como producción (especificación 3.7): solo la usa `seo.spec.ts`

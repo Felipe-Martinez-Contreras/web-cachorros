@@ -1,5 +1,5 @@
 import type { matchStatus } from '@/db/schema/enums'
-import type { MatchEventDTO } from '../dto'
+import type { LiveMatchStateDTO, MatchDTO, MatchEventDTO } from '../dto'
 
 type Status = (typeof matchStatus.enumValues)[number]
 type Period = MatchEventDTO['period']
@@ -115,5 +115,19 @@ export function fromLiveEvent(event: LiveEvent, index: number): MatchEventDTO {
     playerName: event.n ?? null,
     relatedPlayerName: event.r ?? null,
     comment: event.c ?? null,
+  }
+}
+
+/** Copia en el partido lo que cambia durante el juego. */
+export function patchMatch(match: MatchDTO, state: LiveMatchStateDTO): MatchDTO {
+  return {
+    ...match,
+    status: state.status,
+    period: state.period,
+    periodStartedAt: state.periodStartedAt,
+    homeScore: state.homeScore,
+    awayScore: state.awayScore,
+    homePenalties: state.homePenalties,
+    awayPenalties: state.awayPenalties,
   }
 }
