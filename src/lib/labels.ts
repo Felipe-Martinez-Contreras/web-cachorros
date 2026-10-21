@@ -251,6 +251,7 @@ export const auditEntityLabels: Record<string, string> = {
   season: 'Temporadas',
   series: 'Series',
   site_settings: 'Configuración',
+  social_post: 'Redes sociales',
   sponsor: 'Auspiciadores',
   sponsorship_inquiry: 'Solicitudes de auspicio',
   squad_registration: 'Inscripciones',

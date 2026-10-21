@@ -29,6 +29,8 @@ export default defineConfig({
       LOG_LEVEL: 'silent',
       // Las subidas de las pruebas no se mezclan con las de desarrollo.
       UPLOADS_DIR: path.join(tmpdir(), 'cachorros-test-uploads'),
+      // Dentro del proyecto (en .gitignore) para poder revisar las tarjetas generadas.
+      SHARE_CACHE_DIR: path.resolve(import.meta.dirname, 'data/cache/test-share'),
     },
   },
 })

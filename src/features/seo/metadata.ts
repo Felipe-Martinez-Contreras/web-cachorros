@@ -4,7 +4,7 @@ import { connection } from 'next/server'
 import { loadSiteOrFallback } from '@/components/site/site-frame'
 import { env } from '@/lib/env'
 import type { ImageDTO } from '@/lib/images/dto'
-import { ogImageOf } from './lib/og-image'
+import { type OgImage, ogImageOf } from './lib/og-image'
 
 const DEFAULT_DESCRIPTION = 'Club Deportivo Los Cachorros de Sagrada Familia. Desde 1934.'
 
@@ -36,6 +36,9 @@ export async function rootMetadata(): Promise<Metadata> {
       images: image ? [image] : undefined,
     },
     twitter: { card: image ? 'summary_large_image' : 'summary' },
+    // «Agregar a inicio» en iOS (6.16); el manifest lo agrega Next desde app/manifest.ts.
+    icons: { apple: '/icons/apple-touch-icon.png' },
+    appleWebApp: { capable: true, title: site.shortName, statusBarStyle: 'black-translucent' },
     // Staging y desarrollo nunca se indexan.
     ...(env.SITE_ENV === 'production' ? null : { robots: { index: false, follow: false } }),
   }
@@ -48,6 +51,8 @@ type PageMetadataInput = {
   /** Ruta canónica de la página (`/partidos`). */
   path: string
   image?: ImageDTO | null
+  /** Imagen Open Graph ya armada (la tarjeta versionada de `/api/share`); tiene prioridad sobre `image`. */
+  ogImage?: OgImage | null
   article?: { publishedTime: string; modifiedTime?: string; section?: string | null }
 }
 
@@ -59,7 +64,7 @@ export async function pageMetadata(input: PageMetadataInput): Promise<Metadata> 
   await connection()
   const site = await loadSiteOrFallback()
   const description = input.description ?? site.seoDescription ?? DEFAULT_DESCRIPTION
-  const image = ogImageOf(input.image ?? site.seoImage)
+  const image = input.ogImage ?? ogImageOf(input.image ?? site.seoImage)
   const images = image ? [image] : undefined
   const title = input.title ?? site.clubName
   return {

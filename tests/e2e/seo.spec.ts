@@ -205,12 +205,23 @@ test('JSON-LD válido: club, sitio, migas, noticia y partido, con direcciones ab
   expect(crumbs?.itemListElement[1]).toMatchObject({ name: 'Noticias', item: `${base}/noticias` })
   // Open Graph de artículo, con imagen absoluta.
   expect(attr(newsPage, /<meta property="og:type" content="([^"]+)"/)).toBe('article')
-  expect(attr(newsPage, /<meta property="og:image" content="([^"]+)"/)).toMatch(new RegExp(`^${base}/media/`))
+  // La imagen es la tarjeta versionada (2.8): JPEG de 1200 × 630 y 300 KB o menos.
+  const newsImage = attr(newsPage, /<meta property="og:image" content="([^"]+)"/) ?? ''
+  expect(newsImage.startsWith(`${base}/api/share/noticia/`)).toBe(true)
+  expect(newsImage).toMatch(/\/og\?v=[0-9a-z]+$/)
+  const ogResponse = await request.get(newsImage)
+  expect(ogResponse.headers()['content-type']).toBe('image/jpeg')
+  expect((await ogResponse.body()).byteLength).toBeLessThanOrEqual(300 * 1024)
   expect(attr(newsPage, /<meta property="og:site_name" content="([^"]+)"/)).toBe(
     'Club Deportivo Los Cachorros',
   )
 
-  const match = jsonLd(await html(request, `${base}/partidos/${seed.matchSlug}`))
+  const matchPage = await html(request, `${base}/partidos/${seed.matchSlug}`)
+  const matchImage = attr(matchPage, /<meta property="og:image" content="([^"]+)"/) ?? ''
+  expect(matchImage.startsWith(`${base}/api/share/`)).toBe(true)
+  expect(matchImage).toMatch(/\/(proximo|resultado)\/[0-9a-f-]{36}\/og\?v=\d+$/)
+  expect(attr(matchPage, /<meta property="og:image:width" content="([^"]+)"/)).toBe('1200')
+  const match = jsonLd(matchPage)
   const event = match.find((item) => item['@type'] === 'SportsEvent')
   expect(event).toMatchObject({
     url: `${base}/partidos/${seed.matchSlug}`,

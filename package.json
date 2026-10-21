@@ -72,6 +72,7 @@
     "db:reset": "node scripts/run.mjs db-reset",
     "admin:create": "node scripts/run.mjs create-admin",
     "content:pending": "node scripts/run.mjs content-pending",
-    "build:scripts": "node scripts/build-scripts.mjs"
+    "build:scripts": "node scripts/build-scripts.mjs",
+    "pwa:icons": "node scripts/run.mjs pwa-icons"
   }
 }

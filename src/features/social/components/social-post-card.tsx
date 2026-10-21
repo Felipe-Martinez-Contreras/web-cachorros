@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn'
 import { socialPlatformLabels } from '@/lib/labels'
 import { whatsappUrl } from '@/lib/links'
 import type { SocialLinkDTO, SocialPlatform, SocialPostDTO } from '../dto'
+import { EmbedFacade } from './embed-facade'
 
 export const SOCIAL_ICONS: Record<SocialPlatform, ComponentType<SVGProps<SVGSVGElement>>> = {
   instagram: InstagramIcon,
@@ -24,7 +25,7 @@ export const SOCIAL_ICONS: Record<SocialPlatform, ComponentType<SVGProps<SVGSVGE
 
 /**
  * Publicación curada del feed de redes (especificación 2.9): imagen liviana que enlaza a la publicación
- * original, sin scripts de terceros.
+ * original, sin scripts de terceros. Si el panel lo permitió, «Ver aquí» abre el embed detrás de una fachada.
  */
 export function SocialPostCard({ post, className }: { post: SocialPostDTO; className?: string }) {
   const Icon = SOCIAL_ICONS[post.platform]
@@ -47,11 +48,19 @@ export function SocialPostCard({ post, className }: { post: SocialPostDTO; class
   )
   const box = cn('group relative block aspect-square overflow-hidden rounded-md bg-(--surface)', className)
   if (!post.permalink) return <div className={box}>{body}</div>
-  return (
+  const link = (
     <a href={post.permalink} target="_blank" rel="noopener noreferrer" className={box}>
       {body}
       <span className="sr-only">. Ver en {platform} (se abre en una pestaña nueva)</span>
     </a>
+  )
+  if (!post.embedUrl) return link
+  // El botón va fuera del enlace (no se anidan controles) y encima de la imagen.
+  return (
+    <div className="relative">
+      {link}
+      <EmbedFacade embedUrl={post.embedUrl} platform={platform} />
+    </div>
   )
 }
 

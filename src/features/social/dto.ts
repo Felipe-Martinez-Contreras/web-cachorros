@@ -10,6 +10,8 @@ export type SocialPostDTO = {
   permalink: string | null
   excerpt: string | null
   image: ImageDTO | null
+  /** Iframe del embed oficial (solo si el panel lo permitió); se carga recién al tocar «Ver aquí». */
+  embedUrl: string | null
 }
 
 export type SocialLinkDTO = { platform: SocialPlatform; url: string }

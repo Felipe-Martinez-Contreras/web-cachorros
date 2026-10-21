@@ -18,6 +18,7 @@ import { getMatchDetail, resolveSlugRedirect } from '@/features/matches/public-q
 import { JsonLd } from '@/features/seo/components/json-ld'
 import { sportsEventJsonLd } from '@/features/seo/lib/json-ld'
 import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
+import { matchOgImage } from '@/features/share/lib/cards'
 import { env } from '@/lib/env'
 import { formatLongDateTime } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
@@ -36,7 +37,7 @@ async function loadMatch(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { match } = await loadMatch((await params).slug)
+  const { match, shareVersion } = await loadMatch((await params).slug)
   const versus = `${match.home.shortName} vs ${match.away.shortName}`
   return pageMetadata({
     title: `${versus} · ${match.seriesName}`,
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `${scoreText(match)}. ${match.seriesName}, ${match.competitionName}.`
       : `${versus}: ${formatLongDateTime(match.kickoffAt)}. ${match.seriesName}, ${match.competitionName}.`,
     path: `/partidos/${match.slug}`,
+    ogImage: matchOgImage(match, shareVersion, `${versus} · ${match.seriesName}`),
   })
 }
 

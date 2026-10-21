@@ -52,7 +52,17 @@ for i in 1 2 3; do
   check "Subir foto de 12 MP ($i)" 201 "$code"
 done
 
-# 5. Resultado: pico de memoria del cgroup del contenedor y si hubo OOM.
+# 5. Tarjetas para redes (Satori + sharp): las 4 de un partido del seed, una tras otra, con su tiempo.
+match_id=$(docker exec db psql -U cachorros_admin -d cachorros -tAc   "select id from matches where status = 'finalizado' and club_side <> 'ninguno' order by kickoff_at desc limit 1")
+card_times=()
+for format in cuadrado vertical historia og; do
+  start=$(date +%s%3N)
+  code=$(status -L "$BASE/api/share/resultado/$match_id/$format")
+  card_times+=("$format: $(( $(date +%s%3N) - start )) ms")
+  check "Tarjeta resultado $format" 200 "$code"
+done
+
+# 6. Resultado: pico de memoria del cgroup del contenedor y si hubo OOM.
 peak_bytes=$(docker exec app cat /sys/fs/cgroup/memory.peak 2>/dev/null || echo '')
 current=$(docker stats --no-stream --format '{{.MemUsage}}' app || echo 'sin datos')
 oom=$(docker inspect app --format '{{.State.OOMKilled}}')
@@ -72,7 +82,9 @@ peak_mb=$([[ -n "$peak_bytes" ]] && echo $((peak_bytes / 1024 / 1024)) || echo '
   echo "| Contenedor terminado por OOM | ${oom} |"
   echo "| Contenedor sigue corriendo | ${running} |"
   echo
-  echo 'Carga: seed, 3 vueltas a 6 páginas públicas, 5 pantallas del panel y 3 fotos de 12 MP.'
+  echo 'Carga: seed, 3 vueltas a 6 páginas públicas, 5 pantallas del panel, 3 fotos de 12 MP y 4 tarjetas para redes.'
+  echo
+  echo "Primera generación de cada tarjeta (meta ≤ 3 s en la VM): ${card_times[*]}"
   if ((${#failures[@]} > 0)); then
     echo
     echo '**Peticiones que fallaron:**'
@@ -91,3 +103,4 @@ if ((${#failures[@]} > 0)); then
   exit 1
 fi
 echo "Pico de memoria: ${peak_mb} MB de ${LIMIT_MB} MB."
+echo "Tarjetas: ${card_times[*]}"

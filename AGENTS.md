@@ -69,6 +69,7 @@ detrás de Cloudflare.
 | `pnpm admin:create` | Crea un administrador (no hay registro público); `--restablecer` cambia su contraseña |
 | `pnpm content:pending` | Regenera `docs/pendientes-contenido.md` |
 | `pnpm build:scripts` | Empaqueta `scripts/` con esbuild a `.mjs` autocontenidos |
+| `pnpm pwa:icons [archivo]` | Regenera los íconos de la PWA en `public/icons/` desde el escudo (por defecto `public/placeholder/escudo.svg`) |
 
 Arranque local desde un clon limpio:
 
@@ -143,7 +144,9 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   servidor renderiza un texto estático equivalente.
 - **Sin `<Suspense>` ni `loading.tsx` alrededor de datos en el sitio público:** el contenido que llega por
   *streaming* necesita JavaScript para colocarse y la página quedaría en el *skeleton* sin JS. El único límite está
-  en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
+  en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel tampoco pone un `<Suspense>` con
+  esqueleto por encima de su primera lectura dinámica: un esqueleto prerenderado sale con scripts sin el nonce de
+  la CSP (9.3). Más abajo, dentro de una página ya dinámica, sí puede usarlo.
 - Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
   como 200). Una sección pública todavía no construida tiene su `page.tsx` con `<ComingSoon>` (`noindex`). La página 404
   (`src/app/not-found.tsx`) lleva el marco del sitio (`SiteFrame`) y lee los datos del club con
@@ -179,6 +182,21 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   sobrevive a una recarga y lo rechazado queda visible) y lleva su `clientEventId`. Las acciones del servidor
   deben ser idempotentes ante un reintento. La consola relee su estado con `leerConsola`, nunca con
   `router.refresh()` (un corte de señal durante un refresh recarga la página).
+- **Tarjetas para redes (2.8):** `GET /api/share/[plantilla]/[id]/[formato]?v=<versión>` (`src/features/share/`).
+  Se dibujan con `next/og` dentro de `runHeavy()` (`src/lib/heavy-queue.ts`, la cola de 1 que comparten Satori y
+  sharp), se guardan en `SHARE_CACHE_DIR` por versión (`share_version` del partido; hash para el fin de semana y la
+  noticia) y se sirven inmutables; sin versión o con una vieja, redirige a la vigente. Los datos pasan por los
+  mismos DTO públicos (menores con nombre e inicial). `og:image` de partidos y noticias usa `matchOgImage` /
+  `newsOgImage`. Las fuentes TTF llegan al standalone por `outputFileTracingIncludes`.
+- **Feed de redes (2.9):** curado en el panel → Redes sociales; la portada lee `socialFeed().latest()`
+  (`src/features/social/provider.ts`). «Ver aquí» crea el iframe del embed oficial solo al tocarlo.
+- **PWA (6.16):** `app/manifest.ts` en runtime, íconos en `public/icons/` y `public/sw.js`, que se registra como
+  `/sw.js?v=<APP_VERSION>` solo fuera de desarrollo. Su regla (`swStrategy`) la prueba `tests/unit/sw.test.ts`
+  desde el mismo archivo: una ruta nueva que no deba guardarse va en `SW_RULES.bypass`.
+- **CSP (9.3), en Report-Only:** la del sitio público es fija (`src/lib/csp.ts`, aplicada en `next.config.ts`); la
+  del panel lleva un nonce por petición desde `proxy.ts`. Un dominio de terceros nuevo se agrega a la directiva que
+  corresponda en `src/lib/csp.ts`; `tests/e2e/csp.spec.ts` falla con cualquier violación. Los reportes llegan a
+  `POST /api/csp-report` y se registran resumidos.
 - Tareas programadas: `GET /api/cron/tick` y `GET /api/cron/daily` con `Authorization: Bearer $CRON_SECRET`
   (`cronRejection()` en `src/lib/cron-auth.ts`). `tick` publica las noticias programadas y reintenta avisos;
   `daily` aplica la retención de datos personales. La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.

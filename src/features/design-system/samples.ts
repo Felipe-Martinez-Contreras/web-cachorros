@@ -301,6 +301,20 @@ export const sampleSponsors: SponsorDTO[] = [
 ]
 
 export const sampleSocialPosts: SocialPostDTO[] = [
-  { id: 'p1', platform: 'instagram', permalink: null, excerpt: 'Publicación de muestra', image: null },
-  { id: 'p2', platform: 'facebook', permalink: null, excerpt: 'Otra publicación de muestra', image: null },
+  {
+    id: 'p1',
+    platform: 'instagram',
+    permalink: null,
+    excerpt: 'Publicación de muestra',
+    image: null,
+    embedUrl: null,
+  },
+  {
+    id: 'p2',
+    platform: 'facebook',
+    permalink: null,
+    excerpt: 'Otra publicación de muestra',
+    image: null,
+    embedUrl: null,
+  },
 ]

@@ -53,6 +53,8 @@ export const env = createEnv({
 
     // Carpeta de las imágenes procesadas. En la VM es el volumen /data/uploads, que Caddy sirve en /media.
     UPLOADS_DIR: z.string().default('./data/uploads'),
+    // Caché en disco de las tarjetas para redes (especificación 2.8). En la VM es /data/cache/share.
+    SHARE_CACHE_DIR: z.string().default('./data/cache/share'),
     // Tope por archivo subido; Caddy corta en 15 MB como red de seguridad (especificación 9.5).
     MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(50).default(12),
     // Intervalo base del polling en vivo, en ms. Solo vale con SITE_ENV=development (e2e más rápidas);

@@ -1,10 +1,11 @@
 'use client' // Cliente: consola en vivo del celular (botones grandes, cola sin conexión, reloj y Wake Lock).
 
 import { CloudOff, RotateCcw, Trash2, Undo2 } from 'lucide-react'
+import Link from 'next/link'
 import { useEffect, useId, useRef, useState } from 'react'
 import { FormBody } from '@/components/admin/form-body'
 import { useToast } from '@/components/admin/toast'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
 import { Field, TextareaField } from '@/components/ui/field'
 import type { ActionResult } from '@/lib/action-result'
@@ -578,6 +579,17 @@ export function LiveConsole({ matchId, snapshot, senders, online: onlineActions 
         </Alert>
       ) : (
         <>
+          {finished && queue.queue.length === 0 && (
+            <Alert variant="success" title="Partido finalizado">
+              <p>Las tarjetas para redes ya tienen el resultado final.</p>
+              <Link
+                href={`/admin/partidos/${matchId}#tarjetas`}
+                className={buttonVariants({ variant: 'dark', size: 'lg', className: 'mt-2' })}
+              >
+                Descargar y compartir tarjetas
+              </Link>
+            </Alert>
+          )}
           {!finished && (
             <section aria-label="Momento del partido" className="grid gap-2 sm:grid-cols-2">
               {availableTransitions(view.period).map((transition) => (

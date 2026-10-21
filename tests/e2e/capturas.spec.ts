@@ -333,4 +333,39 @@ test.describe('capturas del reporte de fase', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Sí, finalizar' }).click()
     await expect(page.getByText(/^Finalizado/)).toBeVisible()
   })
+
+  test('fase 4b: tarjetas para redes, feed curado y página sin conexión', async ({ page }, testInfo) => {
+    test.skip(fase !== 'fase-4b', 'Estas capturas son de la Fase 4b.')
+    test.setTimeout(180_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+
+    // Un partido jugado del seed: su ficha ofrece las tarjetas para descargar y compartir.
+    await page.goto('/admin/partidos?vista=jugados')
+    await page
+      .getByRole('main')
+      .getByRole('link')
+      .filter({ hasText: /Cachorros|Honor/ })
+      .first()
+      .click()
+    await expect(page.getByRole('heading', { name: 'Tarjetas para redes', level: 2 })).toBeVisible()
+    await page.getByRole('heading', { name: 'Tarjetas para redes', level: 2 }).scrollIntoViewIfNeeded()
+    await loadLazyImages(page)
+    await page.screenshot({ path: `${dir}/panel-tarjetas-${width}.png`, fullPage: true })
+
+    await page.goto('/admin/redes')
+    await page.screenshot({ path: `${dir}/panel-redes-${width}.png`, fullPage: true })
+    await page.goto('/admin/redes/nueva')
+    await page.screenshot({ path: `${dir}/panel-redes-nueva-${width}.png`, fullPage: true })
+
+    await page.goto('/')
+    const feed = page.getByRole('region', { name: 'Redes sociales' })
+    await feed.scrollIntoViewIfNeeded()
+    await loadLazyImages(page)
+    await feed.screenshot({ path: `${dir}/portada-redes-${width}.png` })
+
+    await page.goto('/offline')
+    await page.screenshot({ path: `${dir}/offline-${width}.png` })
+  })
 })
