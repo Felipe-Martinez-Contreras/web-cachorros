@@ -256,6 +256,7 @@ export const auditEntityLabels: Record<string, string> = {
   staff_member: 'Cuerpo técnico',
   standings_table: 'Tablas de posiciones',
   team: 'Rivales',
+  training_schedule: 'Horarios de entrenamiento',
   user: 'Usuarios y seguridad',
   venue: 'Canchas',
 }

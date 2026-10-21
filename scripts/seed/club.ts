@@ -44,6 +44,8 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
     region: CLUB.region,
     geoLat: -34.995,
     geoLng: -71.38,
+    // Dirección de ejemplo (dominio reservado): muestra el botón de pago en la demo. [COMPLETAR: link de pago real o vacío]
+    donationUrl: 'https://example.com/aporta-a-los-cachorros',
     bankDetails: {
       holder: '[COMPLETAR: titular de la cuenta]',
       rut: '[COMPLETAR: RUT del club]',

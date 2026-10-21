@@ -1,7 +1,7 @@
 import 'server-only'
 import { asc, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { boardMembers, documents, mediaAssets } from '@/db/schema'
+import { boardMembers, documents, mediaAssets, series, trainingSchedules, venues } from '@/db/schema'
 import { type MediaThumbDTO, toMediaThumbDTO } from '@/features/media/dto'
 
 // Lecturas del panel: sin caché, siempre el estado actual.
@@ -78,4 +78,26 @@ export type DocumentAdmin = Awaited<ReturnType<typeof listDocumentsAdmin>>[numbe
 
 export async function getDocumentAdmin(id: string): Promise<DocumentAdmin | null> {
   return (await listDocumentsAdmin()).find((row) => row.id === id) ?? null
+}
+
+/** Horarios de entrenamiento de todas las series, en el orden de las series y de la semana. */
+export async function listTrainingAdmin() {
+  const rows = await db
+    .select({
+      id: trainingSchedules.id,
+      seriesId: trainingSchedules.seriesId,
+      seriesName: series.name,
+      weekday: trainingSchedules.weekday,
+      startsAt: trainingSchedules.startsAt,
+      endsAt: trainingSchedules.endsAt,
+      venueId: trainingSchedules.venueId,
+      venueName: venues.name,
+      notes: trainingSchedules.notes,
+    })
+    .from(trainingSchedules)
+    .innerJoin(series, eq(series.id, trainingSchedules.seriesId))
+    .leftJoin(venues, eq(venues.id, trainingSchedules.venueId))
+    .orderBy(asc(series.sortOrder), asc(trainingSchedules.weekday), asc(trainingSchedules.startsAt))
+  // La BD entrega `HH:MM:SS`; el formulario y la lista usan `HH:MM`.
+  return rows.map((row) => ({ ...row, startsAt: row.startsAt.slice(0, 5), endsAt: row.endsAt.slice(0, 5) }))
 }

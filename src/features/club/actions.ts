@@ -2,7 +2,7 @@
 
 import { and, count, eq, ne } from 'drizzle-orm'
 import type { Tx } from '@/db/client'
-import { boardMembers, documents, mediaAssets } from '@/db/schema'
+import { boardMembers, documents, mediaAssets, series, trainingSchedules, venues } from '@/db/schema'
 import { removeMediaFiles } from '@/features/media/files'
 import { assertPublishableMedia } from '@/features/media/guards'
 import type { ActionResult } from '@/lib/action-result'
@@ -10,7 +10,7 @@ import { tags } from '@/lib/cache-tags'
 import { assertId, mutate, Rejection } from '@/lib/entity-action'
 import { logger } from '@/lib/logger'
 import { z } from '@/lib/zod'
-import { boardMemberSchema, documentSchema } from './schemas'
+import { boardMemberSchema, documentSchema, trainingScheduleSchema } from './schemas'
 
 type Result = Promise<ActionResult<{ id: string }>>
 
@@ -208,4 +208,82 @@ export async function eliminarDocumento(id: string): Result {
   })
   if (result.ok) await removeFiles(removed)
   return result
+}
+
+// ── Horarios de entrenamiento ───────────────────────────────────────────────────────────────────
+
+const trainingConstraints = {
+  training_schedules_time_check: { message: 'El término tiene que ser después del inicio.', field: 'endsAt' },
+}
+
+/** La serie y la cancha tienen que existir: el formulario las envía por id. */
+async function assertTrainingRefs(tx: Tx, seriesId: string, venueId: string | null): Promise<string> {
+  const [serie] = await tx.select({ name: series.name }).from(series).where(eq(series.id, seriesId))
+  if (!serie) throw new Rejection('Esa serie ya no existe. Elige otra.', 'seriesId')
+  if (venueId) {
+    const [venue] = await tx.select({ id: venues.id }).from(venues).where(eq(venues.id, venueId))
+    if (!venue) throw new Rejection('Esa cancha ya no existe. Elige otra.', 'venueId')
+  }
+  return serie.name
+}
+
+export async function crearHorario(input: unknown): Result {
+  return mutate({
+    action: 'training_schedule.create',
+    permission: 'club:write',
+    entityType: 'training_schedule',
+    schema: trainingScheduleSchema,
+    input,
+    tags: [tags.club()],
+    constraints: trainingConstraints,
+    write: async (tx, data) => {
+      const seriesName = await assertTrainingRefs(tx, data.seriesId, data.venueId)
+      const [row] = await tx.insert(trainingSchedules).values(data).returning({ id: trainingSchedules.id })
+      if (!row) throw new Error('El horario no se creó.')
+      return { id: row.id, summary: `Agregó un horario de entrenamiento de ${seriesName}` }
+    },
+  })
+}
+
+export async function actualizarHorario(id: string, input: unknown): Result {
+  return mutate({
+    action: 'training_schedule.update',
+    permission: 'club:write',
+    entityType: 'training_schedule',
+    schema: trainingScheduleSchema,
+    input,
+    tags: [tags.club()],
+    constraints: trainingConstraints,
+    write: async (tx, data) => {
+      const scheduleId = assertId(id, 'No encontramos ese horario.')
+      const seriesName = await assertTrainingRefs(tx, data.seriesId, data.venueId)
+      const [row] = await tx
+        .update(trainingSchedules)
+        .set(data)
+        .where(eq(trainingSchedules.id, scheduleId))
+        .returning({ id: trainingSchedules.id })
+      if (!row) throw new Rejection('No encontramos ese horario. Puede que lo hayan eliminado.')
+      return { id: scheduleId, summary: `Editó un horario de entrenamiento de ${seriesName}` }
+    },
+  })
+}
+
+export async function eliminarHorario(id: string): Result {
+  return mutate({
+    action: 'training_schedule.delete',
+    permission: 'club:write',
+    entityType: 'training_schedule',
+    schema: nothing,
+    input: null,
+    tags: [tags.club()],
+    write: async (tx) => {
+      const scheduleId = assertId(id, 'No encontramos ese horario.')
+      const [row] = await tx
+        .delete(trainingSchedules)
+        .where(eq(trainingSchedules.id, scheduleId))
+        .returning({ id: trainingSchedules.id })
+      if (!row) throw new Rejection('No encontramos ese horario. Puede que ya lo hayan eliminado.')
+      return { id: scheduleId, summary: 'Eliminó un horario de entrenamiento' }
+    },
+  })
 }

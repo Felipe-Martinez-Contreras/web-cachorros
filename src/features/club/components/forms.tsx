@@ -4,12 +4,14 @@ import { EntityForm } from '@/components/admin/entity-form'
 import type { MediaThumbDTO } from '@/features/media/dto'
 import type { ActionResult } from '@/lib/action-result'
 import { optionsFromLabels } from '@/lib/form-schemas'
-import { documentCategoryLabels } from '@/lib/labels'
+import { documentCategoryLabels, weekdayLabels } from '@/lib/labels'
 import {
   type BoardMemberFormValues,
   boardMemberSchema,
   type DocumentFormValues,
   documentSchema,
+  type TrainingScheduleFormValues,
+  trainingScheduleSchema,
 } from '../schemas'
 
 type Action = (input: unknown) => Promise<ActionResult<unknown>>
@@ -103,6 +105,54 @@ export function DocumentForm({
         },
         { name: 'description', label: 'Descripción', type: 'textarea', required: false, maxLength: 500 },
         { name: 'isPublished', label: 'Publicado en Transparencia', type: 'checkbox' },
+      ]}
+    />
+  )
+}
+
+const WEEKDAYS = Object.entries(weekdayLabels).map(([value, label]) => ({ value, label }))
+
+export function TrainingScheduleForm({
+  action,
+  defaults,
+  series,
+  venues,
+  isNew = false,
+}: {
+  action: Action
+  defaults: TrainingScheduleFormValues
+  series: { value: string; label: string }[]
+  venues: { value: string; label: string }[]
+  isNew?: boolean
+}) {
+  return (
+    <EntityForm
+      schema={trainingScheduleSchema}
+      action={action}
+      defaultValues={defaults}
+      resetOnSuccess={isNew}
+      submitLabel={isNew ? 'Agregar horario' : 'Guardar horario'}
+      successMessage={isNew ? 'Horario agregado.' : 'Horario guardado.'}
+      fields={[
+        { name: 'seriesId', label: 'Serie', type: 'select', options: series },
+        { name: 'weekday', label: 'Día', type: 'select', options: WEEKDAYS },
+        { name: 'startsAt', label: 'Desde', type: 'time' },
+        { name: 'endsAt', label: 'Hasta', type: 'time' },
+        {
+          name: 'venueId',
+          label: 'Cancha',
+          type: 'select',
+          options: venues,
+          emptyLabel: 'Sin indicar',
+          required: false,
+        },
+        {
+          name: 'notes',
+          label: 'Nota',
+          type: 'text',
+          required: false,
+          placeholder: 'Solo arqueros, trae ropa de recambio…',
+        },
       ]}
     />
   )

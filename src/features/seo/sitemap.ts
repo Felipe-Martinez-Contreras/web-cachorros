@@ -27,6 +27,9 @@ const STATIC_PATHS = [
   '/eventos',
   '/club/directiva',
   '/club/transparencia',
+  '/club/la-cancha',
+  '/formativas',
+  '/apoya-al-club',
   '/contacto',
   '/privacidad',
 ]

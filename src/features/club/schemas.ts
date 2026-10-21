@@ -7,6 +7,7 @@ import {
   optionalUuid,
   requiredInt,
   requiredText,
+  requiredTime,
   requiredUuid,
 } from '@/lib/form-schemas'
 import { documentCategoryLabels } from '@/lib/labels'
@@ -31,6 +32,22 @@ export const boardMemberSchema = z
     path: ['termEnd'],
   })
 export type BoardMemberFormValues = z.input<typeof boardMemberSchema>
+
+/** Horario de entrenamiento de una serie (especificación 6.9 y 6.13). */
+export const trainingScheduleSchema = z
+  .object({
+    seriesId: requiredUuid('Elige una serie de la lista.'),
+    weekday: requiredInt(1, 7, 'Elige un día de la semana.'),
+    startsAt: requiredTime('Escribe la hora de inicio.'),
+    endsAt: requiredTime('Escribe la hora de término.'),
+    venueId: optionalUuid(),
+    notes: optionalText(200),
+  })
+  .refine((value) => value.endsAt > value.startsAt, {
+    message: 'El término tiene que ser después del inicio.',
+    path: ['endsAt'],
+  })
+export type TrainingScheduleFormValues = z.input<typeof trainingScheduleSchema>
 
 /** Documento de transparencia: solo PDF validados (especificación 6.12 y 9.5). */
 export const documentSchema = z.object({

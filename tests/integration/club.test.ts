@@ -4,11 +4,14 @@ import postgres from 'postgres'
 import sharp from 'sharp'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { testDb } from './db-urls'
+import { cleanSport, createSportFixture } from './fixtures'
 import { actAs, ensureTestUsers, invalidatedTags } from './session'
 
 const { sql } = await import('@/db/client')
 const actions = await import('@/features/club/actions')
-const { getCurrentBoard, getTransparency } = await import('@/features/club/queries')
+const { getClubPlace, getCurrentBoard, getDonationInfo, getTrainingBySeries, getTransparency } = await import(
+  '@/features/club/queries'
+)
 const { uploadsDir } = await import('@/features/media/files')
 const { POST } = await import('@/app/api/admin/media/route')
 const devMedia = await import('@/app/media/[...path]/route')
@@ -77,6 +80,9 @@ const memberInput = (fullName: string, extra: Record<string, unknown> = {}) => (
 })
 
 async function wipe() {
+  await admin`delete from staff_assignments`
+  await admin`delete from staff_members where full_name like 'Entrenador%'`
+  await cleanSport(admin)
   await admin`delete from documents`
   await admin`delete from board_members`
   await admin`delete from media_assets where kind = 'documento' or storage_key = 'club-imagen'`
@@ -197,5 +203,80 @@ describe('directiva', () => {
       ok: false,
       fieldErrors: { termEnd: ['El término del período no puede ser anterior al inicio.'] },
     })
+  })
+})
+
+describe('horarios de entrenamiento', () => {
+  it('por serie, de lunes a domingo; formativas trae a su cuerpo técnico de la temporada actual', async () => {
+    const f = await createSportFixture(admin)
+    const [youth] = await admin<{ id: string }[]>`
+      insert into series (name, slug, short_name, kind, contains_minors, description)
+      values ('Sub-12', 'sub-12', 'Sub-12', 'formativa', true, 'Nacidos en 2014 y 2015.') returning id`
+    const youthId = youth?.id ?? ''
+    const [venue] = await admin<{ id: string }[]>`
+      insert into venues (name, is_home) values ('Cancha de prueba', true) returning id`
+    const session = (seriesId: string, weekday: string, startsAt: string, endsAt: string) => ({
+      seriesId,
+      weekday,
+      startsAt,
+      endsAt,
+      venueId: venue?.id ?? '',
+      notes: '',
+    })
+    await idOf(actions.crearHorario(session(youthId, '4', '18:00', '19:15')))
+    await idOf(actions.crearHorario(session(youthId, '2', '18:00', '19:15')))
+    expect(invalidatedTags()).toContain('club')
+    expect(await actions.crearHorario(session(youthId, '2', '19:00', '18:00'))).toMatchObject({
+      ok: false,
+      fieldErrors: { endsAt: ['El término tiene que ser después del inicio.'] },
+    })
+    const [coach] = await admin<{ id: string }[]>`
+      insert into staff_members (full_name) values ('Entrenador Formativo') returning id`
+    await admin`insert into staff_assignments (staff_id, season_id, series_id, role)
+      values (${coach?.id ?? ''}, ${f.seasonId}, ${youthId}, 'director_tecnico')`
+
+    const youthTraining = await getTrainingBySeries('youth')
+    expect(youthTraining).toEqual([
+      {
+        slug: 'sub-12',
+        name: 'Sub-12',
+        description: 'Nacidos en 2014 y 2015.',
+        sessions: [
+          { weekday: 2, startsAt: '18:00', endsAt: '19:15', venueName: 'Cancha de prueba', notes: null },
+          { weekday: 4, startsAt: '18:00', endsAt: '19:15', venueName: 'Cancha de prueba', notes: null },
+        ],
+        coaches: [{ name: 'Entrenador Formativo', role: 'director_tecnico' }],
+      },
+    ])
+    // En La cancha van todas las series, pero solo las que tienen horario (Honor no tiene).
+    expect((await getTrainingBySeries('all')).map((row) => row.slug)).toEqual(['sub-12'])
+    await admin`delete from training_schedules`
+    await admin`delete from venues where id = ${venue?.id ?? ''}`
+  })
+})
+
+describe('la cancha y los aportes', () => {
+  it('lee la dirección, las coordenadas y los datos de transferencia de Configuración', async () => {
+    const [before] = await admin<
+      { geo_lat: number | null; bank_details: unknown; donation_url: string | null }[]
+    >`
+      select geo_lat, bank_details, donation_url from site_settings where id = 1`
+    try {
+      await admin`update site_settings set geo_lat = -34.99, geo_lng = -71.38, address = 'Camino a la cancha s/n',
+        bank_details = ${admin.json({ holder: 'Club', rut: '65.000.000-0', bank: 'Banco', accountType: 'Vista', accountNumber: '1' })},
+        donation_url = '[COMPLETAR: link de pago]' where id = 1`
+      expect(await getClubPlace()).toMatchObject({
+        address: 'Camino a la cancha s/n',
+        geo: { lat: -34.99, lng: -71.38 },
+      })
+      const donation = await getDonationInfo()
+      expect(donation.transferText).toContain('Número de cuenta: 1')
+      // Un marcador no es un link de pago.
+      expect(donation.paymentUrl).toBeNull()
+    } finally {
+      await admin`update site_settings set geo_lat = ${before?.geo_lat ?? null},
+        bank_details = ${before?.bank_details ? admin.json(before.bank_details as Record<string, string>) : null},
+        donation_url = ${before?.donation_url ?? null} where id = 1`
+    }
   })
 })
