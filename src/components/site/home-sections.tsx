@@ -14,7 +14,7 @@ import { NewsCard } from '@/features/news/components/news-card'
 import { getHomeNews } from '@/features/news/queries'
 import { getSite } from '@/features/settings/queries'
 import { SocialFollowLinks, SocialPostCard } from '@/features/social/components/social-post-card'
-import { getSocialPosts } from '@/features/social/queries'
+import { socialFeed } from '@/features/social/provider'
 import { SponsorStrip } from '@/features/sponsors/components/sponsor-strip'
 import { getActiveSponsors } from '@/features/sponsors/queries'
 import { cn } from '@/lib/cn'
@@ -255,7 +255,7 @@ export async function StandingsSection() {
 
 export async function SocialSection() {
   await connection()
-  const [posts, site] = await Promise.all([getSocialPosts(), getSite()])
+  const [posts, site] = await Promise.all([socialFeed().latest(6), getSite()])
   if (posts.length === 0) return null
   return (
     <Section label="Redes sociales" className="bg-(--surface)">

@@ -7,8 +7,9 @@ import { tags } from '@/lib/cache-tags'
 import { toImageDTO } from '@/lib/images/dto'
 import { safeExternalUrl } from '@/lib/links'
 import type { SocialPostDTO } from './dto'
+import { embedFrameUrl } from './lib/feed'
 
-/** Feed curado de redes (especificación 2.9): las fijadas primero, luego en el orden definido en el panel. */
+/** Feed curado de redes (especificación 2.9), proveedor `manual`: las fijadas primero, luego en el orden definido en el panel. */
 export async function getSocialPosts(limit = 6): Promise<SocialPostDTO[]> {
   'use cache'
   cacheTag(tags.social())
@@ -20,6 +21,7 @@ export async function getSocialPosts(limit = 6): Promise<SocialPostDTO[]> {
       platform: socialPosts.platform,
       permalink: socialPosts.permalink,
       excerpt: socialPosts.excerpt,
+      embedEnabled: socialPosts.embedEnabled,
       image: {
         variants: mediaAssets.variants,
         width: mediaAssets.width,
@@ -44,5 +46,6 @@ export async function getSocialPosts(limit = 6): Promise<SocialPostDTO[]> {
     permalink: safeExternalUrl(row.permalink),
     excerpt: row.excerpt,
     image: toImageDTO(row.image),
+    embedUrl: row.embedEnabled ? embedFrameUrl(row.permalink) : null,
   }))
 }

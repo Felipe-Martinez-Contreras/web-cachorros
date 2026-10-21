@@ -27,6 +27,7 @@ export const PERMISSIONS = [
   'events:write',
   'club:write', // directiva, documentos de transparencia y horarios de entrenamiento
   'gallery:write', // álbumes y videos
+  'social:write', // feed curado de redes sociales
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]
 
