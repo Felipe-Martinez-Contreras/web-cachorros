@@ -107,6 +107,8 @@ describe('goleadores', () => {
       "Gol 70'",
     ])
     expect(scorerLines(events, 'away')).toEqual(["Rival Uno 30'"])
+    const unnamed = [goal({ playerName: null, minute: 65 }), goal({ playerName: null, minute: 72 })]
+    expect(scorerLines(unnamed, 'home')).toEqual(["Goles 65', 72'"])
     expect(
       scorerLines([goal({ type: 'autogol', side: 'home', playerName: null, minute: null })], 'away'),
     ).toEqual(['Autogol'])
@@ -129,5 +131,9 @@ describe('clampText', () => {
     expect(clampText('  corto  ', 10)).toBe('corto')
     expect(clampText('Los Cachorros ganan el clásico', 20)).toBe('Los Cachorros ganan…')
     expect(clampText('Supercalifragilístico', 10)).toBe('Supercali…')
+    // Los marcadores de contenido pendiente no se dibujan.
+    expect(clampText('Campeonato Oficial [COMPLETAR: nombre de la asociación] · Fecha 7', 60)).toBe(
+      'Campeonato Oficial · Fecha 7',
+    )
   })
 })

@@ -150,6 +150,8 @@ export function shortHash(parts: readonly (string | number)[]): string {
 type GoalEvent = Pick<MatchEventDTO, 'type' | 'period' | 'minute' | 'stoppageMinute' | 'side' | 'playerName'>
 
 const GOAL_TYPES = new Set(['gol', 'gol_penal', 'autogol'])
+/** Goles sin autor registrado (típico del rival): «Gol 65'» o «Goles 65', 72'». */
+const UNNAMED = 'Gol'
 
 /** ¿Este evento suma un gol para `side`? (`autogol` suma al contrario; la definición por penales no cuenta). */
 export function isGoalFor(event: GoalEvent, side: 'home' | 'away'): boolean {
@@ -170,14 +172,17 @@ export function scorerLines(events: readonly GoalEvent[], side: 'home' | 'away')
         ? event.playerName
           ? `Autogol de ${event.playerName}`
           : 'Autogol'
-        : (event.playerName ?? 'Gol')
+        : (event.playerName ?? UNNAMED)
     const minute = formatMinute(event.minute, event.stoppageMinute)
     const mark = [minute, event.type === 'gol_penal' ? '(p)' : ''].filter(Boolean).join(' ')
     const list = lines.get(name) ?? []
     if (mark) list.push(mark)
     lines.set(name, list)
   }
-  return [...lines].map(([name, minutes]) => (minutes.length > 0 ? `${name} ${minutes.join(', ')}` : name))
+  return [...lines].map(([name, minutes]) => {
+    const label = name === UNNAMED && minutes.length > 1 ? 'Goles' : name
+    return minutes.length > 0 ? `${label} ${minutes.join(', ')}` : label
+  })
 }
 
 /** El último gol del club (para la tarjeta «¡Gol!»), o `null` si el club no ha marcado. */
@@ -189,9 +194,14 @@ export function lastClubGoal<T extends GoalEvent>(events: readonly T[], clubSide
   return null
 }
 
-/** Texto de una tarjeta ajustado a un máximo de caracteres, con «…» si se corta. */
+const CONTENT_MARKER = /\s*\[(COMPLETAR|DECIDIR|VERIFICAR)[^\]]*\]/g
+
+/**
+ * Texto de una tarjeta ajustado a un máximo de caracteres, con «…» si se corta. Los marcadores de contenido
+ * pendiente (`[COMPLETAR: …]`) no se dibujan: la imagen es pública y circula fuera del sitio.
+ */
 export function clampText(text: string, max: number): string {
-  const clean = text.replace(/\s+/g, ' ').trim()
+  const clean = text.replace(CONTENT_MARKER, '').replace(/\s+/g, ' ').trim()
   if (clean.length <= max) return clean
   const cut = clean.slice(0, max - 1)
   // Si el corte cae justo al final de una palabra, se conserva entera.

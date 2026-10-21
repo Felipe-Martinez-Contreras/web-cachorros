@@ -147,9 +147,23 @@ function Header({ title, subtitle, layout }: { title: string; subtitle: string; 
 
 function Crest({ team, size }: { team: CardTeam; size: number }) {
   if (team.crest) {
+    // Disco blanco, como `.crest` en las secciones oscuras del sitio: los escudos con partes negras se leen.
+    const inner = Math.round(size * 0.8)
     return (
-      // biome-ignore lint/performance/noImgElement: Satori dibuja <img>; no es una página.
-      <img src={team.crest} width={size} height={size} alt="" style={{ objectFit: 'contain' }} />
+      <div
+        style={{
+          display: 'flex',
+          width: size,
+          height: size,
+          borderRadius: size,
+          backgroundColor: PAPER,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {/* biome-ignore lint/performance/noImgElement: Satori dibuja <img>; no es una página. */}
+        <img src={team.crest} width={inner} height={inner} alt="" style={{ objectFit: 'contain' }} />
+      </div>
     )
   }
   return (
@@ -349,7 +363,7 @@ function ScorerList({
 /** Partidos que caben en una tarjeta de fin de semana según el alto. */
 function weekendCapacity(layout: Layout): number {
   if (layout.wide) return 3
-  return layout.height > 1500 ? 8 : layout.height > 1200 ? 6 : 5
+  return layout.height > 1500 ? 8 : layout.height > 1200 ? 5 : 4
 }
 
 function weekendScore(match: CardMatch): string {
@@ -362,8 +376,8 @@ function WeekendCard({ data, layout }: { data: WeekendCardData; layout: Layout }
   const { s, wide } = layout
   const rows = data.matches.slice(0, weekendCapacity(layout))
   const rest = data.matches.length - rows.length
-  const crest = (wide ? 44 : 64) * s
-  const text = (wide ? 30 : 40) * s
+  const crest = (wide ? 40 : 56) * s
+  const text = (wide ? 28 : 36) * s
   return (
     <div
       style={{
@@ -399,13 +413,14 @@ function WeekendCard({ data, layout }: { data: WeekendCardData; layout: Layout }
               borderBottom: `${2 * s}px solid #2b2b2b`,
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', width: 220 * s }}>
+            <div style={{ display: 'flex', flexDirection: 'column', width: 250 * s, flexShrink: 0 }}>
               <div
                 style={{
                   display: 'flex',
                   fontSize: (wide ? 20 : 26) * s,
                   color: MUTED,
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {clampText(
@@ -437,9 +452,9 @@ function WeekendCard({ data, layout }: { data: WeekendCardData; layout: Layout }
               }}
             >
               <Crest team={match.home} size={crest} />
-              <div style={{ display: 'flex' }}>{clampText(match.home.name, 14)}</div>
+              <div style={{ display: 'flex', whiteSpace: 'nowrap' }}>{clampText(match.home.name, 14)}</div>
               <div style={{ display: 'flex', color: MUTED, fontSize: text * 0.7 }}>vs</div>
-              <div style={{ display: 'flex' }}>{clampText(match.away.name, 14)}</div>
+              <div style={{ display: 'flex', whiteSpace: 'nowrap' }}>{clampText(match.away.name, 14)}</div>
               <Crest team={match.away} size={crest} />
             </div>
           </div>
