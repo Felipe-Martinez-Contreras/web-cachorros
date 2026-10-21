@@ -6,13 +6,11 @@ import { db } from '@/db/client'
 import { mediaAssets } from '@/db/schema'
 import { audit } from '@/lib/audit'
 import { env } from '@/lib/env'
+import { runHeavy } from '@/lib/heavy-queue'
 import { logger } from '@/lib/logger'
 import { type MediaThumbDTO, toMediaThumbDTO } from './dto'
 import { removeMediaFiles, uploadsDir } from './files'
-import { createSerialQueue, DOCUMENT_FILENAME, isPdf, sniffImageFormat } from './lib/upload-rules'
-
-/** Un solo archivo a la vez en todo el proceso: sharp no compite consigo mismo por la memoria de la VM. */
-const enqueue = createSerialQueue()
+import { DOCUMENT_FILENAME, isPdf, sniffImageFormat } from './lib/upload-rules'
 
 export class UploadError extends Error {
   readonly status: 400 | 413 | 415
@@ -98,7 +96,7 @@ export async function storeUploadedImage(input: StoreInput): Promise<MediaThumbD
     throw new UploadError(415, 'Ese archivo no es una imagen que podamos usar. Sube un JPG, PNG, WebP o SVG.')
   }
 
-  return enqueue(async () => {
+  return runHeavy(async () => {
     // sharp se carga recién al procesar una imagen: subir un PDF no lo necesita.
     const { processImage } = await import('@/lib/images/process')
     let processed: Awaited<ReturnType<typeof processImage>>

@@ -6,6 +6,8 @@ import { buttonVariants } from '@/components/ui/button'
 import { listClubMatchesBetween, type MatchAdminListItem } from '@/features/matches/admin-queries'
 import { groupHomeMatches, homeMatchWindow } from '@/features/matches/lib/home-window'
 import { listPendingNews } from '@/features/news/admin-queries'
+import { recentShareCards } from '@/features/share/admin-queries'
+import { ShareCards } from '@/features/share/components/share-cards'
 import { getLastBackup } from '@/features/system/queries'
 import { requirePanelUser } from '@/lib/auth/session'
 import { env } from '@/lib/env'
@@ -101,10 +103,11 @@ export default async function AdminHomePage() {
   const user = await requirePanelUser()
   const now = new Date()
   const window = homeMatchWindow(now)
-  const [matches, pendingNews, backup] = await Promise.all([
+  const [matches, pendingNews, backup, shareCards] = await Promise.all([
     can(user, 'matches:write') ? listClubMatchesBetween(window.from, window.to) : [],
     can(user, 'news:write') ? listPendingNews() : [],
     getLastBackup(),
+    can(user, 'matches:write') ? recentShareCards(now) : [],
   ])
   const groups = groupHomeMatches(matches, now)
   const nothingToPlay = groups.pending.length + groups.today.length + groups.upcoming.length === 0
@@ -150,6 +153,15 @@ export default async function AdminHomePage() {
             </section>
           )}
         </>
+      )}
+
+      {shareCards.length > 0 && (
+        <section aria-labelledby="tarjetas-recientes" className={cardClass}>
+          <h2 id="tarjetas-recientes" className="mb-3 text-lg font-bold">
+            Tarjetas para redes recientes
+          </h2>
+          <ShareCards cards={shareCards} />
+        </section>
       )}
 
       {pendingNews.length > 0 && (

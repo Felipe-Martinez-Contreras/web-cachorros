@@ -10,6 +10,8 @@ import { matchFormOptions } from '@/features/matches/admin-options'
 import { getMatchAdmin } from '@/features/matches/admin-queries'
 import { MatchForm, MatchStatusForm } from '@/features/matches/components/admin-forms'
 import { toSantiagoWallTime } from '@/features/matches/lib/schedule'
+import { matchShareCards } from '@/features/share/admin-queries'
+import { ShareCards } from '@/features/share/components/share-cards'
 import { requirePanelUser } from '@/lib/auth/session'
 import { isUuid } from '@/lib/form-schemas'
 import { formatLongDateTime } from '@/lib/format'
@@ -20,7 +22,11 @@ export const metadata: Metadata = { title: 'Editar partido' }
 export default async function EditMatchPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePanelUser('matches:write')
   const { id } = await params
-  const [match, options] = await Promise.all([isUuid(id) ? getMatchAdmin(id) : null, matchFormOptions()])
+  const [match, options, cards] = await Promise.all([
+    isUuid(id) ? getMatchAdmin(id) : null,
+    matchFormOptions(),
+    isUuid(id) ? matchShareCards(id) : [],
+  ])
   if (!match) notFound()
   const { date, time } = toSantiagoWallTime(match.kickoffAt)
   const finished = match.status === 'finalizado'
@@ -59,6 +65,19 @@ export default async function EditMatchPage({ params }: { params: Promise<{ id: 
           )
         }
       />
+
+      {cards.length > 0 && (
+        <section aria-labelledby="tarjetas" className="mb-10 grid gap-3">
+          <h2 id="tarjetas" className="scroll-mt-20 text-lg font-bold">
+            Tarjetas para redes
+          </h2>
+          <p className="text-neutral-600">
+            Se actualizan solas con cada gol o cambio del partido. Descárgalas o compártelas directo desde el
+            celular.
+          </p>
+          <ShareCards cards={cards} />
+        </section>
+      )}
 
       <MatchForm
         action={actualizarPartido.bind(null, match.id)}

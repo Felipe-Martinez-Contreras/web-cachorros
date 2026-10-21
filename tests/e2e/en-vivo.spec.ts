@@ -136,7 +136,22 @@ test('el admin juega el partido en vivo y el visitante lo ve sin recargar', asyn
   })
   await expect(visitor.getByText('Cachorros 1, Los Litres 1').first()).toBeVisible()
   expect(await liveRequests(visitor, () => visitor.waitForTimeout(5_000))).toBe(0)
+
+  // La imagen para compartir del detalle es la tarjeta del resultado, en su versión vigente.
+  await visitor.reload()
+  const ogImage = await visitor.locator('meta[property="og:image"]').getAttribute('content')
+  expect(ogImage).toMatch(/\/api\/share\/resultado\/[0-9a-f-]{36}\/og\?v=\d+$/)
   await visitorContext.close()
+
+  // Al finalizar, la consola lleva a las tarjetas para redes: se descargan en los tres formatos.
+  await page.getByRole('link', { name: 'Descargar y compartir tarjetas' }).click()
+  await expect(page.getByRole('heading', { name: 'Tarjetas para redes', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '¡Gol!', level: 3 })).toBeVisible()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Descargar Resultado final 4:5' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^resultado-.+-vertical\.png$/)
+  await expectAccessible(page)
 })
 
 test('sin conexión: las acciones se encolan, sobreviven a una recarga y no se duplican', async ({

@@ -14,6 +14,7 @@ import { JsonLd } from '@/features/seo/components/json-ld'
 import { newsArticleJsonLd } from '@/features/seo/lib/json-ld'
 import { ogImageOf } from '@/features/seo/lib/og-image'
 import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
+import { newsOgImage } from '@/features/share/lib/cards'
 import { env } from '@/lib/env'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -36,6 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: news.seoDescription ?? news.excerpt,
     path: `/noticias/${news.slug}`,
     image: news.shareImage,
+    ogImage: newsOgImage(news, news.title),
     article: { publishedTime: news.publishedAt, modifiedTime: news.updatedAt, section: news.categoryName },
   })
 }
