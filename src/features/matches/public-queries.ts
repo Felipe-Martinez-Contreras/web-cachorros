@@ -1,11 +1,9 @@
 import 'server-only'
 import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
 import { cacheLife, cacheTag } from 'next/cache'
 import { db } from '@/db/client'
 import {
   competitions,
-  matchEvents,
   matches,
   matchLineups,
   mediaAssets,
@@ -24,16 +22,8 @@ import { tags } from '@/lib/cache-tags'
 import { toImageDTO } from '@/lib/images/dto'
 import { directionsUrls } from '@/lib/links'
 import type { SlugEntity } from '@/lib/slug-redirects'
-import type {
-  MatchDetailDTO,
-  MatchDTO,
-  MatchEventDTO,
-  ScorerDTO,
-  SportsNavDTO,
-  StandingsGroupDTO,
-  TeamDTO,
-} from './dto'
-import { compareEvents } from './lib/match-clock'
+import type { MatchDetailDTO, MatchDTO, ScorerDTO, SportsNavDTO, StandingsGroupDTO, TeamDTO } from './dto'
+import { namedPlayerIds, selectEventRows, toEventDTOs } from './public-events'
 import { featuredSeriesId, isClubMatch, selectMatches, toMatchDTO } from './queries'
 
 // Lecturas públicas de la sección Partidos: cacheadas por tags (especificación 3.4). Toda mutación del
@@ -88,8 +78,6 @@ export async function getMatchDetail(slug: string): Promise<MatchDetailDTO | nul
   if (!row) return null
   cacheTag(tags.match(row.id))
 
-  const eventPlayer = alias(players, 'event_player')
-  const relatedPlayer = alias(players, 'related_player')
   const [[extra], eventRows, lineupRows] = await Promise.all([
     db
       .select({
@@ -104,34 +92,7 @@ export async function getMatchDetail(slug: string): Promise<MatchDetailDTO | nul
       .from(matches)
       .leftJoin(venues, eq(venues.id, matches.venueId))
       .where(eq(matches.id, row.id)),
-    db
-      .select({
-        id: matchEvents.id,
-        type: matchEvents.type,
-        period: matchEvents.period,
-        minute: matchEvents.minute,
-        stoppageMinute: matchEvents.stoppageMinute,
-        teamId: matchEvents.teamId,
-        freeTextName: matchEvents.freeTextName,
-        comment: matchEvents.comment,
-        createdAt: matchEvents.createdAt,
-        player: {
-          id: eventPlayer.id,
-          firstName: eventPlayer.firstName,
-          lastName: eventPlayer.lastName,
-          slug: eventPlayer.slug,
-        },
-        related: {
-          id: relatedPlayer.id,
-          firstName: relatedPlayer.firstName,
-          lastName: relatedPlayer.lastName,
-          slug: relatedPlayer.slug,
-        },
-      })
-      .from(matchEvents)
-      .leftJoin(eventPlayer, eq(eventPlayer.id, matchEvents.playerId))
-      .leftJoin(relatedPlayer, eq(relatedPlayer.id, matchEvents.relatedPlayerId))
-      .where(eq(matchEvents.matchId, row.id)),
+    selectEventRows(row.id),
     db
       .select({
         role: matchLineups.role,
@@ -150,24 +111,8 @@ export async function getMatchDetail(slug: string): Promise<MatchDetailDTO | nul
   if (!extra) return null
 
   // Una sola consulta decide quiénes son menores entre todos los nombrados en el partido.
-  const minors = await loadMinorIds([
-    ...lineupRows.map((player) => player.id),
-    ...eventRows.flatMap((event) => [event.player?.id, event.related?.id]).filter((id) => id != null),
-  ])
-  const nameOf = (player: (typeof eventRows)[number]['player']) =>
-    player?.id ? toPublicPlayerRef(player, minors).name : null
-
-  const events: MatchEventDTO[] = eventRows.sort(compareEvents).map((event) => ({
-    id: event.id,
-    type: event.type,
-    period: event.period,
-    minute: event.minute,
-    stoppageMinute: event.stoppageMinute,
-    side: event.teamId === extra.homeTeamId ? 'home' : event.teamId === extra.awayTeamId ? 'away' : null,
-    playerName: nameOf(event.player) ?? event.freeTextName,
-    relatedPlayerName: nameOf(event.related),
-    comment: event.comment,
-  }))
+  const minors = await loadMinorIds([...lineupRows.map((player) => player.id), ...namedPlayerIds(eventRows)])
+  const events = toEventDTOs(eventRows, extra, minors)
 
   const POSITION = { arquero: 0, defensa: 1, mediocampista: 2, delantero: 3 } as const
   const lineup = lineupRows
