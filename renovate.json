@@ -23,6 +23,22 @@
       "description": "Node se mantiene en la línea 24 LTS hasta que la 26 sea LTS (especificación 2.1)",
       "matchPackageNames": ["node", "@types/node"],
       "allowedVersions": "<25"
+    },
+    {
+      "description": "Los runners del CI se fijaron en ubuntu-24.04 a propósito: Renovate no propone ubuntu 26.04",
+      "matchDatasources": ["github-runners"],
+      "matchPackageNames": ["ubuntu"],
+      "enabled": false
+    },
+    {
+      "description": "Mayores pospuestas hasta después de la Fase 4 (decisión del 21 de octubre de 2026): quitar esta regla al cerrarla",
+      "matchPackageNames": ["@hookform/resolvers"],
+      "allowedVersions": "<6"
+    },
+    {
+      "description": "Mayores pospuestas hasta después de la Fase 4 (decisión del 21 de octubre de 2026): quitar esta regla al cerrarla",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ],
   "vulnerabilityAlerts": {
