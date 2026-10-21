@@ -8,6 +8,7 @@ import { actAs, ensureTestUsers, invalidatedTags } from './session'
 const { db, sql } = await import('@/db/client')
 const { auditLog, matchEvents, matches, matchLineups, playerSeasonStats } = await import('@/db/schema')
 const actions = await import('@/features/matches/actions')
+const { leerConsola } = await import('@/features/matches/console-actions')
 const { getResultSheet, listMatchesAdmin } = await import('@/features/matches/admin-queries')
 const standings = await import('@/features/standings/actions')
 const { getStandingsAdmin } = await import('@/features/standings/admin-queries')
@@ -672,6 +673,24 @@ describe('consola en vivo', () => {
     expect(await actions.suspenderPartido(id, { notes: '' })).toMatchObject({ ok: false })
     await idOf(actions.suspenderPartido(id, { notes: 'Lluvia intensa' }))
     expect(await readMatch(id)).toMatchObject({ status: 'suspendido', homeScore: 1, notes: 'Lluvia intensa' })
+  })
+
+  it('la consola relee su estado: marcador, período y el último evento registrado', async () => {
+    const id = await newMatch(35)
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' }))
+    await idOf(actions.agregarEvento(id, event('gol', 'rival', { minute: 30 })))
+    const goal = await idOf(
+      actions.agregarEvento(id, event('gol', 'club', { playerId: squad[0], minute: 10 })),
+    )
+    const read = await leerConsola(id)
+    expect(read).toMatchObject({
+      ok: true,
+      data: { match: { status: 'en_vivo', period: 'primer_tiempo', homeScore: 1, awayScore: 1 } },
+    })
+    // El último registrado (no el de minuto mayor) es el que deshace la consola.
+    expect(read.ok && read.data.lastEventId).toBe(goal)
+    await actAs('prensa')
+    expect(await leerConsola(id)).toMatchObject({ ok: false })
   })
 
   it('sin el permiso de en vivo no se inicia', async () => {
