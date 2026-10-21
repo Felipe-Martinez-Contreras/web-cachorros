@@ -18,6 +18,7 @@ import { tags } from '@/lib/cache-tags'
 import { assertId, mutate, Rejection } from '@/lib/entity-action'
 import { recordSlugChange, resolveSlug } from '@/lib/slug-redirects'
 import { z } from '@/lib/zod'
+import { eventPeriod, resolveTransition } from './lib/live'
 import { clubSideOf, matchSlugBase, periodForMinute, roundLabelFor, santiagoWallTime } from './lib/schedule'
 import { deriveScore } from './lib/score'
 import {
@@ -27,6 +28,9 @@ import {
   matchResultSchema,
   matchSchema,
   matchStatusSchema,
+  periodTransitionSchema,
+  suspendMatchSchema,
+  undoEventSchema,
 } from './schemas'
 
 type Result = Promise<ActionResult<{ id: string }>>
@@ -308,6 +312,7 @@ type LockedMatch = {
   clubSide: 'local' | 'visita' | 'ninguno'
   scoreLocked: boolean
   status: (typeof matches.$inferSelect)['status']
+  period: (typeof matches.$inferSelect)['period']
   halfLengthMinutes: number
 }
 
@@ -325,6 +330,7 @@ async function lockMatch(tx: Tx, id: string): Promise<LockedMatch> {
       clubSide: matches.clubSide,
       scoreLocked: matches.scoreLocked,
       status: matches.status,
+      period: matches.period,
     })
     .from(matches)
     .where(eq(matches.id, matchId))
@@ -495,6 +501,60 @@ export async function copiarNominaAnterior(id: string): Result {
   })
 }
 
+type EventData = z.output<typeof matchEventSchema>
+
+/**
+ * Columnas de un evento a partir del formulario o de la consola: equipo según el lado del club, jugadores
+ * solo del club y período (el del partido si está en juego; si no, el que corresponde al minuto).
+ */
+async function eventColumns(tx: Tx, match: LockedMatch, data: EventData) {
+  const ownTeamId = ownTeamOf(match)
+  const rivalTeamId = ownTeamId === match.homeTeamId ? match.awayTeamId : match.homeTeamId
+  if (match.status === 'cancelado') throw new Rejection('Un partido cancelado no admite eventos.')
+
+  const isComment = data.type === 'comentario'
+  const isClub = data.team === 'club'
+  const playerId = isClub && !isComment ? data.playerId : null
+  const relatedPlayerId = isClub && data.type === 'cambio' ? data.relatedPlayerId : null
+  const involved = [playerId, relatedPlayerId].filter((value): value is string => value !== null)
+  await assertPlayersExist(tx, involved, 'playerId')
+  return {
+    involved,
+    relatedPlayerId,
+    values: {
+      type: data.type,
+      period: eventPeriod(match.period, match.status, () =>
+        periodForMinute(data.minute, match.halfLengthMinutes),
+      ),
+      minute: data.minute,
+      stoppageMinute: data.minute === null ? null : data.stoppageMinute,
+      teamId: isComment ? null : isClub ? ownTeamId : rivalTeamId,
+      playerId,
+      relatedPlayerId,
+      freeTextName: isClub || isComment ? null : data.freeTextName,
+      comment: isComment ? data.comment : null,
+    },
+  }
+}
+
+/** Quien participa en un evento jugó: entra a la nómina si faltaba (las estadísticas cuentan PJ). */
+async function markPlayed(tx: Tx, matchId: string, involved: string[], substituteId: string | null) {
+  for (const involvedId of involved) {
+    await tx
+      .insert(matchLineups)
+      .values({
+        matchId,
+        playerId: involvedId,
+        role: involvedId === substituteId ? 'suplente' : 'titular',
+        played: true,
+      })
+      .onConflictDoUpdate({
+        target: [matchLineups.matchId, matchLineups.playerId],
+        set: { played: true },
+      })
+  }
+}
+
 /** Registra un gol, una tarjeta, un cambio o un comentario, y recalcula el marcador. */
 export async function agregarEvento(id: string, input: unknown): Result {
   return mutate({
@@ -506,30 +566,13 @@ export async function agregarEvento(id: string, input: unknown): Result {
     tags: [],
     write: async (tx, data, user) => {
       const match = await lockMatch(tx, id)
-      const ownTeamId = ownTeamOf(match)
-      const rivalTeamId = ownTeamId === match.homeTeamId ? match.awayTeamId : match.homeTeamId
-      if (match.status === 'cancelado') throw new Rejection('Un partido cancelado no admite eventos.')
-
-      const isComment = data.type === 'comentario'
-      const isClub = data.team === 'club'
-      const playerId = isClub && !isComment ? data.playerId : null
-      const relatedPlayerId = isClub && data.type === 'cambio' ? data.relatedPlayerId : null
-      const involved = [playerId, relatedPlayerId].filter((value): value is string => value !== null)
-      await assertPlayersExist(tx, involved, 'playerId')
+      const { involved, relatedPlayerId, values } = await eventColumns(tx, match, data)
 
       const [created] = await tx
         .insert(matchEvents)
         .values({
           matchId: match.id,
-          type: data.type,
-          period: periodForMinute(data.minute, match.halfLengthMinutes),
-          minute: data.minute,
-          stoppageMinute: data.minute === null ? null : data.stoppageMinute,
-          teamId: isComment ? null : isClub ? ownTeamId : rivalTeamId,
-          playerId,
-          relatedPlayerId,
-          freeTextName: isClub || isComment ? null : data.freeTextName,
-          comment: isComment ? data.comment : null,
+          ...values,
           ...(data.clientEventId ? { clientEventId: data.clientEventId } : {}),
           createdBy: user.id,
         })
@@ -544,21 +587,7 @@ export async function agregarEvento(id: string, input: unknown): Result {
         return { id: duplicate?.id ?? match.id, summary: 'Evento repetido ignorado', tags: matchTags(match) }
       }
 
-      // Quien participa en un evento jugó: entra a la nómina si faltaba (las estadísticas cuentan PJ).
-      for (const involvedId of involved) {
-        await tx
-          .insert(matchLineups)
-          .values({
-            matchId: match.id,
-            playerId: involvedId,
-            role: involvedId === relatedPlayerId ? 'suplente' : 'titular',
-            played: true,
-          })
-          .onConflictDoUpdate({
-            target: [matchLineups.matchId, matchLineups.playerId],
-            set: { played: true },
-          })
-      }
+      await markPlayed(tx, match.id, involved, relatedPlayerId)
       await recalculateScore(tx, match)
       return {
         id: created.id,
@@ -646,6 +675,159 @@ export async function finalizarPartido(id: string, input: unknown): Result {
         id: match.id,
         summary: `Finalizó el partido ${final?.homeScore}–${final?.awayScore}`,
         meta: { resolution: data.resolution, manual, ...final },
+        tags: matchTags(match),
+      }
+    },
+  })
+}
+
+/** Edita un evento ya registrado (minuto, jugador, tipo o equipo) y recalcula el marcador. */
+export async function editarEvento(eventId: string, input: unknown): Result {
+  return mutate({
+    action: 'match.event.update',
+    permission: 'matches:write',
+    entityType: 'match_event',
+    schema: matchEventSchema,
+    input,
+    tags: [],
+    write: async (tx, data) => {
+      const id = assertId(eventId, 'No encontramos ese evento.')
+      const [event] = await tx
+        .select({ matchId: matchEvents.matchId, period: matchEvents.period })
+        .from(matchEvents)
+        .where(eq(matchEvents.id, id))
+      if (!event) throw new Rejection('No encontramos ese evento. Puede que lo hayan eliminado.')
+      const match = await lockMatch(tx, event.matchId)
+      const { involved, relatedPlayerId, values } = await eventColumns(tx, match, data)
+      // Al corregirlo no se mueve de período (un gol del 1.er tiempo editado en el 2.º sigue en el 1.º),
+      // salvo que el minuto nuevo lo cambie.
+      const period =
+        event.period === 'penales' ? event.period : periodForMinute(data.minute, match.halfLengthMinutes)
+      await tx
+        .update(matchEvents)
+        .set({ ...values, period: data.minute === null ? event.period : period })
+        .where(eq(matchEvents.id, id))
+      await markPlayed(tx, match.id, involved, relatedPlayerId)
+      await recalculateScore(tx, match)
+      return {
+        id,
+        summary: `Editó un evento (${data.type})`,
+        meta: { matchId: match.id, type: data.type, team: data.team, minute: data.minute },
+        tags: matchTags(match),
+      }
+    },
+  })
+}
+
+/**
+ * «Deshacer último» de la consola (7.3): borra el evento más reciente, solo si es el que la consola tenía
+ * como último. Un segundo toque (o un reintento de la cola) con un evento que ya no existe no hace nada.
+ */
+export async function deshacerUltimoEvento(id: string, input: unknown): Result {
+  return mutate({
+    action: 'match.event.undo',
+    permission: 'matches:write',
+    entityType: 'match_event',
+    schema: undoEventSchema,
+    input,
+    tags: [],
+    write: async (tx, data) => {
+      const match = await lockMatch(tx, id)
+      const [expected] = await tx
+        .select({ id: matchEvents.id, type: matchEvents.type })
+        .from(matchEvents)
+        .where(and(eq(matchEvents.id, data.lastEventId), eq(matchEvents.matchId, match.id)))
+      if (!expected) return { id: match.id, summary: 'Deshacer repetido ignorado', tags: matchTags(match) }
+      const [last] = await tx
+        .select({ id: matchEvents.id })
+        .from(matchEvents)
+        .where(eq(matchEvents.matchId, match.id))
+        .orderBy(desc(matchEvents.createdAt), desc(matchEvents.id))
+        .limit(1)
+      if (last?.id !== expected.id) {
+        throw new Rejection(
+          'Llegó otro evento mientras tanto. Revisa la cronología y elimina el que corresponda.',
+        )
+      }
+      await tx.delete(matchEvents).where(eq(matchEvents.id, expected.id))
+      await recalculateScore(tx, match)
+      return {
+        id: expected.id,
+        summary: `Deshizo el último evento (${expected.type})`,
+        meta: { matchId: match.id, type: expected.type },
+        tags: matchTags(match),
+      }
+    },
+  })
+}
+
+/**
+ * Inicia o termina un tiempo desde la consola (7.3). El primer paso deja el partido en vivo. Es
+ * idempotente: repetir un paso ya aplicado no hace nada (doble toque o cola sin conexión).
+ */
+export async function cambiarPeriodo(id: string, input: unknown): Result {
+  return mutate({
+    action: 'match.period.update',
+    permission: 'matches:live',
+    entityType: 'match',
+    schema: periodTransitionSchema,
+    input,
+    tags: [],
+    write: async (tx, data) => {
+      const match = await lockMatch(tx, id)
+      ownTeamOf(match)
+      const result = resolveTransition(match, data.transition)
+      if (result.kind === 'invalid') throw new Rejection(result.message)
+      if (result.kind === 'already') {
+        return { id: match.id, summary: 'Paso repetido ignorado', tags: matchTags(match) }
+      }
+      await tx
+        .update(matches)
+        .set({
+          status: 'en_vivo',
+          period: result.period,
+          periodStartedAt: result.clockRuns ? sql`now()` : null,
+          shareVersion: sql`${matches.shareVersion} + 1`,
+        })
+        .where(eq(matches.id, match.id))
+      return {
+        id: match.id,
+        summary: `Partido en vivo: ${data.transition.replaceAll('_', ' ')}`,
+        meta: { from: match.period, to: result.period },
+        tags: matchTags(match),
+      }
+    },
+  })
+}
+
+/** Suspende un partido en juego (lluvia, incidentes): queda con su marcador y el motivo se publica. */
+export async function suspenderPartido(id: string, input: unknown): Result {
+  return mutate({
+    action: 'match.suspend',
+    permission: 'matches:live',
+    entityType: 'match',
+    schema: suspendMatchSchema,
+    input,
+    tags: [],
+    write: async (tx, data) => {
+      const match = await lockMatch(tx, id)
+      if (match.status === 'suspendido') {
+        return { id: match.id, summary: 'Suspensión repetida ignorada', tags: matchTags(match) }
+      }
+      if (match.status !== 'en_vivo') throw new Rejection('Solo se suspende un partido que se está jugando.')
+      await tx
+        .update(matches)
+        .set({
+          status: 'suspendido',
+          periodStartedAt: null,
+          notes: data.notes,
+          shareVersion: sql`${matches.shareVersion} + 1`,
+        })
+        .where(eq(matches.id, match.id))
+      return {
+        id: match.id,
+        summary: 'Suspendió el partido',
+        meta: { period: match.period, notes: data.notes },
         tags: matchTags(match),
       }
     },

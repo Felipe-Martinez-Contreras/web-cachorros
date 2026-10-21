@@ -55,6 +55,9 @@ export const env = createEnv({
     UPLOADS_DIR: z.string().default('./data/uploads'),
     // Tope por archivo subido; Caddy corta en 15 MB como red de seguridad (especificación 9.5).
     MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(50).default(12),
+    // Intervalo base del polling en vivo, en ms. Solo vale con SITE_ENV=development (e2e más rápidas);
+    // en staging y producción siempre es el de la especificación (20 s).
+    LIVE_POLL_MS: z.coerce.number().int().min(500).max(60_000).optional(),
   },
   experimental__runtimeEnv: {},
   // Las claves de prueba de Turnstile dejan pasar a cualquiera: producción no arranca con ellas.

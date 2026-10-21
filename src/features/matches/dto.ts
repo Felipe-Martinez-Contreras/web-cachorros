@@ -7,6 +7,7 @@ import type {
   standingsMode,
 } from '@/db/schema/enums'
 import type { ImageDTO } from '@/lib/images/dto'
+import type { LiveEvent } from './lib/live-poll'
 
 // DTOs públicos de partidos: lo mínimo y serializable. Nunca filas de la BD (especificación 3.2).
 
@@ -130,6 +131,31 @@ export type MatchdayDTO =
   | { kind: 'live'; matches: MatchDTO[] }
   | { kind: 'next'; match: MatchDTO; alsoToday: MatchDTO[] }
   | { kind: 'last'; match: MatchDTO }
+
+/**
+ * Estado de un partido en `/api/live/*` (2.6): lo que cambia durante el juego, sin nombres ni escudos (la
+ * página ya los tiene). `version` es `share_version`: sube con cada evento, paso o cambio de estado.
+ */
+export type LiveMatchStateDTO = Pick<
+  MatchDTO,
+  | 'id'
+  | 'slug'
+  | 'status'
+  | 'period'
+  | 'periodStartedAt'
+  | 'kickoffAt'
+  | 'halfLengthMinutes'
+  | 'homeScore'
+  | 'awayScore'
+  | 'homePenalties'
+  | 'awayPenalties'
+> & { version: number }
+
+export type LiveMatchDTO = { match: LiveMatchStateDTO; events: LiveEvent[] }
+
+/** Respuestas de `/api/live/current` y `/api/live/[matchId]`. `serverNow` corrige el reloj del celular. */
+export type LiveCurrentResponse = { serverNow: string; matches: LiveMatchStateDTO[] }
+export type LiveMatchResponse = LiveMatchDTO & { serverNow: string }
 
 /** «Cachorros 1, Los Litres 0»: texto del marcador para lectores de pantalla. */
 export function scoreText(match: MatchDTO): string {

@@ -11,6 +11,7 @@ import {
 } from '@/lib/form-schemas'
 import { lineupRoleLabels, matchEventTypeLabels, matchResolutionLabels } from '@/lib/labels'
 import { z } from '@/lib/zod'
+import { PERIOD_TRANSITION_KEYS, type PeriodTransition } from './lib/live'
 
 const ROUND_MESSAGE = 'El número de fecha va entre 1 y 60.'
 const SCORE_MESSAGE = 'Escribe los goles (entre 0 y 99).'
@@ -190,3 +191,26 @@ export const matchResultSchema = z
     }
   })
 export type MatchResultInput = z.input<typeof matchResultSchema>
+
+/** Paso de la consola en vivo: iniciar o terminar un tiempo (7.3). */
+export const periodTransitionSchema = z.object({
+  transition: z.enum(PERIOD_TRANSITION_KEYS as [PeriodTransition, ...PeriodTransition[]], {
+    error: 'Ese paso no existe.',
+  }),
+})
+
+/** Suspender un partido en juego: el motivo se muestra en el sitio. */
+export const suspendMatchSchema = z.object({
+  notes: optionalText(280).refine(
+    (value) => value !== null,
+    'Cuenta brevemente el motivo: se muestra en el sitio.',
+  ),
+})
+
+/**
+ * «Deshacer último» (7.3): se indica cuál era el último evento que veía la consola. Si en el intervalo
+ * llegó otro (desde otro celular), no se borra nada.
+ */
+export const undoEventSchema = z.object({
+  lastEventId: requiredUuid('No hay un evento para deshacer.'),
+})

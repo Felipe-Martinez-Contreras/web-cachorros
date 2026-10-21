@@ -14,6 +14,7 @@ import type { ActionResult } from '@/lib/action-result'
 import { optionsFromLabels } from '@/lib/form-schemas'
 import { matchEventTypeLabels, matchResolutionLabels, playerPositionGroupLabels } from '@/lib/labels'
 import type { SheetEvent, SheetLineupRow, SheetPlayer } from '../admin-queries'
+import { newClientId } from '../lib/client-id'
 import { formatMinute } from '../lib/match-clock'
 import { type MatchEventInput, type MatchResultInput, matchEventSchema, matchResultSchema } from '../schemas'
 
@@ -75,19 +76,6 @@ function useRunner() {
   return { pending, run }
 }
 
-/**
- * UUID para la idempotencia de un evento. `crypto.randomUUID` solo existe en contextos seguros (HTTPS o
- * localhost): al probar desde el celular por la red local hace falta este respaldo.
- */
-function newEventId(): string {
-  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
-  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40
-  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80
-  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
-}
-
 // ───────────────────────── Nómina ─────────────────────────
 
 type LineupState = 'no' | 'titular' | 'entro' | 'banca'
@@ -105,7 +93,15 @@ function stateOf(row: SheetLineupRow | undefined): LineupState {
   return row.played ? 'entro' : 'banca'
 }
 
-function LineupSection({ squad, lineup, hasPreviousLineup, actions }: ResultLoaderProps) {
+/** Nómina del partido (también la usa la consola en vivo, en la previa). */
+export function LineupSection({
+  squad,
+  lineup,
+  hasPreviousLineup,
+  actions,
+}: Pick<ResultLoaderProps, 'squad' | 'lineup' | 'hasPreviousLineup'> & {
+  actions: Pick<ResultLoaderProps['actions'], 'saveLineup' | 'copyLineup'>
+}) {
   const uid = useId()
   const { pending, run } = useRunner()
   const byPlayer = new Map(lineup.map((row) => [row.playerId, row]))
@@ -316,7 +312,7 @@ function EventForm({
   const uid = useId()
   const { run } = useRunner()
   // Un identificador por formulario abierto: si el mismo envío llega dos veces, el servidor lo ignora.
-  const clientEventId = useRef(newEventId())
+  const clientEventId = useRef(newClientId())
   const variants = KIND_TYPES[kind]
   const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<EventFormValues>({

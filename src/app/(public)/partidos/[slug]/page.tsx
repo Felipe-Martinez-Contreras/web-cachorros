@@ -7,9 +7,13 @@ import { Breadcrumbs } from '@/components/site/page-shell'
 import { ShareBar } from '@/components/site/share-bar'
 import { buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
-import { EventTimeline } from '@/features/matches/components/event-timeline'
-import { LiveBadge, Scoreboard } from '@/features/matches/components/scoreboard'
+import {
+  LiveMatchProvider,
+  LiveMatchScore,
+  LiveMatchTimeline,
+} from '@/features/matches/components/live-match'
 import { hasScore, type LineupPlayerDTO, scoreText } from '@/features/matches/dto'
+import { livePollBaseMs } from '@/features/matches/live-queries'
 import { getMatchDetail, resolveSlugRedirect } from '@/features/matches/public-queries'
 import { JsonLd } from '@/features/seo/components/json-ld'
 import { sportsEventJsonLd } from '@/features/seo/lib/json-ld'
@@ -77,128 +81,124 @@ export default async function MatchPage({ params }: Props) {
   const upcoming = match.status === 'programado'
 
   return (
-    <article>
-      <JsonLd
-        data={sportsEventJsonLd(
-          { ...match, venue: venue ? { name: venue.name, address: venue.address } : null },
-          siteBaseUrl(),
-        )}
-      />
-      <header className="theme-dark">
-        <div className="container-site grid grid-cols-1 gap-4 pt-4 pb-10 md:pb-14">
-          <Breadcrumbs
-            items={[
-              { href: '/', label: 'Inicio' },
-              { href: `/partidos?serie=${match.seriesSlug}`, label: 'Partidos' },
-              { label: `${match.home.shortName} vs ${match.away.shortName}` },
-            ]}
-          />
-          <div className="grid justify-items-center gap-2 text-center">
-            <p className="text-eyebrow text-accent">
-              {match.seriesName} · {match.competitionName}
-              {match.roundLabel && ` · ${match.roundLabel}`}
-            </p>
-            <h1 className="sr-only">{title}</h1>
-            {match.status === 'en_vivo' && <LiveBadge />}
-          </div>
-          <Scoreboard match={match} size="lg" />
-          <p className="text-center text-(--muted)">
-            <time dateTime={match.kickoffAt}>{formatLongDateTime(match.kickoffAt)}</time>
-            {match.venue && ` · ${match.venue.name}`}
-          </p>
-        </div>
-      </header>
-
-      <div className="container-site grid grid-cols-1 max-w-4xl gap-10 py-8 md:py-12">
-        {off && (
-          <Alert variant="warning" title={`Partido ${matchStatusLabels[match.status].toLowerCase()}`}>
-            {notes ?? 'Avisaremos aquí cuando haya novedades.'}
-          </Alert>
-        )}
-        {!off && notes && <p className="text-lg">{notes}</p>}
-
-        {events.length > 0 && (
-          <section aria-labelledby="cronologia" className="grid gap-4">
-            <h2 id="cronologia" className="text-h2 uppercase">
-              Cronología
-            </h2>
-            <EventTimeline events={events} homeName={match.home.shortName} awayName={match.away.shortName} />
-          </section>
-        )}
-
-        {lineup.starters.length + lineup.substitutes.length > 0 && (
-          <section aria-labelledby="nomina" className="grid gap-4">
-            <h2 id="nomina" className="text-h2 uppercase">
-              Nómina de {match.clubSide === 'local' ? match.home.shortName : match.away.shortName}
-            </h2>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <PlayerList title="Titulares" players={lineup.starters} />
-              <PlayerList
-                title="Suplentes"
-                players={lineup.substitutes.map((player) => ({
-                  ...player,
-                  note: hasScore(match) && player.played ? 'entró' : undefined,
-                }))}
-              />
-            </div>
-          </section>
-        )}
-
-        {venue && (
-          <section aria-labelledby="cancha" className="grid gap-3">
-            <h2 id="cancha" className="text-h2 uppercase">
-              Cancha
-            </h2>
-            <p className="flex items-start gap-2 text-lg">
-              <MapPin aria-hidden="true" className="mt-1 size-5 shrink-0" />
-              <span>
-                <span className="font-semibold">{venue.name}</span>
-                {venue.address && <span className="block text-base text-(--muted)">{venue.address}</span>}
-                {venue.notes && <span className="block text-base text-(--muted)">{venue.notes}</span>}
-              </span>
-            </p>
-            {venue.directions && (
-              <ul className="flex flex-wrap gap-2" aria-label="Cómo llegar">
-                {(
-                  [
-                    ['Google Maps', venue.directions.google],
-                    ['Waze', venue.directions.waze],
-                    ['Apple Maps', venue.directions.apple],
-                  ] as const
-                ).map(([label, href]) => (
-                  <li key={label}>
-                    <a
-                      href={href}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                      className={buttonVariants({ variant: 'outline' })}
-                    >
-                      Cómo llegar con {label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
-
-        <section aria-label="Compartir y calendario" className="grid gap-4 border-t border-(--border) pt-6">
-          {upcoming && (
-            <div>
-              <a href={`/api/ics/partido/${match.id}`} className={buttonVariants({ variant: 'dark' })}>
-                <CalendarPlus aria-hidden="true" />
-                Agregar al calendario
-              </a>
-            </div>
+    <LiveMatchProvider match={match} events={events} pollBaseMs={livePollBaseMs()}>
+      <article>
+        <JsonLd
+          data={sportsEventJsonLd(
+            { ...match, venue: venue ? { name: venue.name, address: venue.address } : null },
+            siteBaseUrl(),
           )}
-          <ShareBar
-            url={`${env.SITE_URL}/partidos/${match.slug}`}
-            title={
-              hasScore(match) ? `${scoreText(match)} · ${match.seriesName}` : `${title} · ${match.seriesName}`
-            }
-          />
-        </section>
-      </div>
-    </article>
+        />
+        <header className="theme-dark">
+          <div className="container-site grid grid-cols-1 gap-4 pt-4 pb-10 md:pb-14">
+            <Breadcrumbs
+              items={[
+                { href: '/', label: 'Inicio' },
+                { href: `/partidos?serie=${match.seriesSlug}`, label: 'Partidos' },
+                { label: `${match.home.shortName} vs ${match.away.shortName}` },
+              ]}
+            />
+            <div className="grid justify-items-center gap-2 text-center">
+              <p className="text-eyebrow text-accent">
+                {match.seriesName} · {match.competitionName}
+                {match.roundLabel && ` · ${match.roundLabel}`}
+              </p>
+              <h1 className="sr-only">{title}</h1>
+            </div>
+            <LiveMatchScore />
+            <p className="text-center text-(--muted)">
+              <time dateTime={match.kickoffAt}>{formatLongDateTime(match.kickoffAt)}</time>
+              {match.venue && ` · ${match.venue.name}`}
+            </p>
+          </div>
+        </header>
+
+        <div className="container-site grid grid-cols-1 max-w-4xl gap-10 py-8 md:py-12">
+          {off && (
+            <Alert variant="warning" title={`Partido ${matchStatusLabels[match.status].toLowerCase()}`}>
+              {notes ?? 'Avisaremos aquí cuando haya novedades.'}
+            </Alert>
+          )}
+          {!off && notes && <p className="text-lg">{notes}</p>}
+
+          <LiveMatchTimeline title="Cronología" />
+
+          {lineup.starters.length + lineup.substitutes.length > 0 && (
+            <section aria-labelledby="nomina" className="grid gap-4">
+              <h2 id="nomina" className="text-h2 uppercase">
+                Nómina de {match.clubSide === 'local' ? match.home.shortName : match.away.shortName}
+              </h2>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <PlayerList title="Titulares" players={lineup.starters} />
+                <PlayerList
+                  title="Suplentes"
+                  players={lineup.substitutes.map((player) => ({
+                    ...player,
+                    note: hasScore(match) && player.played ? 'entró' : undefined,
+                  }))}
+                />
+              </div>
+            </section>
+          )}
+
+          {venue && (
+            <section aria-labelledby="cancha" className="grid gap-3">
+              <h2 id="cancha" className="text-h2 uppercase">
+                Cancha
+              </h2>
+              <p className="flex items-start gap-2 text-lg">
+                <MapPin aria-hidden="true" className="mt-1 size-5 shrink-0" />
+                <span>
+                  <span className="font-semibold">{venue.name}</span>
+                  {venue.address && <span className="block text-base text-(--muted)">{venue.address}</span>}
+                  {venue.notes && <span className="block text-base text-(--muted)">{venue.notes}</span>}
+                </span>
+              </p>
+              {venue.directions && (
+                <ul className="flex flex-wrap gap-2" aria-label="Cómo llegar">
+                  {(
+                    [
+                      ['Google Maps', venue.directions.google],
+                      ['Waze', venue.directions.waze],
+                      ['Apple Maps', venue.directions.apple],
+                    ] as const
+                  ).map(([label, href]) => (
+                    <li key={label}>
+                      <a
+                        href={href}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                        className={buttonVariants({ variant: 'outline' })}
+                      >
+                        Cómo llegar con {label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+
+          <section aria-label="Compartir y calendario" className="grid gap-4 border-t border-(--border) pt-6">
+            {upcoming && (
+              <div>
+                <a href={`/api/ics/partido/${match.id}`} className={buttonVariants({ variant: 'dark' })}>
+                  <CalendarPlus aria-hidden="true" />
+                  Agregar al calendario
+                </a>
+              </div>
+            )}
+            <ShareBar
+              url={`${env.SITE_URL}/partidos/${match.slug}`}
+              title={
+                hasScore(match)
+                  ? `${scoreText(match)} · ${match.seriesName}`
+                  : `${title} · ${match.seriesName}`
+              }
+            />
+          </section>
+        </div>
+      </article>
+    </LiveMatchProvider>
   )
 }

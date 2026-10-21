@@ -5,9 +5,10 @@ import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/feedback'
 import { getUpcomingEvents } from '@/features/events/queries'
+import { LiveMatchday } from '@/features/matches/components/live-matchday'
 import { MatchCard } from '@/features/matches/components/match-card'
-import { MatchdayStrip } from '@/features/matches/components/matchday-strip'
 import { StandingsTable } from '@/features/matches/components/standings-table'
+import { livePollBaseMs } from '@/features/matches/live-queries'
 import { getFeaturedStandings, getLatestResults, getMatchday } from '@/features/matches/queries'
 import { NewsCard } from '@/features/news/components/news-card'
 import { getHomeNews } from '@/features/news/queries'
@@ -111,7 +112,7 @@ export async function HeroSection() {
 
       {matchday && (
         <div className="container-site relative z-10 -mt-20 md:-mt-28">
-          <MatchdayStrip matchday={matchday} className="mx-auto max-w-3xl" />
+          <LiveMatchday matchday={matchday} pollBaseMs={livePollBaseMs()} className="mx-auto max-w-3xl" />
         </div>
       )}
     </>

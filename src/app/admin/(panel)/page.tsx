@@ -60,12 +60,22 @@ function MatchList({
                 )}
               </div>
               {match.status !== 'cancelado' && (
-                <Link
-                  href={`/admin/partidos/${match.id}/resultado`}
-                  className={buttonVariants({ variant: highlight ? 'dark' : 'outline', size: 'lg' })}
-                >
-                  {played ? 'Corregir resultado' : 'Cargar resultado'}
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  {!played && !highlight && (
+                    <Link
+                      href={`/admin/partidos/${match.id}/en-vivo`}
+                      className={buttonVariants({ variant: 'primary', size: 'lg' })}
+                    >
+                      {match.status === 'en_vivo' ? 'Volver a la consola' : 'Iniciar en vivo'}
+                    </Link>
+                  )}
+                  <Link
+                    href={`/admin/partidos/${match.id}/resultado`}
+                    className={buttonVariants({ variant: highlight ? 'dark' : 'outline', size: 'lg' })}
+                  >
+                    {played ? 'Corregir resultado' : 'Cargar resultado'}
+                  </Link>
+                </div>
               )}
             </li>
           )

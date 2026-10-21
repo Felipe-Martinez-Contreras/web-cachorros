@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ClubImage } from '@/components/site/club-image'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/cn'
@@ -65,11 +66,13 @@ type ScoreboardProps = {
   match: MatchDTO
   /** `lg`: franja matchday y detalle del partido. `md`: tarjetas. */
   size?: 'md' | 'lg'
+  /** Minuto en vivo (una isla de cliente), junto al período. */
+  minute?: ReactNode
   className?: string
 }
 
 /** Escudos enfrentados con el marcador (o la hora, si aún no se juega). */
-export function Scoreboard({ match, size = 'md', className }: ScoreboardProps) {
+export function Scoreboard({ match, size = 'md', minute, className }: ScoreboardProps) {
   const large = size === 'lg'
   const scored = hasScore(match)
   const note = matchNote(match)
@@ -108,7 +111,11 @@ export function Scoreboard({ match, size = 'md', className }: ScoreboardProps) {
             {formatTime(match.kickoffAt)}
           </p>
         )}
-        {match.status === 'en_vivo' && <span className="text-meta">{matchPeriodLabels[match.period]}</span>}
+        {match.status === 'en_vivo' && (
+          <span className="text-meta">
+            {matchPeriodLabels[match.period]} {minute}
+          </span>
+        )}
         {note && <span className="text-meta text-(--muted)">{note}</span>}
       </div>
 

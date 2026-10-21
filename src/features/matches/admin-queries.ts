@@ -116,6 +116,8 @@ export async function getMatchAdmin(id: string) {
       roundLabel: matches.roundLabel,
       notes: matches.notes,
       status: matches.status,
+      period: matches.period,
+      periodStartedAt: matches.periodStartedAt,
       resolution: matches.resolution,
       scoreLocked: matches.scoreLocked,
       clubSide: matches.clubSide,
@@ -156,6 +158,9 @@ export type SheetEvent = {
   minute: number | null
   stoppageMinute: number | null
   team: 'club' | 'rival' | null
+  playerId: string | null
+  relatedPlayerId: string | null
+  freeTextName: string | null
   playerName: string | null
   relatedPlayerName: string | null
   comment: string | null
@@ -212,6 +217,8 @@ export async function getResultSheet(id: string) {
         minute: matchEvents.minute,
         stoppageMinute: matchEvents.stoppageMinute,
         teamId: matchEvents.teamId,
+        playerId: matchEvents.playerId,
+        relatedPlayerId: matchEvents.relatedPlayerId,
         freeTextName: matchEvents.freeTextName,
         comment: matchEvents.comment,
         createdAt: matchEvents.createdAt,
@@ -263,9 +270,15 @@ export async function getResultSheet(id: string) {
   }
 
   const fullName = (first: string | null, last: string | null) => (first && last ? `${first} ${last}` : null)
+  // «Deshacer último» (7.3) va por orden de registro, no por minuto.
+  const lastRegistered = events.reduce<(typeof events)[number] | null>(
+    (latest, event) => (!latest || event.createdAt > latest.createdAt ? event : latest),
+    null,
+  )
   return {
     match,
     ownTeamId,
+    lastEventId: lastRegistered?.id ?? null,
     squad: [...squad.values()].sort(
       (a, b) =>
         POSITION_ORDER[a.position] - POSITION_ORDER[b.position] ||
@@ -283,6 +296,9 @@ export async function getResultSheet(id: string) {
         minute: event.minute,
         stoppageMinute: event.stoppageMinute,
         team: event.teamId === null ? null : event.teamId === ownTeamId ? 'club' : 'rival',
+        playerId: event.playerId,
+        relatedPlayerId: event.relatedPlayerId,
+        freeTextName: event.freeTextName,
         playerName: fullName(event.playerFirst, event.playerLast) ?? event.freeTextName,
         relatedPlayerName: fullName(event.relatedFirst, event.relatedLast),
         comment: event.comment,
@@ -312,3 +328,28 @@ export async function lastClubMatchBySeries(): Promise<
     .orderBy(matches.seriesId, desc(matches.kickoffAt))
   return new Map(rows.map(({ seriesId, ...rest }) => [seriesId, rest]))
 }
+
+/** Lo que necesita la consola en vivo, serializable (lo usan la página y `leerConsola`). */
+export function consoleSnapshot(sheet: ResultSheet) {
+  const { match } = sheet
+  return {
+    match: {
+      homeName: match.homeShortName,
+      awayName: match.awayShortName,
+      clubSide: match.clubSide,
+      status: match.status,
+      period: match.period,
+      periodStartedAt: match.periodStartedAt?.toISOString() ?? null,
+      halfLengthMinutes: match.halfLengthMinutes,
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      scoreLocked: match.scoreLocked,
+    },
+    squad: sheet.squad,
+    lineup: sheet.lineup,
+    events: sheet.events,
+    lastEventId: sheet.lastEventId,
+    hasPreviousLineup: sheet.previousMatchId !== null,
+  }
+}
+export type ConsoleSnapshot = ReturnType<typeof consoleSnapshot>

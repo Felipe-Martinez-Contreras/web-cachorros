@@ -8,6 +8,7 @@ import { actAs, ensureTestUsers, invalidatedTags } from './session'
 const { db, sql } = await import('@/db/client')
 const { auditLog, matchEvents, matches, matchLineups, playerSeasonStats } = await import('@/db/schema')
 const actions = await import('@/features/matches/actions')
+const { leerConsola } = await import('@/features/matches/console-actions')
 const { getResultSheet, listMatchesAdmin } = await import('@/features/matches/admin-queries')
 const standings = await import('@/features/standings/actions')
 const { getStandingsAdmin } = await import('@/features/standings/admin-queries')
@@ -606,5 +607,98 @@ describe('tabla de posiciones', () => {
       played: 1,
       points: 0,
     })
+  })
+})
+
+describe('consola en vivo', () => {
+  it('los pasos dejan el partido en vivo, anotan el inicio del tiempo y no avanzan dos veces', async () => {
+    const id = await newMatch(30)
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' }))
+    expect(invalidatedTags()).toEqual(expect.arrayContaining(['live', `match:${id}`]))
+    const started = await readMatch(id)
+    expect(started).toMatchObject({ status: 'en_vivo', period: 'primer_tiempo' })
+    expect(started.periodStartedAt).toBeInstanceOf(Date)
+    const version = started.shareVersion
+
+    // El mismo paso otra vez (doble toque o cola sin conexión): no cambia nada.
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' }))
+    expect((await readMatch(id)).shareVersion).toBe(version)
+
+    await idOf(actions.cambiarPeriodo(id, { transition: 'terminar_primer_tiempo' }))
+    expect(await readMatch(id)).toMatchObject({ period: 'entretiempo', periodStartedAt: null })
+    expect(await actions.cambiarPeriodo(id, { transition: 'iniciar_penales' })).toEqual({
+      ok: false,
+      message: 'Ese paso no corresponde al momento del partido. Recarga la consola.',
+    })
+  })
+
+  it('un gol en vivo toma el período del partido; deshacer borra solo el último que veía la consola', async () => {
+    const id = await newMatch(31)
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' }))
+    await idOf(actions.cambiarPeriodo(id, { transition: 'terminar_primer_tiempo' }))
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_segundo_tiempo' }))
+    // Minuto 30 en el 2.º tiempo de una serie de 45: el período es el del partido, no el del minuto.
+    const first = await idOf(
+      actions.agregarEvento(id, event('gol', 'club', { playerId: squad[0], minute: 30 })),
+    )
+    const [goal] = await db.select().from(matchEvents).where(eq(matchEvents.id, first))
+    expect(goal?.period).toBe('segundo_tiempo')
+    const second = await idOf(actions.agregarEvento(id, event('gol', 'rival', { minute: 60 })))
+    expect(await readMatch(id)).toMatchObject({ homeScore: 1, awayScore: 1 })
+
+    // La consola creía que el último era el primero: llegó otro, no se borra nada.
+    expect(await actions.deshacerUltimoEvento(id, { lastEventId: first })).toMatchObject({ ok: false })
+    await idOf(actions.deshacerUltimoEvento(id, { lastEventId: second }))
+    expect(await readMatch(id)).toMatchObject({ homeScore: 1, awayScore: 0 })
+    // Repetido: ese evento ya no existe y no se borra otro.
+    await idOf(actions.deshacerUltimoEvento(id, { lastEventId: second }))
+    expect(await db.select().from(matchEvents).where(eq(matchEvents.matchId, id))).toHaveLength(1)
+  })
+
+  it('editar un evento recalcula el marcador', async () => {
+    const id = await newMatch(32)
+    const goal = await idOf(
+      actions.agregarEvento(id, event('gol', 'club', { playerId: squad[0], minute: 10 })),
+    )
+    expect(await readMatch(id)).toMatchObject({ homeScore: 1, awayScore: 0 })
+    await idOf(actions.editarEvento(goal, event('autogol', 'club', { playerId: squad[0], minute: 12 })))
+    expect(await readMatch(id)).toMatchObject({ homeScore: 0, awayScore: 1 })
+  })
+
+  it('suspender pide el motivo, solo en un partido en juego, y conserva el marcador', async () => {
+    const id = await newMatch(33)
+    expect(await actions.suspenderPartido(id, { notes: 'Lluvia' })).toMatchObject({ ok: false })
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' }))
+    await idOf(actions.agregarEvento(id, event('gol', 'club', { playerId: squad[1], minute: 5 })))
+    expect(await actions.suspenderPartido(id, { notes: '' })).toMatchObject({ ok: false })
+    await idOf(actions.suspenderPartido(id, { notes: 'Lluvia intensa' }))
+    expect(await readMatch(id)).toMatchObject({ status: 'suspendido', homeScore: 1, notes: 'Lluvia intensa' })
+  })
+
+  it('la consola relee su estado: marcador, período y el último evento registrado', async () => {
+    const id = await newMatch(35)
+    await idOf(actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' }))
+    await idOf(actions.agregarEvento(id, event('gol', 'rival', { minute: 30 })))
+    const goal = await idOf(
+      actions.agregarEvento(id, event('gol', 'club', { playerId: squad[0], minute: 10 })),
+    )
+    const read = await leerConsola(id)
+    expect(read).toMatchObject({
+      ok: true,
+      data: { match: { status: 'en_vivo', period: 'primer_tiempo', homeScore: 1, awayScore: 1 } },
+    })
+    // El último registrado (no el de minuto mayor) es el que deshace la consola.
+    expect(read.ok && read.data.lastEventId).toBe(goal)
+    await actAs('prensa')
+    expect(await leerConsola(id)).toMatchObject({ ok: false })
+  })
+
+  it('sin el permiso de en vivo no se inicia', async () => {
+    const id = await newMatch(34)
+    await actAs('prensa')
+    expect(await actions.cambiarPeriodo(id, { transition: 'iniciar_primer_tiempo' })).toMatchObject({
+      ok: false,
+    })
+    expect((await readMatch(id)).status).toBe('programado')
   })
 })

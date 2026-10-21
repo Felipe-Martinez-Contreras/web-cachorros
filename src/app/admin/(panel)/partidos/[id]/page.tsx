@@ -40,12 +40,22 @@ export default async function EditMatchPage({ params }: { params: Promise<{ id: 
         back={{ href: '/admin/partidos', label: 'Partidos' }}
         action={
           match.status !== 'cancelado' && (
-            <Link
-              href={`/admin/partidos/${match.id}/resultado`}
-              className={buttonVariants({ variant: 'dark', size: 'lg' })}
-            >
-              {finished ? 'Corregir resultado' : 'Cargar resultado'}
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              {!finished && match.clubSide !== 'ninguno' && (
+                <Link
+                  href={`/admin/partidos/${match.id}/en-vivo`}
+                  className={buttonVariants({ variant: 'primary', size: 'lg' })}
+                >
+                  {match.status === 'en_vivo' ? 'Volver a la consola' : 'Iniciar en vivo'}
+                </Link>
+              )}
+              <Link
+                href={`/admin/partidos/${match.id}/resultado`}
+                className={buttonVariants({ variant: 'dark', size: 'lg' })}
+              >
+                {finished ? 'Corregir resultado' : 'Cargar resultado'}
+              </Link>
+            </div>
           )
         }
       />
