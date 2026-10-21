@@ -26,6 +26,7 @@ describe('CSP del sitio público', () => {
     expect(directive(csp, 'worker-src')).toEqual(["'self'"])
     expect(directive(csp, 'manifest-src')).toEqual(["'self'"])
     expect(directive(csp, 'object-src')).toEqual(["'none'"])
+    expect(directive(csp, 'form-action')).toEqual(["'self'", 'https://wa.me', 'https://api.whatsapp.com'])
     expect(directive(csp, 'frame-ancestors')).toEqual(["'none'"])
     expect(directive(csp, 'report-uri')).toEqual(['/api/csp-report'])
   })

@@ -11,7 +11,9 @@ LABEL org.opencontainers.image.title="cachorros-ops" \
       org.opencontainers.image.revision="${REVISION}"
 
 # rclone (Cloud Storage), age (cifrado), curl (tareas y monitor), tzdata y supercronic (cron sin root).
-RUN apk add --no-cache rclone age curl tzdata supercronic
+# Sin gosu: ops corre directo como usuario sin privilegios y nunca usa el entrypoint de postgres. gosu (de la
+# imagen base) arrastraba una vulnerabilidad CRITICAL de la biblioteca estándar de Go (Trivy).
+RUN apk add --no-cache rclone age curl tzdata supercronic  && rm -f /usr/local/bin/gosu /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
 
 # rclone sin archivo de configuración ni llaves: usa la cuenta de servicio de la VM (servidor de metadatos).
 # El CI reemplaza el remoto por una carpeta local con RCLONE_CONFIG_GCS_TYPE=local.

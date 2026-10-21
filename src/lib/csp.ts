@@ -48,7 +48,8 @@ export const PUBLIC_CSP_DIRECTIVES: Directives = {
   'manifest-src': ["'self'"],
   'object-src': ["'none'"],
   'base-uri': ["'self'"],
-  'form-action': ["'self'"],
+  // El pedido de la tienda es un formulario GET que redirige a WhatsApp (6.8): la redirección también cuenta.
+  'form-action': ["'self'", 'https://wa.me', 'https://api.whatsapp.com'],
   'frame-ancestors': ["'none'"],
   'report-uri': [CSP_REPORT_PATH],
 }
