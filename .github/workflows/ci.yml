@@ -100,10 +100,9 @@ jobs:
           retention-days: 7
 
   lighthouse:
-    name: Lighthouse móvil de la portada (informativo)
+    name: Lighthouse móvil (portada, noticia, partido y plantel)
     runs-on: ubuntu-24.04
-    # No bloquea el PR: publica los puntajes para compararlos con la meta (90 / 95 / 95 / 95).
-    continue-on-error: true
+    # Bloquea el PR (Fase 5): la mediana de 5 corridas de cada página debe llegar a 90 / 95 / 95 / 95.
     services:
       db:
         image: postgres:18-alpine
@@ -141,9 +140,13 @@ jobs:
       - run: pnpm db:seed
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Lighthouse (5 corridas, 4G lento y CPU ×4)
+      - name: Un partido jugado de Honor para medir
+        run: |
+          slug=$(psql "$DATABASE_ADMIN_URL" -tAc "select m.slug from matches m join series s on s.id = m.series_id
+            where s.slug = 'honor' and m.status = 'finalizado' order by m.kickoff_at desc limit 1")
+          echo "LH_MATCH_PATH=/partidos/${slug}" >> "$GITHUB_ENV"
+      - name: Lighthouse (5 corridas por página, 4G lento y CPU ×4)
         id: lighthouse
-        continue-on-error: true
         run: pnpm lighthouse
       - name: Resumen de puntajes
         if: ${{ !cancelled() }}

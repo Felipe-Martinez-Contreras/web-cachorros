@@ -17,7 +17,14 @@ module.exports = {
     collect: {
       startServerCommand: 'node scripts/start.mjs',
       startServerReadyPattern: 'Ready',
-      url: [`http://localhost:${PORT}/`],
+      // Presupuesto de la Fase 5: portada, una noticia, un partido y un plantel. El slug del partido depende
+      // de la fecha del seed: el CI lo busca en la base y lo pasa en LH_MATCH_PATH.
+      url: [
+        `http://localhost:${PORT}/`,
+        `http://localhost:${PORT}${process.env.LH_NEWS_PATH || '/noticias/cronica-honor'}`,
+        `http://localhost:${PORT}${process.env.LH_MATCH_PATH || '/partidos'}`,
+        `http://localhost:${PORT}/plantel/honor`,
+      ],
       // Varias corridas: el puntaje de rendimiento varía con la carga de la máquina.
       numberOfRuns: 5,
       // Usa el Chromium que ya instala Playwright: no hace falta tener Chrome en la máquina.
@@ -34,12 +41,13 @@ module.exports = {
         skipAudits: ['is-crawlable'],
       },
     },
+    // Cada página se juzga por su corrida mediana (una corrida lenta del runner no tumba el CI).
     assert: {
       assertions: {
-        'categories:performance': ['error', { minScore: 0.9 }],
-        'categories:accessibility': ['error', { minScore: 0.95 }],
-        'categories:best-practices': ['error', { minScore: 0.95 }],
-        'categories:seo': ['error', { minScore: 0.95 }],
+        'categories:performance': ['error', { minScore: 0.9, aggregationMethod: 'median-run' }],
+        'categories:accessibility': ['error', { minScore: 0.95, aggregationMethod: 'median-run' }],
+        'categories:best-practices': ['error', { minScore: 0.95, aggregationMethod: 'median-run' }],
+        'categories:seo': ['error', { minScore: 0.95, aggregationMethod: 'median-run' }],
       },
     },
     upload: { target: 'filesystem', outputDir: REPORTS_DIR },

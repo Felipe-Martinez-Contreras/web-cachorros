@@ -3,6 +3,9 @@
 # pregunta solo lo que es tuyo (dominio, claves de Turnstile, SMTP, bucket, clave pública de respaldos…).
 # No sobrescribe un .env existente.
 #   ./deploy/generar-env.sh
+#
+# Las respuestas se asignan con `printf -v` dentro de ask(): shellcheck no lo sigue (aplica a todo el archivo).
+# shellcheck disable=SC2154
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

@@ -3,12 +3,14 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
+import { Alert } from '@/components/ui/feedback'
 import { listClubMatchesBetween, type MatchAdminListItem } from '@/features/matches/admin-queries'
 import { groupHomeMatches, homeMatchWindow } from '@/features/matches/lib/home-window'
 import { listPendingNews } from '@/features/news/admin-queries'
 import { recentShareCards } from '@/features/share/admin-queries'
 import { ShareCards } from '@/features/share/components/share-cards'
-import { getLastBackup } from '@/features/system/queries'
+import { diskPercent, type OpsRunSummary, systemHealth } from '@/features/system/lib/health'
+import { getSystemRuns } from '@/features/system/queries'
 import { requirePanelUser } from '@/lib/auth/session'
 import { env } from '@/lib/env'
 import { formatLongDateTime, formatMatchDate } from '@/lib/format'
@@ -98,18 +100,26 @@ function QuickLink({ href, icon: Icon, children }: { href: string; icon: LucideI
   )
 }
 
+/** «10 de octubre, 04:16 h» con «(falló)» si corresponde, o el texto de «nunca». */
+function runText(run: OpsRunSummary | null, never: string): string {
+  if (!run) return never
+  return `${formatLongDateTime(run.at)}${run.status === 'error' ? ' (falló)' : ''}`
+}
+
 /** Inicio del panel (especificación 7.2): lo que hay que hacer hoy, a un toque. */
 export default async function AdminHomePage() {
   const user = await requirePanelUser()
   const now = new Date()
   const window = homeMatchWindow(now)
-  const [matches, pendingNews, backup, shareCards] = await Promise.all([
+  const [matches, pendingNews, runs, shareCards] = await Promise.all([
     can(user, 'matches:write') ? listClubMatchesBetween(window.from, window.to) : [],
     can(user, 'news:write') ? listPendingNews() : [],
-    getLastBackup(),
+    getSystemRuns(),
     can(user, 'matches:write') ? recentShareCards(now) : [],
   ])
   const groups = groupHomeMatches(matches, now)
+  const health = systemHealth(runs, now)
+  const disk = diskPercent(runs.disk)
   const nothingToPlay = groups.pending.length + groups.today.length + groups.upcoming.length === 0
 
   return (
@@ -196,6 +206,11 @@ export default async function AdminHomePage() {
         <h2 id="system-heading" className="mb-2 text-lg font-bold">
           Estado del sistema
         </h2>
+        <Alert
+          variant={health.level === 'ok' ? 'success' : health.level === 'error' ? 'danger' : 'warning'}
+          title={health.message}
+          className="mb-3"
+        />
         <dl className="grid gap-1 text-neutral-600">
           <div className="flex flex-wrap gap-x-2">
             <dt>Versión instalada:</dt>
@@ -204,9 +219,19 @@ export default async function AdminHomePage() {
           <div className="flex flex-wrap gap-x-2">
             <dt>Último respaldo:</dt>
             <dd className="font-medium text-ink">
-              {backup
-                ? `${formatLongDateTime(backup.finishedAt ?? backup.startedAt)}${backup.status === 'error' ? ' (falló)' : ''}`
-                : 'todavía no hay respaldos registrados'}
+              {runText(runs.backup, 'todavía no hay respaldos registrados')}
+            </dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <dt>Última prueba de restauración:</dt>
+            <dd className="font-medium text-ink">{runText(runs.restoreTest, 'todavía no se ha probado')}</dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <dt>Disco del servidor:</dt>
+            <dd className="font-medium text-ink">
+              {disk === null
+                ? 'sin datos todavía'
+                : `${disk} % usado (revisado el ${formatLongDateTime(runs.disk?.at ?? '')})`}
             </dd>
           </div>
         </dl>

@@ -63,7 +63,8 @@ BACKUP_AGE_RECIPIENT=${public_key}
 EOF
 chmod 600 .env
 
-docker compose config -q || fail 'docker compose config'
+# Antes del primer despliegue .env no tiene versión: se da una para validar el archivo.
+APP_VERSION=ci-1 docker compose config -q || fail 'docker compose config'
 ok 'docker compose config'
 docker run --rm -e SITE_DOMAIN=localhost -e SITE_ENV=staging \
   -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
@@ -91,6 +92,8 @@ for header in 'x-content-type-options: nosniff' 'x-frame-options: DENY' \
   grep -qi "^${header}" <<<"$headers" || fail "falta la cabecera ${header}"
 done
 grep -qi '^server:' <<<"$headers" && fail 'Caddy no debe anunciar Server'
+grep -qi '^content-security-policy: upgrade-insecure-requests' <<<"$headers"   || fail 'Caddy debe sumar upgrade-insecure-requests a la CSP'
+grep -i '^content-security-policy:' <<<"$headers" | grep -q "script-src 'self' 'unsafe-inline'"   || fail 'la CSP de la app no llegó a través de Caddy'
 ok 'Cabeceras de seguridad y X-Robots-Tag en staging'
 
 if curl -sS --cacert "$CLIENT/ca.pem" -o /dev/null https://localhost/ 2>/dev/null; then

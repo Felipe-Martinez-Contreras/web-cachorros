@@ -1,8 +1,12 @@
 // Content Security Policy (especificación 9.3). Lógica pura y sin alias de rutas: la importa también
-// `next.config.ts`. En la Fase 4 ambas van en `Content-Security-Policy-Report-Only`; en la Fase 5 pasan a
-// obligatorias.
+// `next.config.ts`. Obligatoria desde la Fase 5 (en la 4 fue Report-Only); las violaciones se siguen
+// reportando a /api/csp-report. `upgrade-insecure-requests` lo agrega Caddy en la VM: aquí rompería las
+// pruebas y el desarrollo, que corren en http://localhost.
 
-export const CSP_HEADER = 'Content-Security-Policy-Report-Only'
+export const CSP_HEADER = 'Content-Security-Policy'
+
+/** `next dev` evalúa código para recargar en caliente: solo en desarrollo se permite `eval`. */
+const DEV_SCRIPT = ["'unsafe-eval'"]
 export const CSP_REPORT_PATH = '/api/csp-report'
 
 type Directives = Record<string, readonly string[]>
@@ -20,7 +24,6 @@ function serialize(directives: Directives): string {
  * - Cloudflare Web Analytics: script y envío de datos.
  * - Fachadas: miniaturas de YouTube, y los iframes de youtube-nocookie, OpenStreetMap y los embeds del
  *   feed («Ver aquí» de Instagram y Facebook), que solo se crean después del clic.
- * `upgrade-insecure-requests` no se incluye mientras sea Report-Only: el navegador lo ignora y avisa.
  */
 export const PUBLIC_CSP_DIRECTIVES: Directives = {
   'default-src': ["'self'"],
@@ -50,8 +53,10 @@ export const PUBLIC_CSP_DIRECTIVES: Directives = {
   'report-uri': [CSP_REPORT_PATH],
 }
 
-export function publicCsp(): string {
-  return serialize(PUBLIC_CSP_DIRECTIVES)
+export function publicCsp({ dev = false }: { dev?: boolean } = {}): string {
+  if (!dev) return serialize(PUBLIC_CSP_DIRECTIVES)
+  const scripts = PUBLIC_CSP_DIRECTIVES['script-src'] ?? []
+  return serialize({ ...PUBLIC_CSP_DIRECTIVES, 'script-src': [...scripts, ...DEV_SCRIPT] })
 }
 
 /**
@@ -59,10 +64,10 @@ export function publicCsp(): string {
  * el nonce de esta misma cabecera en la petición y lo pone en sus scripts. `'strict-dynamic'` deja cargar
  * los fragmentos que esos scripts piden (el editor y el visor de PDF se cargan con `import()`).
  */
-export function adminCsp(nonce: string): string {
+export function adminCsp(nonce: string, { dev = false }: { dev?: boolean } = {}): string {
   return serialize({
     'default-src': ["'self'"],
-    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"],
+    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? DEV_SCRIPT : [])],
     // React escribe estilos en línea (`style=`) y el CSS va dentro del HTML (`inlineCss`).
     'style-src': ["'self'", "'unsafe-inline'"],
     // `blob:`: vista previa de una foto antes de subirla.

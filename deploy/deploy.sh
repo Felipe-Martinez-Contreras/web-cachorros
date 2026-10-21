@@ -21,7 +21,9 @@ die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
 
 current_version() { sed -n 's/^APP_VERSION=//p' "$ENV_FILE" | tail -n 1; }
 # Versiones que quedaron funcionando, de la más antigua a la más reciente.
-ok_versions() { [[ -f "$HISTORY" ]] && awk '$3 == "ok" { print $2 }' "$HISTORY" || true; }
+ok_versions() {
+  if [[ -f "$HISTORY" ]]; then awk '$3 == "ok" { print $2 }' "$HISTORY"; fi
+}
 
 set_version() {
   if grep -q '^APP_VERSION=' "$ENV_FILE"; then

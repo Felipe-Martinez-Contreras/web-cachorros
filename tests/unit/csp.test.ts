@@ -30,8 +30,12 @@ describe('CSP del sitio público', () => {
     expect(directive(csp, 'report-uri')).toEqual(['/api/csp-report'])
   })
 
-  it('no lleva nonce (el HTML se puede cachear)', () => {
+  it('no lleva nonce (el HTML se puede cachear) y solo permite eval en desarrollo', () => {
     expect(csp).not.toContain('nonce-')
+    expect(csp).not.toContain('unsafe-eval')
+    expect(directive(publicCsp({ dev: true }), 'script-src')).toContain("'unsafe-eval'")
+    expect(directive(adminCsp('abc', { dev: true }), 'script-src')).toContain("'unsafe-eval'")
+    expect(adminCsp('abc')).not.toContain('unsafe-eval')
   })
 })
 

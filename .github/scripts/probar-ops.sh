@@ -77,6 +77,8 @@ docker run --rm -v uploads:/u alpine test -f "$first_image" || fail 'la imagen b
 [[ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" == 200 ]] \
   || fail 'la portada no responde después de restaurar'
 
+# Las comillas invertidas son Markdown, no comandos.
+# shellcheck disable=SC2016
 {
   echo '### Imagen ops: respaldos y restauración'
   echo

@@ -203,7 +203,11 @@ test('inicio del panel: accesos rápidos y partidos de la semana', async ({ page
   // El seed deja partidos por jugar el próximo fin de semana.
   await expect(page.getByRole('link', { name: 'Cargar resultado' }).first()).toBeVisible()
   await expect(page.getByText('Versión instalada:')).toBeVisible()
-  await expect(page.getByText('todavía no hay respaldos registrados')).toBeVisible()
+  // Estado del sistema en lenguaje simple: sin ops (local y CI) todavía no hay respaldos.
+  const system = page.getByRole('region', { name: 'Estado del sistema' })
+  await expect(system.getByText('Todavía no hay respaldos registrados.', { exact: true })).toBeVisible()
+  await expect(system.getByText('todavía no se ha probado', { exact: true })).toBeVisible()
+  await expect(system.getByText('sin datos todavía', { exact: true })).toBeVisible()
   await expectAccessible(page)
   await quick.getByRole('link', { name: 'Nueva noticia' }).click()
   await expect(page.getByRole('heading', { name: 'Nueva noticia', level: 1 })).toBeVisible()

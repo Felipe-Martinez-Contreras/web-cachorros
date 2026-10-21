@@ -9,6 +9,9 @@ import { TURNSTILE_TEST_KEY } from '@/lib/forms/turnstile'
  * `SKIP_ENV_VALIDATION=1`): la imagen no depende del entorno. Al arrancar, `instrumentation.ts` importa
  * este módulo y la app falla con un mensaje claro si falta algo.
  */
+/** `next dev` (lo inyecta Next en el build: vale también en el proxy). */
+export const isDevServer = process.env.NODE_ENV === 'development'
+
 const skipValidation =
   process.env.SKIP_ENV_VALIDATION === '1' || process.env.NEXT_PHASE === 'phase-production-build'
 
@@ -33,6 +36,15 @@ export const env = createEnv({
     BETTER_AUTH_SECRET: requerida('Genera una con el comando del README.').pipe(
       z.string().min(32, { error: 'Debe tener al menos 32 caracteres.' }),
     ),
+
+    // Con `true`, nadie usa el panel sin la verificación en dos pasos activa (solo «Mi cuenta», para
+    // activarla). Recomendado en producción.
+    AUTH_REQUIRE_2FA: z
+      .enum(['true', 'false'], { error: 'Debe ser true o false.' })
+      .default('false')
+      .transform((value) => value === 'true'),
+    // Cloudflare Web Analytics (opcional): sin token no se carga nada.
+    CF_WEB_ANALYTICS_TOKEN: z.string().optional(),
 
     // Protege las tareas programadas (`/api/cron/*`). Sin ella, esas rutas responden 503.
     CRON_SECRET: z.string().min(32, { error: 'Debe tener al menos 32 caracteres.' }).optional(),

@@ -29,6 +29,13 @@
 		-Server
 	}
 
+	# La CSP la pone la app (src/lib/csp.ts); aquí solo se suma upgrade-insecure-requests, que en la app
+	# rompería el desarrollo en http://localhost. Diferido: se agrega a la cabecera que trae la respuesta.
+	header {
+		+Content-Security-Policy "upgrade-insecure-requests"
+		defer
+	}
+
 	# Staging y cualquier entorno que no sea producción nunca se indexa (especificación 11).
 	@noindex expression `{env.SITE_ENV} != "production"`
 	header @noindex X-Robots-Tag "noindex, nofollow"

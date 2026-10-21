@@ -25,10 +25,10 @@ finish() {
 trap finish EXIT
 
 step='buscar el último respaldo'
-[ -s "${OPS_DIR}/latest.dump" ] && [ -s "${OPS_DIR}/latest.counts.json" ] || {
+if [ ! -s "${OPS_DIR}/latest.dump" ] || [ ! -s "${OPS_DIR}/latest.counts.json" ]; then
   log 'No hay un respaldo local para probar.'
   exit 1
-}
+fi
 expected=$(cat "${OPS_DIR}/latest.counts.json")
 
 step='crear la base temporal'
