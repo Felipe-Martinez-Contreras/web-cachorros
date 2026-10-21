@@ -1,6 +1,8 @@
 import { connection } from 'next/server'
 import type { ReactNode } from 'react'
+import { ServiceWorker } from '@/components/site/service-worker'
 import { loadSite, SiteFrame } from '@/components/site/site-frame'
+import { env } from '@/lib/env'
 
 // El sitio público bloquea en el servidor a propósito (ADR 0007): con esto Next no lo reporta como un
 // problema de «navegación instantánea» en desarrollo.
@@ -14,5 +16,11 @@ export const instant = false
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   await connection()
   const site = await loadSite()
-  return <SiteFrame site={site}>{children}</SiteFrame>
+  return (
+    <SiteFrame site={site}>
+      {children}
+      {/* En desarrollo no hay service worker: serviría archivos viejos mientras se programa. */}
+      {env.SITE_ENV !== 'development' && <ServiceWorker version={env.APP_VERSION} />}
+    </SiteFrame>
+  )
 }

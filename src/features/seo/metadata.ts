@@ -36,6 +36,9 @@ export async function rootMetadata(): Promise<Metadata> {
       images: image ? [image] : undefined,
     },
     twitter: { card: image ? 'summary_large_image' : 'summary' },
+    // «Agregar a inicio» en iOS (6.16); el manifest lo agrega Next desde app/manifest.ts.
+    icons: { apple: '/icons/apple-touch-icon.png' },
+    appleWebApp: { capable: true, title: site.shortName, statusBarStyle: 'black-translucent' },
     // Staging y desarrollo nunca se indexan.
     ...(env.SITE_ENV === 'production' ? null : { robots: { index: false, follow: false } }),
   }
