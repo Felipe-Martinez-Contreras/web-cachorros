@@ -22,8 +22,9 @@ export function EventCard({ event, headingLevel: Heading = 'h3', className }: Ev
           />
         )}
       </div>
-      <div>
+      <div className="flex flex-wrap gap-2">
         <Badge variant="soft">{eventTypeLabels[event.type]}</Badge>
+        {event.status === 'cancelado' && <Badge variant="danger">Cancelado</Badge>}
       </div>
       <Heading className="text-xl leading-snug font-bold">
         <Link

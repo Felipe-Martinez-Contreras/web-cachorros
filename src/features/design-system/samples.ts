@@ -250,6 +250,7 @@ export const sampleEvent: EventCardDTO = {
   slug: 'muestra',
   title: 'Evento de muestra',
   type: 'completada',
+  status: 'programado',
   startsAt: '2026-10-17T16:00:00Z',
   locationText: 'Lugar de muestra',
   priceText: null,

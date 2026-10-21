@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  CalendarHeart,
   CalendarRange,
   ClipboardList,
   Contact,
@@ -111,6 +112,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: Handshake,
         permission: 'sponsors:write',
       },
+      { href: '/admin/eventos', label: 'Eventos', icon: CalendarHeart, permission: 'events:write' },
       { href: '/admin/tienda', label: 'Tienda', icon: ShoppingBag, permission: 'store:write' },
     ],
   },

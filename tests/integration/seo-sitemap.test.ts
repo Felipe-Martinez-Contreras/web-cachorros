@@ -11,6 +11,7 @@ let f: SportFixture
 
 async function cleanClub() {
   await admin`delete from products`
+  await admin`delete from events`
 }
 
 beforeAll(async () => {
@@ -60,6 +61,9 @@ describe('entradas del sitemap', () => {
     await admin`insert into products (name, slug, price_clp, is_active) values
       ('Camiseta', 'camiseta-del-sitemap', 18000, true),
       ('Oculto', 'producto-oculto', 1000, false)`
+    await admin`insert into events (title, slug, type, starts_at, is_published) values
+      ('Bingo', 'bingo-del-sitemap', 'bingo', now() + interval '3 days', true),
+      ('Borrador', 'evento-borrador', 'rifa', now() + interval '3 days', false)`
 
     const entries = await getSitemapEntries()
     const paths = entries.map((entry) => entry.path)
@@ -77,6 +81,8 @@ describe('entradas del sitemap', () => {
         '/jugadores/adulto-del-sitemap',
         '/tienda',
         '/tienda/camiseta-del-sitemap',
+        '/eventos',
+        '/eventos/bingo-del-sitemap',
       ]),
     )
     for (const hidden of [
@@ -89,11 +95,12 @@ describe('entradas del sitemap', () => {
       '/partidos/partido-entre-rivales',
       '/plantel/serie-antigua',
       '/tienda/producto-oculto',
+      '/eventos/evento-borrador',
     ]) {
       expect(paths, `${hidden} no debe estar en el sitemap`).not.toContain(hidden)
     }
     // Ninguna sección que sigue en «Próximamente», ni el panel ni la API.
-    expect(paths.some((path) => /^\/(admin|api|eventos|galeria)/.test(path))).toBe(false)
+    expect(paths.some((path) => /^\/(admin|api|galeria)/.test(path))).toBe(false)
     expect(paths).toEqual(expect.arrayContaining(['/socios', '/auspiciadores', '/contacto', '/privacidad']))
     expect(new Set(paths).size).toBe(paths.length)
 

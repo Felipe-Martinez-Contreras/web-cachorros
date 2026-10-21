@@ -2,7 +2,7 @@ import 'server-only'
 import { asc, desc, eq, max } from 'drizzle-orm'
 import { cacheLife, cacheTag } from 'next/cache'
 import { db } from '@/db/client'
-import { matches, news, players, products, series } from '@/db/schema'
+import { events, matches, news, players, products, series } from '@/db/schema'
 import { isClubMatch } from '@/features/matches/queries'
 import { isNewsVisible } from '@/features/news/queries'
 import { loadMinorIds } from '@/features/players/public'
@@ -24,6 +24,7 @@ const STATIC_PATHS = [
   '/socios',
   '/auspiciadores',
   '/tienda',
+  '/eventos',
   '/contacto',
   '/privacidad',
 ]
@@ -37,10 +38,10 @@ const SITEMAP_LIMIT = 5000
  */
 export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   'use cache'
-  cacheTag(tags.news(), tags.matches(), tags.players(), tags.history(), tags.store())
+  cacheTag(tags.news(), tags.matches(), tags.players(), tags.history(), tags.store(), tags.events())
   cacheLife('hours')
 
-  const [newsRows, matchRows, seriesRows, playerRows, [latest], productRows] = await Promise.all([
+  const [newsRows, matchRows, seriesRows, playerRows, [latest], productRows, eventRows] = await Promise.all([
     db
       .select({ slug: news.slug, updatedAt: news.updatedAt })
       .from(news)
@@ -74,6 +75,12 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
       .where(eq(products.isActive, true))
       .orderBy(asc(products.sortOrder), asc(products.slug))
       .limit(SITEMAP_LIMIT),
+    db
+      .select({ slug: events.slug, updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.isPublished, true))
+      .orderBy(desc(events.startsAt))
+      .limit(SITEMAP_LIMIT),
   ])
   const minors = await loadMinorIds(playerRows.map((player) => player.id))
   const iso = (date: Date | null | undefined) => date?.toISOString() ?? null
@@ -90,5 +97,6 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
       .filter((player) => !minors.has(player.id))
       .map((row) => ({ path: `/jugadores/${row.slug}`, lastModified: iso(row.updatedAt) })),
     ...productRows.map((row) => ({ path: `/tienda/${row.slug}`, lastModified: iso(row.updatedAt) })),
+    ...eventRows.map((row) => ({ path: `/eventos/${row.slug}`, lastModified: iso(row.updatedAt) })),
   ]
 }
