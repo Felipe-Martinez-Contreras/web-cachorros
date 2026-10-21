@@ -6,6 +6,7 @@ import { matchSlugStatus } from '@/features/matches/slug'
 import { newsSlugStatus } from '@/features/news/slug'
 import { playerSlugStatus, seriesSlugStatus } from '@/features/players/slug'
 import { productSlugStatus } from '@/features/store/slug'
+import { adminCsp, CSP_HEADER, newNonce } from '@/lib/csp'
 import { logger } from '@/lib/logger'
 import type { SlugStatus } from '@/lib/slug-status'
 
@@ -21,7 +22,13 @@ function adminProxy(request: NextRequest) {
   if (!PUBLIC_ADMIN_PATHS.has(request.nextUrl.pathname) && !getSessionCookie(request)) {
     return NextResponse.redirect(new URL('/admin/login', request.url))
   }
-  const response = NextResponse.next()
+  // CSP estricta con un nonce por petición (9.3): Next lo lee de la cabecera de la petición y lo pone
+  // en sus scripts; la respuesta lleva la misma política.
+  const csp = adminCsp(newNonce())
+  const headers = new Headers(request.headers)
+  headers.set(CSP_HEADER, csp)
+  const response = NextResponse.next({ request: { headers } })
+  response.headers.set(CSP_HEADER, csp)
   response.headers.set('X-Robots-Tag', 'noindex, nofollow')
   response.headers.set('Cache-Control', 'no-store')
   return response
