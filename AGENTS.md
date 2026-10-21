@@ -193,10 +193,22 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
 - **PWA (6.16):** `app/manifest.ts` en runtime, íconos en `public/icons/` y `public/sw.js`, que se registra como
   `/sw.js?v=<APP_VERSION>` solo fuera de desarrollo. Su regla (`swStrategy`) la prueba `tests/unit/sw.test.ts`
   desde el mismo archivo: una ruta nueva que no deba guardarse va en `SW_RULES.bypass`.
-- **CSP (9.3), en Report-Only:** la del sitio público es fija (`src/lib/csp.ts`, aplicada en `next.config.ts`); la
+- **CSP (9.3), obligatoria:** la del sitio público es fija (`src/lib/csp.ts`, aplicada en `next.config.ts`); la
   del panel lleva un nonce por petición desde `proxy.ts`. Un dominio de terceros nuevo se agrega a la directiva que
   corresponda en `src/lib/csp.ts`; `tests/e2e/csp.spec.ts` falla con cualquier violación. Los reportes llegan a
-  `POST /api/csp-report` y se registran resumidos.
+  `POST /api/csp-report` y se registran resumidos. En `next dev` se agrega `'unsafe-eval'` (recarga en caliente);
+  `upgrade-insecure-requests` lo suma Caddy en la VM.
+- **Infraestructura (12):** `compose.yaml` y `deploy/` (Caddyfile, `deploy.sh`, `restore.sh`, `bootstrap-vm.sh`,
+  `generar-env.sh`, `cloudflare-ips.sh`) son lo que corre en la VM; la guía es `docs/despliegue.md`. La imagen
+  `ops` (`docker/ops/`, contexto propio) hace los respaldos cifrados con `age`, la prueba de restauración y las
+  tareas programadas, y deja cada ejecución en `ops_runs` (lo lee «Estado del sistema»). El CI prueba las dos
+  cosas: `probar-ops.sh` (remoto rclone local) y `probar-compose.sh` (la VM simulada con certificados de
+  prueba). **Mínimo privilegio:** nada que corra en la VM toca Google Cloud (su cuenta de servicio solo ve el
+  bucket); el firewall se actualiza desde el PC o con `cloudflare-ips.yml` (WIF). Las imágenes las publica
+  `release.yml` en GHCR (`sha-<corto>`) después de Trivy.
+- **Dos pasos obligatorios:** con `AUTH_REQUIRE_2FA=true`, `requirePanelUser` lleva a «Mi cuenta» y
+  `requirePermission` rechaza todo lo que no sea `panel:access`. Una pantalla nueva que deba verse sin los dos
+  pasos (solo «Mi cuenta») pasa `allowWithoutTwoFactor`.
 - Tareas programadas: `GET /api/cron/tick` y `GET /api/cron/daily` con `Authorization: Bearer $CRON_SECRET`
   (`cronRejection()` en `src/lib/cron-auth.ts`). `tick` publica las noticias programadas y reintenta avisos;
   `daily` aplica la retención de datos personales. La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.

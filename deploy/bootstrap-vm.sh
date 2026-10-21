@@ -12,7 +12,7 @@ say() { printf '\n== %s\n' "$*"; }
 
 say 'Paquetes base'
 apt-get update -q
-apt-get install -y -q ca-certificates curl gnupg openssl unattended-upgrades
+apt-get install -y -q ca-certificates curl git gnupg openssl unattended-upgrades
 
 if ! command -v docker >/dev/null; then
   say 'Docker Engine y Compose (repositorio oficial de Docker)'
