@@ -1,9 +1,10 @@
 import { readFile } from 'node:fs/promises'
-import { expect, type Page, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   ADMIN,
   expectAccessible,
   login,
+  openModule,
   uniqueIp,
   useOwnIp,
   waitForMail,
@@ -12,16 +13,6 @@ import {
 } from './support'
 
 /** En el celular los módulos están en la hoja «Más»; en escritorio, en el menú lateral. */
-async function openModule(page: Page, name: string, isMobile: boolean) {
-  if (isMobile) {
-    await page.getByRole('button', { name: 'Más' }).click()
-    await page.getByRole('navigation', { name: 'Todos los módulos' }).getByRole('link', { name }).click()
-  } else {
-    await page.getByRole('navigation', { name: 'Módulos del panel' }).getByRole('link', { name }).click()
-  }
-  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
-}
-
 test('hacerse socio: solicitud con aviso y acuse, aprobación con número y padrón en CSV', async ({
   page,
   request,

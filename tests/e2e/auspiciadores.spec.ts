@@ -1,24 +1,15 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   ADMIN,
   expectAccessible,
   login,
+  openModule,
   uniqueIp,
   useOwnIp,
   waitForMail,
   waitForMailMatching,
   waitForTurnstile,
 } from './support'
-
-async function openModule(page: Page, name: string, isMobile: boolean) {
-  if (isMobile) {
-    await page.getByRole('button', { name: 'Más' }).click()
-    await page.getByRole('navigation', { name: 'Todos los módulos' }).getByRole('link', { name }).click()
-  } else {
-    await page.getByRole('navigation', { name: 'Módulos del panel' }).getByRole('link', { name }).click()
-  }
-  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
-}
 
 test('vitrina por nivel con enlaces que cuentan clics, y reporte del mes en el panel', async ({
   page,
