@@ -13,6 +13,8 @@ export const tags = {
   sponsors: () => 'sponsors',
   events: () => 'events',
   store: () => 'store',
+  /** Directiva, documentos de transparencia y horarios de entrenamiento. */
+  club: () => 'club',
   history: () => 'history',
   /** Textos de páginas editables desde el panel (`page_blocks`). */
   pages: () => 'pages',

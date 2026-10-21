@@ -221,7 +221,9 @@ export const socialPlatformLabels: Labels<typeof socialPlatform> = {
 
 /** Sobre qué fue cada acción registrada en «Actividad» (`audit_log.entity_type`). */
 export const auditEntityLabels: Record<string, string> = {
+  board_member: 'Directiva',
   competition: 'Competencias',
+  document: 'Documentos de transparencia',
   event: 'Eventos',
   contact_message: 'Mensajes de contacto',
   hall_of_fame: 'Salón de la fama',

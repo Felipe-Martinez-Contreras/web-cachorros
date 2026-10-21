@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache'
 import { listMedia } from '@/features/media/queries'
-import { uploadMediaSchema } from '@/features/media/schemas'
-import { storeUploadedImage, UploadError } from '@/features/media/store'
+import { uploadDocumentSchema, uploadMediaSchema } from '@/features/media/schemas'
+import { storeUploadedDocument, storeUploadedImage, UploadError } from '@/features/media/store'
 import { AuthError, requirePermission } from '@/lib/auth/session'
 import { tags } from '@/lib/cache-tags'
 import { env } from '@/lib/env'
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * Subida de una imagen (especificación 2.7): un archivo por petición. Esta ruta queda fuera del
+ * Subida de una imagen (especificación 2.7) o de un PDF (`kind=document`, 6.12): un archivo por petición. Esta ruta queda fuera del
  * `matcher` del proxy a propósito (trampa 6: el proxy trunca cuerpos grandes sin avisar).
  */
 export async function POST(request: Request) {
@@ -67,7 +67,28 @@ export async function POST(request: Request) {
     return json({ ok: false, message: 'No pudimos leer el archivo. Vuelve a intentarlo.' }, 400)
   }
   const file = form.get('file')
-  if (!(file instanceof File)) return json({ ok: false, message: 'Elige una imagen para subir.' }, 400)
+  if (!(file instanceof File)) return json({ ok: false, message: 'Elige un archivo para subir.' }, 400)
+
+  if (form.get('kind') === 'document') {
+    const document = uploadDocumentSchema.safeParse({ altText: form.get('altText') })
+    if (!document.success) {
+      return json({ ok: false, message: document.error.issues[0]?.message ?? 'Revisa el documento.' }, 400)
+    }
+    try {
+      const media = await storeUploadedDocument({
+        bytes: Buffer.from(await file.arrayBuffer()),
+        filename: file.name || null,
+        altText: document.data.altText,
+        userId: user.id,
+      })
+      revalidateTag(tags.media(), 'max')
+      return json({ ok: true, data: media }, 201)
+    } catch (error) {
+      if (error instanceof UploadError) return json({ ok: false, message: error.message }, error.status)
+      log.error({ err: error }, 'falló la subida de un documento')
+      return json({ ok: false, message: 'No pudimos guardar el documento. Inténtalo de nuevo.' }, 500)
+    }
+  }
 
   const parsed = uploadMediaSchema.safeParse({
     altText: form.get('altText'),

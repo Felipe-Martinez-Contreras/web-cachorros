@@ -1,4 +1,5 @@
 import {
+  Building2,
   CalendarDays,
   CalendarHeart,
   CalendarRange,
@@ -114,6 +115,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       },
       { href: '/admin/eventos', label: 'Eventos', icon: CalendarHeart, permission: 'events:write' },
       { href: '/admin/tienda', label: 'Tienda', icon: ShoppingBag, permission: 'store:write' },
+      { href: '/admin/club', label: 'Club', icon: Building2, permission: 'club:write' },
     ],
   },
   {

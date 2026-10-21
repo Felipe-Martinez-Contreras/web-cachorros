@@ -102,6 +102,12 @@ export function formatNumber(value: number): string {
   return numberFormat.format(value)
 }
 
+/** Tamaño de un archivo: «850 KB», «1,2 MB». */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${numberFormat.format(Math.max(1, Math.round(bytes / 1024)))} KB`
+  return `${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 }).format(bytes / (1024 * 1024))} MB`
+}
+
 /** Pesos chilenos, sin decimales: «$15.000». */
 export function formatClp(amount: number): string {
   return `${amount < 0 ? '-' : ''}$${numberFormat.format(Math.abs(amount))}`

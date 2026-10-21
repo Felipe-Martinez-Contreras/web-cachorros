@@ -25,6 +25,14 @@ export async function sniffImageFormat(input: Uint8Array): Promise<ImageFormat |
   return BY_MIME[detected.mime] ?? null
 }
 
+/** Nombre del archivo de un documento dentro de su carpeta (`<clave>/documento.pdf`). */
+export const DOCUMENT_FILENAME = 'documento.pdf'
+
+/** Un documento de transparencia solo se acepta si su firma es la de un PDF (especificación 9.5). */
+export async function isPdf(input: Uint8Array): Promise<boolean> {
+  return (await fileTypeFromBuffer(input))?.mime === 'application/pdf'
+}
+
 /** Tamaño final al reducir una imagen para que ningún lado supere `max`, sin agrandarla. */
 export function fitWithin(width: number, height: number, max: number): { width: number; height: number } {
   const longest = Math.max(width, height)

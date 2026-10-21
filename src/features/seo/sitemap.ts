@@ -25,6 +25,8 @@ const STATIC_PATHS = [
   '/auspiciadores',
   '/tienda',
   '/eventos',
+  '/club/directiva',
+  '/club/transparencia',
   '/contacto',
   '/privacidad',
 ]
