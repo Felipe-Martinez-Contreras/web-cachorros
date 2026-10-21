@@ -83,7 +83,11 @@ Además, del plan aprobado:
 | `pnpm test` (unitarias) | local | 306 de 306 |
 | `pnpm test:integration` | local | 238 de 238 |
 | e2e de los hitos (`workers=1`) | local | tarjetas en `en-vivo` 6/6, `redes` 2/2, `pwa` 4/4, `csp` 4/4, `panel` y `formularios` 18/18, `resultados` 4/4 |
-| `pnpm test:e2e` completa e imagen Docker con memoria | CI del PR #12 | _se completa al revisar el CI_ |
+| `pnpm test:e2e` completa (360 y 1280 px) | CI del PR #12 (`36960d1`) | 210 de 210, sin *flaky* (incluye `seo` y `noticias`, que en Windows no corren) |
+| Integración y unitarias | CI del PR #12 | 238 de 238 · 306 de 306 |
+| Imagen Docker (`--memory=512m`) con seed, panel, 3 fotos de 12 MP y 4 tarjetas | CI del PR #12 | pico de memoria 245 MB de 512 MB |
+| Primera generación de cada tarjeta (meta ≤ 3 s) | CI del PR #12 | 1:1 392 ms · 4:5 149 ms · 9:16 139 ms · OG 192 ms |
+| Build sin base de datos y Lighthouse móvil | CI del PR #12 | en verde |
 
 En local, `noticias.spec.ts` y la OG de una noticia en `seo.spec.ts` fallan por la limitación conocida de
 Windows: el build standalone no trae las DLL de libvips y sharp no carga. En el CI (Linux) pasan.
