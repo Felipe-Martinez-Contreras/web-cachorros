@@ -29,9 +29,13 @@ ENV RCLONE_CONFIG_GCS_TYPE="google cloud storage" \
 RUN addgroup -S -g 1001 ops && adduser -S -u 1001 -G ops ops \
  && mkdir -p /srv/ops /srv/app-data && chown ops:ops /srv/ops /srv/app-data
 
-COPY --chmod=0755 bin/ /usr/local/bin/
-COPY --chmod=0644 lib/ /usr/local/lib/ops/
-COPY --chmod=0644 crontab /etc/ops/crontab
+COPY bin/ /usr/local/bin/
+COPY lib/ /usr/local/lib/ops/
+COPY crontab /etc/ops/crontab
+# Permisos explícitos: `COPY --chmod=0644` también se aplica a las carpetas que crea, y sin el bit de paso el
+# usuario ops no podía leer el crontab ni cargar common.sh.
+RUN chmod 0755 /usr/local/bin/*.sh /usr/local/lib/ops /etc/ops \
+ && chmod 0644 /usr/local/lib/ops/* /etc/ops/crontab
 
 USER ops
 WORKDIR /srv/ops
