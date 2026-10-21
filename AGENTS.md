@@ -171,6 +171,14 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `updateTag()` en Server Actions; `revalidateTag(tag, 'max')` en Route Handlers y tareas programadas.
 - **`next build` no toca la BD:** las rutas con datos se resuelven en runtime (`await connection()` o APIs dinámicas
   dentro de `<Suspense>`). El CI compila sin BD.
+- **En vivo (2.6, ADR 0005):** `/api/live/current` y `/api/live/[matchId]` sin `use cache` (la caché es la del
+  borde: `s-maxage=10`), con ETag desde `share_version` y eventos compactos (`toLiveEvent`) para quedar en 2 KB.
+  Toda acción que cambie un partido sube `share_version`. En el sitio, las islas usan `useLivePolling`
+  (sin peticiones si no hay nada en vivo ni por comenzar); `LIVE_POLL_MS` lo acorta solo en desarrollo (e2e).
+- **Consola en vivo (7.3):** toda acción pasa por la cola de `lib/offline-queue.ts` (se guarda antes de enviarse,
+  sobrevive a una recarga y lo rechazado queda visible) y lleva su `clientEventId`. Las acciones del servidor
+  deben ser idempotentes ante un reintento. La consola relee su estado con `leerConsola`, nunca con
+  `router.refresh()` (un corte de señal durante un refresh recarga la página).
 - Tareas programadas: `GET /api/cron/tick` y `GET /api/cron/daily` con `Authorization: Bearer $CRON_SECRET`
   (`cronRejection()` en `src/lib/cron-auth.ts`). `tick` publica las noticias programadas y reintenta avisos;
   `daily` aplica la retención de datos personales. La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.

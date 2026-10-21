@@ -276,4 +276,61 @@ test.describe('capturas del reporte de fase', () => {
     await expect(page.getByRole('heading', { name: 'Tallas', level: 2 })).toBeVisible()
     await shot('panel-tienda-producto')
   })
+
+  test('fase 4a: consola en vivo, franja de la portada y detalle en vivo', async ({
+    page,
+    browser,
+  }, testInfo) => {
+    test.skip(fase !== 'fase-4a', 'Estas capturas son de la Fase 4a.')
+    test.setTimeout(240_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    // Un partido propio (fecha 54/55, 00:01: `e2e-clean` lo borra) que se juega en la consola y se cierra.
+    const round = testInfo.project.name === 'celular' ? 54 : 55
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+    await page.goto('/admin/partidos/nuevo')
+    await page.getByRole('combobox', { name: 'Serie' }).selectOption({ label: 'Honor' })
+    await page.getByRole('combobox', { name: 'Visita' }).selectOption({ label: 'Deportivo Los Litres' })
+    await page.getByLabel('Hora', { exact: true }).fill('00:01')
+    await page.getByRole('spinbutton', { name: /^Número de fecha/ }).fill(String(round))
+    await page.getByRole('button', { name: 'Programar partido' }).click()
+    await expect(page.getByText('Partido programado.')).toBeVisible()
+    await page
+      .getByRole('listitem')
+      .filter({ hasText: `Fecha ${round}` })
+      .getByRole('link')
+      .first()
+      .click()
+    await page.getByRole('link', { name: 'Iniciar en vivo' }).click()
+    await page.getByRole('button', { name: 'Usar nómina del partido anterior' }).click()
+    await expect(page.getByText('Nómina copiada del partido anterior.')).toBeVisible()
+    await page.screenshot({ path: `${dir}/panel-consola-previa-${width}.png`, fullPage: true })
+
+    await page.getByRole('button', { name: 'Iniciar 1.er tiempo', exact: true }).click()
+    await page.getByRole('button', { name: /^Gol de / }).click()
+    await page.getByRole('group', { name: 'Jugador' }).getByRole('button').first().click()
+    await page.screenshot({ path: `${dir}/panel-consola-gol-${width}.png`, fullPage: true })
+    await page.getByRole('button', { name: 'Registrar' }).click()
+    await expect(page.getByRole('status', { name: 'Marcador' })).toHaveText(/1 – 0/)
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({ path: `${dir}/panel-consola-en-vivo-${width}.png`, fullPage: true })
+
+    const visitor = await browser.newContext({ viewport: page.viewportSize() ?? undefined })
+    const site = await visitor.newPage()
+    await site.goto('/')
+    await expect(site.getByRole('region', { name: 'Partidos en vivo' })).toBeVisible()
+    await site.screenshot({ path: `${dir}/portada-en-vivo-${width}.png` })
+    await site.getByRole('link', { name: 'Seguir el partido' }).click()
+    await expect(site.getByText('En vivo', { exact: true }).filter({ visible: true })).toBeVisible()
+    await site.waitForTimeout(1500)
+    await site.screenshot({ path: `${dir}/partido-en-vivo-${width}.png`, fullPage: true })
+    await visitor.close()
+
+    // Se cierra el partido: no queda nada en vivo.
+    await page.getByRole('button', { name: 'Fin del 1.er tiempo', exact: true }).click()
+    await page.getByRole('button', { name: 'Iniciar 2.º tiempo', exact: true }).click()
+    await page.getByRole('button', { name: 'Finalizar partido' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Sí, finalizar' }).click()
+    await expect(page.getByText(/^Finalizado/)).toBeVisible()
+  })
 })
