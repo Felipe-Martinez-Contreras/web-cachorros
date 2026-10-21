@@ -145,10 +145,11 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   *streaming* necesita JavaScript para colocarse y la página quedaría en el *skeleton* sin JS. El único límite está
   en el layout raíz (envuelve `<html>`), así el HTML llega completo. El panel sí puede usar `<Suspense>`.
 - Una ruta que no existe debe responder 404 real: no uses rutas comodín con `notFound()` (el estado ya se envió
-  como 200). Las secciones aún no construidas tienen su `page.tsx` con `<ComingSoon>`. La página 404
+  como 200). Una sección pública todavía no construida tiene su `page.tsx` con `<ComingSoon>` (`noindex`). La página 404
   (`src/app/not-found.tsx`) lleva el marco del sitio (`SiteFrame`) y lee los datos del club con
   `loadSiteOrFallback()`: si la base falla usa el respaldo, nunca responde 500.
-- Las páginas de detalle (`/noticias/[slug]`, `/partidos/[slug]`, `/jugadores/[slug]`, `/plantel/[serie]`) reciben
+- Las páginas de detalle (`/noticias/[slug]`, `/partidos/[slug]`, `/jugadores/[slug]`, `/plantel/[serie]`,
+  `/tienda/[slug]`, `/eventos/[slug]`, `/galeria/[slug]`) reciben
   su 404 y su 301 desde `proxy.ts` (ADR 0008), que llama a `src/features/<dominio>/slug.ts`: **una sola consulta
   indexada**, con la misma regla de visibilidad que el DTO público; si la base falla, deja pasar. La página
   conserva su `notFound()` como segunda barrera. Una página de detalle nueva se agrega a `DETAIL_ROUTES` y al
@@ -215,7 +216,9 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
 - Texto enriquecido: el documento del editor se valida y se reduce a la lista blanca con `richTextField()`
   (`src/lib/rich-text/`); se dibuja con `<RichText>` (`src/components/site/rich-text.tsx`), nodo por nodo, sin
   `dangerouslySetInnerHTML`. Un nodo nuevo se agrega en los tres lugares: `document.ts`, el editor y el render.
-  Los videos van detrás de una fachada: nada de terceros se carga antes del clic.
+  Los videos van detrás de una fachada: nada de terceros se carga antes del clic. Lo mismo en todo el sitio:
+  `YoutubeFacade` (`youtube-nocookie`, con miniatura propia), `MapFacade` (OpenStreetMap) y los videos de Facebook
+  como enlace. Cada fachada tiene su e2e que intercepta la red y verifica que no sale nada antes del clic.
 - Listas con `ResourceList` / `ResourceRow` (tarjetas en el celular), filtros como formulario GET (`ListToolbar`),
   acciones con `ActionButton` (confirmación en `<dialog>` para lo destructivo) y avisos con `useToast()`.
   Un módulo con varias pantallas usa `SectionTabs` (enlaces). Una mutación sin tags públicos (bandejas, padrón)
@@ -223,6 +226,13 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
 - Slugs: `resolveSlug()` + `recordSlugChange()` (`src/lib/slug-redirects.ts`) dentro de la transacción.
 - Imágenes: toda imagen que se asigna a algo visible pasa por `assertPublishableMedia()`
   (`src/features/media/guards.ts`); las subidas van por `POST /api/admin/media`, nunca por una Server Action.
+  Los PDF de transparencia también (`kind=document`): se aceptan solo por su firma real (`isPdf()`, `file-type`),
+  no se re-codifican y se sirven con `Content-Security-Policy: sandbox` y `nosniff`. En un formulario se suben con
+  el campo `document` de `EntityForm`; el archivo de un documento debe ser `kind = 'documento'` y, si queda sin
+  uso al reemplazarlo o eliminarlo, se borra con sus archivos.
+- sharp se carga solo al procesar una imagen (`import()` dentro de `storeUploadedImage`). Para borrar archivos
+  usa `src/features/media/files.ts` (`uploadsDir()`, `removeMediaFiles()`), que no arrastra sharp: así una acción
+  que solo borra no lo carga.
 - Una ruta de archivos que se decide en runtime (`UPLOADS_DIR`) lleva `/* turbopackIgnore: true */`; sin eso el
   build rastrea todo el proyecto y lo mete en la imagen.
 
@@ -253,6 +263,15 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   clic del día con un *upsert* (`sponsor_clicks_daily`, sin datos personales; no cuenta precargas ni HEAD) y
   redirige con 302. La vitrina y el contador usan la misma regla de vigencia (`isSponsorVisible()`). El slug
   se fija al crear el auspiciador y no cambia al renombrarlo: es el enlace que ya pudo compartirse.
+- Tienda (6.8): sin pago en línea. «Pedir por WhatsApp» es un formulario GET a `/tienda/[slug]/pedido` (funciona
+  sin JavaScript), que valida la talla y la cantidad contra el producto vigente y redirige a `wa.me` con
+  `buildOrderMessage()` (`src/features/store/lib/order.ts`, el formato exacto de la especificación). Una talla se
+  puede pedir según `isVariantOrderable()`: disponible y, si el producto controla stock, con unidades.
+- Eventos (6.11): fecha y hora se escriben como hora de pared en Santiago (`santiagoWallTime`). Un evento es
+  «próximo» mientras no termina y no se marcó realizado (la misma regla en la portada, el listado y el sitemap).
+- Galería (6.5): un álbum con menores se publica solo con la confirmación de autorizaciones, que guarda quién y
+  cuándo (`albums_minors_consent_check`); las fotos marcadas «contiene menores» no llegan al sitio. Lo interactivo
+  (visor, «Copiar datos», afiche ampliado) funciona sin JavaScript: enlaces, texto seleccionable o `popover`.
 - Datos personales (9.6): una tabla nueva con datos de personas se agrega a `PERSONAL_DATA_SOURCES`
   (`src/features/privacy/queries.ts`, para exportar y eliminar) y a la retención (`runRetention()`, tarea
   `GET /api/cron/daily`). El dato buscado viaja en el cuerpo (Server Action o POST), nunca en la URL.
@@ -345,7 +364,10 @@ Convenciones de las pruebas:
 - **E2E:** todo lo que crean empieza con «E2E» (o usa fechas de partido desde la 40 y camisetas desde la 90);
   `scripts/e2e-clean.ts` lo borra antes de cada corrida. Las pruebas no escriben en la BD por fuera del panel: el
   panel es lo que invalida la caché. Se busca por rol (`getByRole`): Next conserva oculta la pantalla anterior y
-  `getByLabel` / `getByText` también encuentran sus elementos.
+  `getByLabel` / `getByText` también encuentran sus elementos. Para entrar a un módulo del panel usa
+  `openModule()` (`tests/e2e/support.ts`; en el celular está dentro de «Más»). No fijes datos que otra prueba
+  puede cambiar (por ejemplo, el WhatsApp de Configuración): revisa su forma. Un formulario público exige 3 s
+  desde que se dibujó: espéralos antes de enviar.
 
 ### Logs (3.12)
 
