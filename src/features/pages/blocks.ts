@@ -10,8 +10,19 @@ export const PAGE_BLOCKS = {
   },
   'formativas.info': {
     label: 'Formativas · información',
-    where: 'Página Divisiones formativas.',
-    href: null,
+    where: 'Página Divisiones formativas: filosofía, categorías y edades, requisitos y costo.',
+    href: '/formativas',
+  },
+  'formativas.preguntas': {
+    label: 'Formativas · preguntas frecuentes',
+    where:
+      'Página Divisiones formativas, al final. Cada pregunta como título y su respuesta debajo (incluye la política de fotos de menores).',
+    href: '/formativas#preguntas',
+  },
+  'tienda.guia-tallas': {
+    label: 'Tienda · guía de tallas',
+    where: 'Ficha de cada producto de la tienda, en «Guía de tallas».',
+    href: '/tienda',
   },
   'socios.beneficios': {
     label: 'Socios · beneficios',
@@ -30,8 +41,8 @@ export const PAGE_BLOCKS = {
   },
   'donaciones.uso': {
     label: 'Apoya al club · uso de los aportes',
-    where: 'Página Apoya al club.',
-    href: null,
+    where: 'Página Apoya al club, antes de los datos de transferencia.',
+    href: '/apoya-al-club',
   },
   'privacidad.politica': {
     label: 'Política de privacidad',

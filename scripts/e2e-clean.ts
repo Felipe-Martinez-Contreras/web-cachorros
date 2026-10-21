@@ -41,6 +41,8 @@ try {
     await sql`delete from membership_plans where name like 'E2E%'`
     await sql`delete from sponsorship_inquiries where business_name like 'E2E%'`
     await sql`delete from sponsors where name like 'E2E%'`
+    await sql`delete from products where name like 'E2E%'`
+    await sql`delete from product_categories where name like 'E2E%'`
     const media = await sql<{ storage_key: string }[]>`
       delete from media_assets where alt_text like 'E2E %' returning storage_key`
     const uploadsDir = path.resolve(process.env.UPLOADS_DIR || './data/uploads')

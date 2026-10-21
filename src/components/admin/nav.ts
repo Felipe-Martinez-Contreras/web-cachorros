@@ -20,6 +20,7 @@ import {
   Shield,
   ShieldCheck,
   ShieldHalf,
+  ShoppingBag,
   Trophy,
   UserCog,
   Users,
@@ -110,6 +111,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: Handshake,
         permission: 'sponsors:write',
       },
+      { href: '/admin/tienda', label: 'Tienda', icon: ShoppingBag, permission: 'store:write' },
     ],
   },
   {

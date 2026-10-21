@@ -179,6 +179,8 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
       categoryId: productCategoryId(product.category),
       description: `${product.description} [COMPLETAR: precio y tallas reales; los valores mostrados son de ejemplo]`,
       priceClp: product.priceClp,
+      // El polerón muestra el control de stock: una talla sin unidades aparece «Agotada».
+      trackStock: product.slug === 'poleron-del-club',
       sortOrder: index,
     })),
   )
@@ -192,6 +194,9 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
         id: seedId(`variant:${product.slug}:${size}`),
         productId: productId(product.slug),
         sizeLabel: size,
+        stock: product.slug === 'poleron-del-club' ? (size === 'XL' ? 0 : 5) : null,
+        // Ejemplo de talla agotada sin control de stock.
+        isAvailable: !(product.slug === 'camiseta-oficial-local' && size === 'XXL'),
         sortOrder: index,
       })),
     ),

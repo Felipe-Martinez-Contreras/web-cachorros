@@ -9,13 +9,19 @@ const { getSitemapEntries } = await import('@/features/seo/sitemap')
 const admin = postgres(testDb.adminUrl, { max: 1, onnotice: () => {} })
 let f: SportFixture
 
+async function cleanClub() {
+  await admin`delete from products`
+}
+
 beforeAll(async () => {
   await cleanSport(admin)
+  await cleanClub()
   f = await createSportFixture(admin)
 })
 
 afterAll(async () => {
   await cleanSport(admin)
+  await cleanClub()
   await admin.end()
   await sql.end()
 })
@@ -51,6 +57,10 @@ describe('entradas del sitemap', () => {
       ('Futura', 'noticia-futura', 'publicada', now() + interval '1 day'),
       ('Programada', 'noticia-programada', 'programada', now() + interval '1 day')`
 
+    await admin`insert into products (name, slug, price_clp, is_active) values
+      ('Camiseta', 'camiseta-del-sitemap', 18000, true),
+      ('Oculto', 'producto-oculto', 1000, false)`
+
     const entries = await getSitemapEntries()
     const paths = entries.map((entry) => entry.path)
 
@@ -65,6 +75,8 @@ describe('entradas del sitemap', () => {
         '/noticias/noticia-publicada',
         '/partidos/partido-del-club',
         '/jugadores/adulto-del-sitemap',
+        '/tienda',
+        '/tienda/camiseta-del-sitemap',
       ]),
     )
     for (const hidden of [
@@ -76,11 +88,12 @@ describe('entradas del sitemap', () => {
       '/noticias/noticia-programada',
       '/partidos/partido-entre-rivales',
       '/plantel/serie-antigua',
+      '/tienda/producto-oculto',
     ]) {
       expect(paths, `${hidden} no debe estar en el sitemap`).not.toContain(hidden)
     }
     // Ninguna sección que sigue en «Próximamente», ni el panel ni la API.
-    expect(paths.some((path) => /^\/(admin|api|tienda|eventos|galeria)/.test(path))).toBe(false)
+    expect(paths.some((path) => /^\/(admin|api|eventos|galeria)/.test(path))).toBe(false)
     expect(paths).toEqual(expect.arrayContaining(['/socios', '/auspiciadores', '/contacto', '/privacidad']))
     expect(new Set(paths).size).toBe(paths.length)
 

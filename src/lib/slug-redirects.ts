@@ -8,7 +8,7 @@ import { slugify, uniqueSlug } from '@/lib/slug'
 type SlugTable = PgTable & { id: AnyPgColumn; slug: AnyPgColumn }
 
 /** Entidades con slug público; el valor es el `entity_type` de `slug_redirects`. */
-export type SlugEntity = 'series' | 'team' | 'match' | 'player' | 'news'
+export type SlugEntity = 'series' | 'team' | 'match' | 'player' | 'news' | 'product' | 'event' | 'album'
 
 /**
  * Slug único para una entidad (3.9): `base`, o `base-2`, `base-3`… si ya está tomado por otra fila.
