@@ -211,7 +211,7 @@ jobs:
       - name: Medir la memoria con --memory=512m (portada, panel y fotos de 12 MP)
         run: bash .github/scripts/medir-memoria.sh
       - name: Revisar los scripts de shell (shellcheck)
-        run: shellcheck -x docker/ops/bin/*.sh docker/ops/lib/*.sh .github/scripts/probar-ops.sh
+        run: shellcheck -x docker/ops/bin/*.sh docker/ops/lib/*.sh deploy/*.sh .github/scripts/probar-ops.sh .github/scripts/probar-compose.sh
       - name: Construir la imagen ops
         uses: docker/build-push-action@v7
         with:
@@ -223,3 +223,27 @@ jobs:
           cache-to: type=gha,scope=ops,mode=max
       - name: Probar respaldos y restauración (imagen ops)
         run: bash .github/scripts/probar-ops.sh
+
+  compose:
+    name: VM simulada (compose, Caddy y despliegue)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Construir la imagen web (dos etiquetas, para desplegar y volver atrás)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: ci.local/cachorros-web:ci-1,ci.local/cachorros-web:ci-2
+          build-args: REVISION=${{ github.sha }}
+          cache-from: type=gha
+      - name: Construir la imagen ops
+        uses: docker/build-push-action@v7
+        with:
+          context: docker/ops
+          load: true
+          tags: ci.local/cachorros-ops:ci-1,ci.local/cachorros-ops:ci-2
+          cache-from: type=gha,scope=ops
+      - name: Desplegar con compose.yaml y deploy.sh, y probar Caddy, rollback y restauración
+        run: bash .github/scripts/probar-compose.sh

@@ -23,9 +23,11 @@ ENV RCLONE_CONFIG_GCS_TYPE="google cloud storage" \
     UPLOADS_SOURCE=/srv/app-data/uploads \
     TZ=America/Santiago
 
-# El mismo uid que la app (1001): puede leer las subidas y, en una restauración, reescribirlas.
+# El mismo uid que la app (1001): puede leer las subidas y, en una restauración, reescribirlas. /srv/app-data
+# también es suyo: si ops monta el volumen app_data antes que la app, Docker copia este dueño al volumen
+# (trampa 13) y la app debe poder escribir en él.
 RUN addgroup -S -g 1001 ops && adduser -S -u 1001 -G ops ops \
- && mkdir -p /srv/ops /srv/app-data && chown ops:ops /srv/ops
+ && mkdir -p /srv/ops /srv/app-data && chown ops:ops /srv/ops /srv/app-data
 
 COPY --chmod=0755 bin/ /usr/local/bin/
 COPY --chmod=0644 lib/ /usr/local/lib/ops/
