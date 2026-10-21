@@ -116,8 +116,8 @@ test('solo producción se deja indexar: robots.txt y la etiqueta robots dependen
   expect(production).toContain(`Sitemap: ${SECOND_SITE.url}/sitemap.xml`)
   expect(robotsMeta(await html(request, `${SECOND_SITE.url}/`))).toBeNull()
   expect(robotsMeta(await html(request, `${SECOND_SITE.url}/noticias/cronica-honor`))).toBeNull()
-  // Las secciones que siguen en «Próximamente» y el panel no se indexan ni en producción.
-  expect(robotsMeta(await html(request, `${SECOND_SITE.url}/galeria`))).toContain('noindex')
+  expect(robotsMeta(await html(request, `${SECOND_SITE.url}/galeria`))).toBeNull()
+  // El panel no se indexa ni en producción.
   const login = await request.get(`${SECOND_SITE.url}/admin/login`)
   expect(login.headers()['x-robots-tag']).toBe('noindex, nofollow')
 })

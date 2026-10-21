@@ -41,6 +41,8 @@ try {
     await sql`delete from membership_plans where name like 'E2E%'`
     await sql`delete from sponsorship_inquiries where business_name like 'E2E%'`
     await sql`delete from sponsors where name like 'E2E%'`
+    await sql`delete from albums where title like 'E2E%'`
+    await sql`delete from videos where title like 'E2E%'`
     await sql`delete from events where title like 'E2E%'`
     await sql`delete from board_members where full_name like 'E2E%'`
     await sql`delete from training_schedules where notes like 'E2E%'`

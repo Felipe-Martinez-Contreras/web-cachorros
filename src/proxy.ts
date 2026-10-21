@@ -1,6 +1,7 @@
 import { getSessionCookie } from 'better-auth/cookies'
 import { type NextRequest, NextResponse } from 'next/server'
 import { eventSlugStatus } from '@/features/events/slug'
+import { albumSlugStatus } from '@/features/gallery/slug'
 import { matchSlugStatus } from '@/features/matches/slug'
 import { newsSlugStatus } from '@/features/news/slug'
 import { playerSlugStatus, seriesSlugStatus } from '@/features/players/slug'
@@ -41,6 +42,7 @@ const DETAIL_ROUTES: Record<string, DetailRoute> = {
   plantel: { status: seriesSlugStatus },
   tienda: { status: productSlugStatus },
   eventos: { status: eventSlugStatus },
+  galeria: { status: albumSlugStatus },
 }
 
 // Ninguna ruta coincide con esta dirección: Next responde con el `not-found` del club y estado 404 real.
@@ -109,5 +111,6 @@ export const config = {
     '/plantel/:serie',
     '/tienda/:slug',
     '/eventos/:slug',
+    '/galeria/:slug',
   ],
 }

@@ -222,6 +222,8 @@ export const socialPlatformLabels: Labels<typeof socialPlatform> = {
 /** Sobre qué fue cada acción registrada en «Actividad» (`audit_log.entity_type`). */
 export const auditEntityLabels: Record<string, string> = {
   board_member: 'Directiva',
+  album: 'Álbumes de fotos',
+  album_item: 'Fotos de álbumes',
   competition: 'Competencias',
   document: 'Documentos de transparencia',
   event: 'Eventos',
@@ -259,6 +261,7 @@ export const auditEntityLabels: Record<string, string> = {
   training_schedule: 'Horarios de entrenamiento',
   user: 'Usuarios y seguridad',
   venue: 'Canchas',
+  video: 'Videos',
 }
 
 export const weekdayLabels: Record<number, string> = {
