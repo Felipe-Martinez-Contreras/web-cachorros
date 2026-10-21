@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.28
 # Imagen web (Next.js standalone: sitio + panel + API). Se construye en CI, nunca en la VM,
 # y no depende del entorno: la misma imagen sirve para staging y producción.
 ARG NODE_VERSION=24
