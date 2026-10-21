@@ -1,5 +1,5 @@
 import 'server-only'
-import { updateTag } from 'next/cache'
+import { refresh, updateTag } from 'next/cache'
 import type { ZodType } from 'zod'
 import { db, type Tx } from '@/db/client'
 import { type ActionResult, fail, ok } from '@/lib/action-result'
@@ -121,7 +121,11 @@ export async function mutate<T>(options: MutationOptions<T>): Promise<ActionResu
       throw error
     }
 
-    for (const tag of new Set([...options.tags, ...(outcome.tags ?? [])])) updateTag(tag) // 5. invalidación
+    const invalidated = new Set([...options.tags, ...(outcome.tags ?? [])])
+    for (const tag of invalidated) updateTag(tag) // 5. invalidación
+    // Sin tags (bandejas, padrón: nada público en caché), igual hay que descartar las pantallas del panel
+    // que el navegador ya tenía precargadas; `updateTag` lo hace solo cuando hay tags.
+    if (invalidated.size === 0) refresh()
     return ok({ id: outcome.id }) // 6. resultado tipado
   })
 }

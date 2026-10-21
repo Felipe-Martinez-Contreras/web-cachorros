@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { LogoutButton } from '@/features/auth/components/logout-button'
 import type { SessionUser } from '@/lib/auth/session'
 import { can } from '@/lib/permissions'
+import { CloseSheetOnNavigate } from './close-sheet-on-navigate'
 import { ADMIN_NAV, type AdminNavItem } from './nav'
 import { ToastProvider } from './toast'
 
@@ -136,6 +137,7 @@ export function PanelShell({ user, children }: { user: SessionUser; children: Re
           </div>
           <nav aria-label="Todos los módulos">{groupList(true)}</nav>
         </dialog>
+        <CloseSheetOnNavigate sheetId={SHEET_ID} />
       </div>
     </ToastProvider>
   )

@@ -14,6 +14,8 @@ export type PageBlockDTO = {
   title: string | null
   body: RichTextDoc
   images: Record<string, ImageDTO>
+  /** Última edición (ISO). En la política de privacidad, es también su versión. */
+  updatedAt: string
 }
 
 /** Texto público de una página; `null` si todavía no se escribe. Se invalida con el tag `pages`. */
@@ -23,12 +25,17 @@ export async function getPageBlock(key: PageBlockKey): Promise<PageBlockDTO | nu
   cacheLife('hours')
 
   const [row] = await db
-    .select({ title: pageBlocks.title, body: pageBlocks.body })
+    .select({ title: pageBlocks.title, body: pageBlocks.body, updatedAt: pageBlocks.updatedAt })
     .from(pageBlocks)
     .where(eq(pageBlocks.key, key))
     .limit(1)
   if (!row?.body || isRichTextEmpty(row.body)) return null
-  return { title: row.title, body: row.body, images: await loadRichTextImages(row.body) }
+  return {
+    title: row.title,
+    body: row.body,
+    images: await loadRichTextImages(row.body),
+    updatedAt: row.updatedAt.toISOString(),
+  }
 }
 
 // Lecturas del panel: sin caché.

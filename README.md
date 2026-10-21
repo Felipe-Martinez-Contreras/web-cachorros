@@ -48,6 +48,16 @@ $b = New-Object byte[] 32
 
 (En Linux o macOS: `openssl rand -base64 32`.)
 
+Genera también la sal de las IP de los formularios y pégala en la línea `IP_HASH_SALT=`:
+
+```powershell
+$b = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+-join ($b | ForEach-Object { $_.ToString('x2') })
+```
+
+(En Linux o macOS: `openssl rand -hex 32`.)
+
 ```powershell
 # 3. Base de datos (PostgreSQL 18) y bandeja de correo de pruebas (Mailpit)
 docker compose -f compose.dev.yaml up -d
@@ -114,6 +124,8 @@ Todas están explicadas en [`.env.example`](.env.example). Las que la app exige 
 | `DATABASE_ADMIN_URL` | Conexión de administración: solo la usan las migraciones |
 | `BETTER_AUTH_SECRET` | Secreto de las sesiones (32+ caracteres) |
 | `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM` | Envío de correos |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Anti-spam de los formularios. `.env.example` trae las claves de prueba oficiales; en producción la app no arranca con ellas |
+| `IP_HASH_SALT` | Sal del HMAC con que se guarda la IP de quien envía un formulario (32+ caracteres) |
 
 Opcional: `CRON_SECRET` (32+ caracteres) protege las tareas programadas; ver «Noticias programadas».
 

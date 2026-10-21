@@ -8,6 +8,9 @@ const VALID = {
   SMTP_HOST: 'localhost',
   SMTP_PORT: '1025',
   MAIL_FROM: 'Club <no-responder@cachorros.test>',
+  TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+  TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
+  IP_HASH_SALT: 'sal-de-pruebas-unitarias-0123456789abcdef',
 }
 
 const MANAGED = [...Object.keys(VALID), 'SKIP_ENV_VALIDATION', 'NEXT_PHASE', 'DB_POOL_MAX', 'APP_VERSION']
@@ -46,6 +49,20 @@ describe('env', () => {
     await expect(loadEnv({ SITE_URL: 'cachorros' })).rejects.toThrow(/SITE_URL: Debe ser la URL pública/)
     await expect(loadEnv({ SITE_ENV: 'prod' })).rejects.toThrow(/SITE_ENV: Debe ser development, staging/)
     await expect(loadEnv({ BETTER_AUTH_SECRET: 'corta' })).rejects.toThrow(/al menos 32 caracteres/)
+  })
+
+  it('producción no arranca con las claves de prueba de Turnstile; staging sí', async () => {
+    await expect(loadEnv({ SITE_ENV: 'production' })).rejects.toThrow(
+      /TURNSTILE_SITE_KEY: Es una clave de prueba[\s\S]*TURNSTILE_SECRET_KEY: Es una clave de prueba/,
+    )
+    await expect(loadEnv({ SITE_ENV: 'staging' })).resolves.toBeDefined()
+    await expect(
+      loadEnv({
+        SITE_ENV: 'production',
+        TURNSTILE_SITE_KEY: '0x4AAAAAAABkMYinukE8nzYS',
+        TURNSTILE_SECRET_KEY: '0x4AAAAAAABkMYinukE8nzYS-secreto-real',
+      }),
+    ).resolves.toBeDefined()
   })
 
   it('no valida mientras se compila (SKIP_ENV_VALIDATION o next build)', async () => {

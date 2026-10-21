@@ -15,8 +15,18 @@ export const PAGE_BLOCKS = {
   },
   'socios.beneficios': {
     label: 'Socios · beneficios',
-    where: 'Página Hazte socio.',
-    href: null,
+    where: 'Página Hazte socio, antes de los planes.',
+    href: '/socios',
+  },
+  'socios.preguntas': {
+    label: 'Socios · preguntas frecuentes',
+    where: 'Página Hazte socio, después del formulario. Cada pregunta como título y su respuesta debajo.',
+    href: '/socios#preguntas',
+  },
+  'auspiciadores.beneficios': {
+    label: 'Auspiciadores · beneficios por nivel',
+    where: 'Página Auspiciadores, en «¿Quieres auspiciar al club?».',
+    href: '/auspiciadores#auspiciar',
   },
   'donaciones.uso': {
     label: 'Apoya al club · uso de los aportes',
@@ -25,8 +35,9 @@ export const PAGE_BLOCKS = {
   },
   'privacidad.politica': {
     label: 'Política de privacidad',
-    where: 'Página Privacidad.',
-    href: null,
+    where:
+      'Página Privacidad. Cada vez que la guardas cambia su versión: los formularios registran la versión que aceptó cada persona.',
+    href: '/privacidad',
   },
 } as const satisfies Record<string, { label: string; where: string; href: string | null }>
 

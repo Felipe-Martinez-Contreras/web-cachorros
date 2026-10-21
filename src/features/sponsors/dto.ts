@@ -1,5 +1,6 @@
 import type { sponsorTier } from '@/db/schema/enums'
 import type { ImageDTO } from '@/lib/images/dto'
+import type { SponsorLink } from './lib/links'
 
 export type SponsorDTO = {
   id: string
@@ -7,6 +8,8 @@ export type SponsorDTO = {
   name: string
   tier: (typeof sponsorTier.enumValues)[number]
   logo: ImageDTO | null
-  /** Tiene algún enlace propio: se llega por `/r/auspiciador/[slug]`, que cuenta los clics (Fase 3). */
+  description: string | null
+  /** Enlaces propios: se llega por `/r/auspiciador/[slug]?a=…`, que cuenta los clics del día. */
+  links: SponsorLink[]
   hasLink: boolean
 }

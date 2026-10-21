@@ -1,5 +1,6 @@
 import { createEnv } from '@t3-oss/env-nextjs'
 import * as z from 'zod'
+import { TURNSTILE_TEST_KEY } from '@/lib/forms/turnstile'
 
 /**
  * Variables de entorno (especificación 3.7). Solo de servidor: `NEXT_PUBLIC_*` está prohibido.
@@ -42,12 +43,34 @@ export const env = createEnv({
     SMTP_PASSWORD: z.string().optional(),
     MAIL_FROM: requerida('Ejemplo: "Club Deportivo Los Cachorros <no-responder@dominio>".'),
 
+    // Anti-spam de los formularios públicos (especificación 9.4). En desarrollo y CI, las claves de prueba.
+    TURNSTILE_SITE_KEY: requerida('En desarrollo usa la clave de prueba de .env.example.'),
+    TURNSTILE_SECRET_KEY: requerida('En desarrollo usa la clave de prueba de .env.example.'),
+    // La IP de quien envía un formulario solo se guarda como HMAC con esta sal (especificación 9.4).
+    IP_HASH_SALT: requerida('Genera una con el comando del README (hex de 32 bytes).').pipe(
+      z.string().min(32, { error: 'Debe tener al menos 32 caracteres.' }),
+    ),
+
     // Carpeta de las imágenes procesadas. En la VM es el volumen /data/uploads, que Caddy sirve en /media.
     UPLOADS_DIR: z.string().default('./data/uploads'),
     // Tope por archivo subido; Caddy corta en 15 MB como red de seguridad (especificación 9.5).
     MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(50).default(12),
   },
   experimental__runtimeEnv: {},
+  // Las claves de prueba de Turnstile dejan pasar a cualquiera: producción no arranca con ellas.
+  createFinalSchema: (shape) =>
+    z.object(shape).superRefine((values, context) => {
+      if (values.SITE_ENV !== 'production') return
+      for (const key of ['TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY'] as const) {
+        if (TURNSTILE_TEST_KEY.test(values[key])) {
+          context.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'Es una clave de prueba de Turnstile: en producción usa la del widget real.',
+          })
+        }
+      }
+    }),
   emptyStringAsUndefined: true,
   skipValidation,
   onValidationError: (issues) => {

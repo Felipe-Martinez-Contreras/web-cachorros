@@ -1,5 +1,6 @@
 import { isContentMarker } from '@/lib/markers'
 import { toE164 } from '@/lib/phone'
+import { formatRut, isValidRut } from '@/lib/rut'
 import { z } from '@/lib/zod'
 
 // Piezas de Zod para los formularios del panel. Un campo de formulario vacío llega como '' (o `null` si
@@ -100,6 +101,20 @@ export function optionalPhone(message = 'Escribe el teléfono con su código: +5
         if (!phone) ctx.addIssue({ code: 'custom', message })
         return phone ?? value
       })
+      .nullable(),
+  )
+}
+
+/** RUT opcional, validado con módulo 11 y guardado como `12.345.678-5`; vacío → `null`. */
+export function optionalRut(message = 'Revisa el RUT: el dígito verificador no coincide.') {
+  return z.preprocess(
+    blankToNull,
+    z
+      .string()
+      .trim()
+      .max(20, message)
+      .refine(isValidRut, message)
+      .transform((value) => formatRut(value))
       .nullable(),
   )
 }

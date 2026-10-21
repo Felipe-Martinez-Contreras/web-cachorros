@@ -146,6 +146,8 @@ export function FilterSelect({
     <label className="grid min-w-0 basis-40 gap-1 text-sm font-medium">
       {label}
       <select
+        // Con `key`, al llegar desde otra pantalla React no reutiliza un `<select>` con su selección anterior.
+        key={`${name}:${value ?? ''}`}
         name={name}
         defaultValue={value ?? ''}
         className="block min-h-12 w-full rounded-md border border-neutral-500 bg-paper px-3 text-base font-normal"

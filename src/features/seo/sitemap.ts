@@ -21,6 +21,10 @@ const STATIC_PATHS = [
   '/historia/titulos',
   '/historia/salon-de-la-fama',
   '/historia/camisetas',
+  '/socios',
+  '/auspiciadores',
+  '/contacto',
+  '/privacidad',
 ]
 
 const SITEMAP_LIMIT = 5000

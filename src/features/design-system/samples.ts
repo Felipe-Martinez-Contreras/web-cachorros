@@ -257,10 +257,46 @@ export const sampleEvent: EventCardDTO = {
 }
 
 export const sampleSponsors: SponsorDTO[] = [
-  { id: 's1', slug: 'muestra', name: 'Auspiciador principal', tier: 'principal', logo: null, hasLink: false },
-  { id: 's2', slug: 'muestra', name: 'Auspiciador oficial', tier: 'oficial', logo: null, hasLink: false },
-  { id: 's3', slug: 'muestra', name: 'Colaborador uno', tier: 'colaborador', logo: null, hasLink: false },
-  { id: 's4', slug: 'muestra', name: 'Colaborador dos', tier: 'colaborador', logo: null, hasLink: false },
+  {
+    id: 's1',
+    slug: 'muestra',
+    name: 'Auspiciador principal',
+    tier: 'principal',
+    logo: null,
+    description: null,
+    links: [],
+    hasLink: false,
+  },
+  {
+    id: 's2',
+    slug: 'muestra',
+    name: 'Auspiciador oficial',
+    tier: 'oficial',
+    logo: null,
+    description: null,
+    links: [],
+    hasLink: false,
+  },
+  {
+    id: 's3',
+    slug: 'muestra',
+    name: 'Colaborador uno',
+    tier: 'colaborador',
+    logo: null,
+    description: null,
+    links: [],
+    hasLink: false,
+  },
+  {
+    id: 's4',
+    slug: 'muestra',
+    name: 'Colaborador dos',
+    tier: 'colaborador',
+    logo: null,
+    description: null,
+    links: [],
+    hasLink: false,
+  },
 ]
 
 export const sampleSocialPosts: SocialPostDTO[] = [

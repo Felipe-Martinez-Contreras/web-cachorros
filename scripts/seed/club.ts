@@ -2,15 +2,19 @@ import { eq, inArray } from 'drizzle-orm'
 import type { Tx } from '@/db/client'
 import {
   boardMembers,
+  contactMessages,
   documents,
   events,
+  members,
   membershipPlans,
+  membershipRequests,
   productCategories,
   productImages,
   products,
   productVariants,
   siteSettings,
   sponsors,
+  sponsorshipInquiries,
 } from '@/db/schema'
 import { santiagoDateTime } from '@/features/matches/lib/countdown'
 import { toIsoDate } from '@/lib/format'
@@ -59,6 +63,13 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
         : null),
     },
     featuredSeriesId: sport.seriesId('honor'),
+    // Direcciones de ejemplo (dominio reservado .test): en desarrollo, los avisos llegan a Mailpit.
+    // [COMPLETAR: correos de la directiva que reciben los avisos de cada formulario]
+    notifyRecipients: {
+      socios: ['socios@cachorros.test'],
+      auspicios: ['auspicios@cachorros.test'],
+      contacto: ['contacto@cachorros.test'],
+    },
     seoDefaults: {
       description: `Sitio oficial del ${CLUB.name} de Sagrada Familia. Partidos, resultados, noticias y más. Desde 1934.`,
     },
@@ -143,6 +154,10 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
       tier: sponsor.tier,
       logoMediaId: media.id(`sponsor:${sponsor.slug}`),
       description: 'Comercio ficticio de ejemplo. [COMPLETAR: auspiciadores reales, niveles y enlaces]',
+      // Enlaces de ejemplo (dominio reservado example.com) para probar el conteo de clics.
+      websiteUrl: sponsor.tier === 'colaborador' ? null : `https://example.com/${sponsor.slug}`,
+      instagramUrl: sponsor.tier === 'principal' ? `https://example.com/instagram/${sponsor.slug}` : null,
+      whatsappE164: sponsor.tier === 'colaborador' ? EXAMPLE_PHONE : null,
       sortOrder: index,
     })),
   )
@@ -212,6 +227,72 @@ export async function seedClub({ tx, now, media, sport }: Options): Promise<Club
       sortOrder: index,
     })),
   )
+
+  // ── Bandejas y padrón de ejemplo (datos ficticios, correos @cachorros.test) ──────────────────────
+  const planId = (key: (typeof plans)[number][0]) => seedId(`plan:${key}`)
+  await upsert(tx, members, [
+    {
+      id: seedId('member:1'),
+      memberNumber: 1,
+      fullName: 'Socio Ejemplo Uno',
+      email: 'socio1@cachorros.test',
+      planId: planId('activo'),
+      joinedOn: '2024-04-01',
+    },
+    {
+      id: seedId('member:2'),
+      memberNumber: 2,
+      fullName: 'Socia Ejemplo Dos',
+      email: 'socio2@cachorros.test',
+      planId: planId('cooperador'),
+      joinedOn: '2024-04-01',
+    },
+    {
+      id: seedId('member:3'),
+      memberNumber: 3,
+      fullName: 'Socio Ejemplo Tres',
+      planId: planId('juvenil'),
+      status: 'baja' as const,
+      joinedOn: '2025-03-15',
+    },
+  ])
+  const consent = { privacyConsentAt: new Date(), privacyPolicyVersion: 'sin-publicar' }
+  await upsert(tx, membershipRequests, [
+    {
+      id: seedId('membership-request:1'),
+      fullName: 'Solicitante Ejemplo',
+      email: 'solicitante@cachorros.test',
+      phoneE164: EXAMPLE_PHONE,
+      commune: 'Sagrada Familia',
+      planId: planId('activo'),
+      message: 'Mensaje de ejemplo: quiero hacerme socio.',
+      ...consent,
+      notifiedAt: consent.privacyConsentAt,
+    },
+  ])
+  await upsert(tx, sponsorshipInquiries, [
+    {
+      id: seedId('sponsorship-inquiry:1'),
+      businessName: 'Almacén Ejemplo',
+      contactName: 'Contacto Comercial Ejemplo',
+      email: 'auspicio-ejemplo@cachorros.test',
+      tierInterest: 'colaborador' as const,
+      message: 'Mensaje de ejemplo: queremos aparecer en la camiseta de la Senior.',
+      ...consent,
+      notifiedAt: consent.privacyConsentAt,
+    },
+  ])
+  await upsert(tx, contactMessages, [
+    {
+      id: seedId('contact-message:1'),
+      name: 'Contacto Ejemplo',
+      email: 'contacto-ejemplo@cachorros.test',
+      topic: 'historia' as const,
+      message: 'Mensaje de ejemplo: tengo fotos antiguas del club.',
+      ...consent,
+      notifiedAt: consent.privacyConsentAt,
+    },
+  ])
 
   // ── Directiva y documentos ───────────────────────────────────────────────────────────────────
   const board = [

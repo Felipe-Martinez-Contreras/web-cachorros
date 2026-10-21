@@ -170,8 +170,9 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `updateTag()` en Server Actions; `revalidateTag(tag, 'max')` en Route Handlers y tareas programadas.
 - **`next build` no toca la BD:** las rutas con datos se resuelven en runtime (`await connection()` o APIs dinámicas
   dentro de `<Suspense>`). El CI compila sin BD.
-- Tareas programadas: `GET /api/cron/tick` con `Authorization: Bearer $CRON_SECRET` (publica las noticias
-  programadas). La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.
+- Tareas programadas: `GET /api/cron/tick` y `GET /api/cron/daily` con `Authorization: Bearer $CRON_SECRET`
+  (`cronRejection()` en `src/lib/cron-auth.ts`). `tick` publica las noticias programadas y reintenta avisos;
+  `daily` aplica la retención de datos personales. La lógica vive en el dominio (`src/features/news/publish-due.ts`) y es idempotente.
 - Cero N+1; seleccionar solo las columnas necesarias. Pool `max: 5`.
 - Migraciones con `drizzle-kit generate`, compatibles hacia atrás (*expand/contract*).
   **Prohibido `drizzle-kit push` fuera de desarrollo.**
@@ -217,11 +218,45 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   Los videos van detrás de una fachada: nada de terceros se carga antes del clic.
 - Listas con `ResourceList` / `ResourceRow` (tarjetas en el celular), filtros como formulario GET (`ListToolbar`),
   acciones con `ActionButton` (confirmación en `<dialog>` para lo destructivo) y avisos con `useToast()`.
+  Un módulo con varias pantallas usa `SectionTabs` (enlaces). Una mutación sin tags públicos (bandejas, padrón)
+  igual refresca el panel: `mutate()` llama a `refresh()` cuando no invalida ningún tag.
 - Slugs: `resolveSlug()` + `recordSlugChange()` (`src/lib/slug-redirects.ts`) dentro de la transacción.
 - Imágenes: toda imagen que se asigna a algo visible pasa por `assertPublishableMedia()`
   (`src/features/media/guards.ts`); las subidas van por `POST /api/admin/media`, nunca por una Server Action.
 - Una ruta de archivos que se decide en runtime (`UPLOADS_DIR`) lleva `/* turbopackIgnore: true */`; sin eso el
   build rastrea todo el proyecto y lo mete en la imagen.
+
+### Formularios públicos (9.4)
+
+- Socios, auspicios y contacto se envían a `POST /api/forms/[form]` (Route Handler, no Server Action: responde
+  un 429 real y funciona sin JavaScript con PRG, `?enviado=1` / `?error=<código>`). Cada formulario se registra
+  en `src/features/inbox/forms.ts` (bandeja, página, `action` de Turnstile, esquema y guardado).
+- Orden de los controles: `Origin` igual a `SITE_URL` (CSRF) → rate limit (5 cada 10 min por formulario e IP)
+  → campo trampa y tiempo mínimo firmado (3 s) → Turnstile (`success`, `hostname`, `action`) → Zod. Las piezas
+  están en `src/lib/forms/`; los textos de error, en `messages.ts` (los mismos con y sin JavaScript).
+- En la página: `<PublicForm {...publicFormProps('nombre')} …>` después de `connection()` (la clave pública de
+  Turnstile llega desde el servidor y el formulario se firma por petición).
+- Se guarda `ip_hash` (nunca la IP), `privacy_consent_at` y `privacy_policy_version`. El aviso por correo va en
+  `after()` (`src/features/inbox/notify.ts`); si falla, la tarea `tick` lo reintenta hasta 5 veces.
+- En las e2e, cada prueba envía su propia IP simulada en `x-e2e-client-ip` (solo se acepta con
+  `SITE_ENV=development`): el rate limit es por IP y todas las pruebas salen de la misma máquina.
+- La versión de la política de privacidad es la fecha de la última edición del bloque `privacidad.politica`
+  (se muestra en `/privacidad` y se guarda con cada consentimiento).
+- Bandejas del panel: piezas en `src/components/admin/inbox.tsx` (estado, responder por correo o WhatsApp,
+  ficha con el consentimiento) e `InboxUpdateForm`. Las exportaciones CSV se registran en
+  `src/features/inbox/exports.ts` y se descargan por `GET /api/admin/exportar/[lista]`: se generan con
+  `toCsv()` (`src/lib/csv.ts`: `;`, BOM y fórmulas neutralizadas) y cada descarga se audita con el número de
+  filas. La auditoría de datos personales anota números y estados, nunca nombres, RUT ni contacto.
+- Padrón: el número de socio es correlativo (`nextMemberNumber()`, con `pg_advisory_xact_lock`) y no se edita.
+  Aprobar una solicitud bloquea su fila (`FOR UPDATE`): dos aprobaciones simultáneas crean un solo socio.
+- Auspiciadores: todo enlace público pasa por `/r/auspiciador/[slug]?a=web|instagram|whatsapp`, que suma el
+  clic del día con un *upsert* (`sponsor_clicks_daily`, sin datos personales; no cuenta precargas ni HEAD) y
+  redirige con 302. La vitrina y el contador usan la misma regla de vigencia (`isSponsorVisible()`). El slug
+  se fija al crear el auspiciador y no cambia al renombrarlo: es el enlace que ya pudo compartirse.
+- Datos personales (9.6): una tabla nueva con datos de personas se agrega a `PERSONAL_DATA_SOURCES`
+  (`src/features/privacy/queries.ts`, para exportar y eliminar) y a la retención (`runRetention()`, tarea
+  `GET /api/cron/daily`). El dato buscado viaja en el cuerpo (Server Action o POST), nunca en la URL.
+  Procedimiento en `docs/seguridad-privacidad.md`.
 
 ### Menores de edad (6.3)
 

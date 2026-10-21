@@ -1,30 +1,18 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
+import { retryPendingNotifications } from '@/features/inbox/notify'
 import { publishDueNews } from '@/features/news/publish-due'
 import { tags } from '@/lib/cache-tags'
-import { env } from '@/lib/env'
+import { cronRejection } from '@/lib/cron-auth'
 import { logger } from '@/lib/logger'
-
-const digest = (value: string) => createHash('sha256').update(value).digest()
-
-/** Compara en tiempo constante; el hash iguala los largos. */
-function isAuthorized(request: Request, secret: string): boolean {
-  const header = request.headers.get('authorization') ?? ''
-  return timingSafeEqual(digest(header), digest(`Bearer ${secret}`))
-}
 
 /**
  * Tarea `tick` (especificación 12.8): cada 5 minutos el contenedor `ops` llama a esta ruta con
- * `Authorization: Bearer $CRON_SECRET`. Publica las noticias programadas que llegaron a su hora.
+ * `Authorization: Bearer $CRON_SECRET`. Publica las noticias programadas que llegaron a su hora y reintenta
+ * los avisos por correo de los formularios que fallaron.
  */
 export async function GET(request: Request) {
-  const secret = env.CRON_SECRET
-  if (!secret) {
-    return Response.json({ ok: false, message: 'Falta configurar CRON_SECRET.' }, { status: 503 })
-  }
-  if (!isAuthorized(request, secret)) {
-    return Response.json({ ok: false, message: 'No autorizado.' }, { status: 401 })
-  }
+  const rejection = cronRejection(request)
+  if (rejection) return rejection
   try {
     const published = await publishDueNews()
     if (published.length > 0) {
@@ -32,8 +20,12 @@ export async function GET(request: Request) {
       for (const row of published) revalidateTag(tags.newsItem(row.id), 'max')
       logger.info({ count: published.length }, 'tick: noticias programadas publicadas')
     }
+    const notifications = await retryPendingNotifications()
+    if (notifications.sent + notifications.failed > 0) {
+      logger.info(notifications, 'tick: avisos de formularios reintentados')
+    }
     return Response.json(
-      { ok: true, publishedNews: published.length },
+      { ok: true, publishedNews: published.length, notifications },
       { headers: { 'Cache-Control': 'no-store' } },
     )
   } catch (error) {

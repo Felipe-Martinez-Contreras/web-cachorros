@@ -19,6 +19,10 @@ export const PERMISSIONS = [
   'history:write',
   'pages:write',
   'media:write',
+  'members:write', // planes, solicitudes de socio y padrón
+  'messages:write', // bandeja de contacto
+  'sponsors:write', // auspiciadores, solicitudes de auspicio y reporte de clics
+  'privacy:manage', // exportar y eliminar los datos de una persona (9.6)
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]
 

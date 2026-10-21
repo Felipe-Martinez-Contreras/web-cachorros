@@ -319,7 +319,11 @@ describe('estados', () => {
     await actAs('nadie')
     const response = await tick(request(`Bearer ${secret}`))
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ ok: true, publishedNews: 1 })
+    expect(await response.json()).toEqual({
+      ok: true,
+      publishedNews: 1,
+      notifications: { sent: 0, failed: 0 },
+    })
     expect(invalidatedTags()).toEqual(['news', `news:${id}`])
   })
 

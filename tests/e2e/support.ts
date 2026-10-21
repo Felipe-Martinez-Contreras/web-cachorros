@@ -52,15 +52,39 @@ export async function deleteMailFor(request: APIRequestContext, email: string) {
 }
 
 /** Espera el correo más reciente para esa dirección en Mailpit y devuelve su texto. */
-export async function waitForMail(request: APIRequestContext, email: string): Promise<string> {
+export function waitForMail(request: APIRequestContext, email: string): Promise<string> {
+  return waitForMailMatching(request, `to:${email}`)
+}
+
+/** Espera el correo más reciente que cumple la búsqueda de Mailpit (`to:… "frase"`) y devuelve su texto. */
+export async function waitForMailMatching(request: APIRequestContext, query: string): Promise<string> {
   let text = ''
   await expect(async () => {
-    const search = await request.get(`${MAILPIT}/api/v1/search`, { params: { query: `to:${email}` } })
+    const search = await request.get(`${MAILPIT}/api/v1/search`, { params: { query } })
     const { messages } = (await search.json()) as { messages: { ID: string }[] }
     const latest = messages[0]
-    expect(latest, `todavía no llega el correo para ${email}`).toBeTruthy()
+    expect(latest, `todavía no llega el correo (${query})`).toBeTruthy()
     const message = await request.get(`${MAILPIT}/api/v1/message/${latest?.ID}`)
     text = ((await message.json()) as { Text: string }).Text
   }).toPass({ timeout: 15_000 })
   return text
+}
+
+/**
+ * El rate limit cuenta por IP y aquí todas las peticiones llegan desde la misma máquina: cada prueba envía
+ * su propia IP simulada (`x-e2e-client-ip`, que el servidor solo acepta con SITE_ENV=development). Se agrega
+ * solo a `/api/forms/*`: en las peticiones a Cloudflare (Turnstile) rompería CORS.
+ */
+export async function useOwnIp(page: Page, ip: string) {
+  await page.route('**/api/forms/**', (route) =>
+    route.continue({ headers: { ...route.request().headers(), 'x-e2e-client-ip': ip } }),
+  )
+}
+
+export const uniqueIp = (project: string) =>
+  `e2e-${project}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+/** El widget de prueba de Turnstile («siempre pasa») deja su token en el formulario. */
+export async function waitForTurnstile(page: Page) {
+  await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 20_000 })
 }

@@ -73,6 +73,10 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
+      # Claves de prueba oficiales de Turnstile («siempre pasa») y una sal sin valor real.
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      IP_HASH_SALT: sal-solo-para-ci-sin-valor-real-0123456789abcdef
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -120,6 +124,10 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
       MAIL_FROM: Club Deportivo Los Cachorros <no-responder@cachorros.test>
+      # Claves de prueba oficiales de Turnstile («siempre pasa») y una sal sin valor real.
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      IP_HASH_SALT: sal-solo-para-ci-sin-valor-real-0123456789abcdef
       LOG_LEVEL: warn
     steps:
       - uses: actions/checkout@v7
@@ -181,16 +189,23 @@ jobs:
           SMTP_HOST=localhost
           SMTP_PORT=587
           MAIL_FROM=Club <no-responder@cachorros.test>
+          TURNSTILE_SITE_KEY=1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+          IP_HASH_SALT=sal-solo-para-ci-sin-valor-real-0123456789abcdef
           EOF
           for i in $(seq 1 30); do
             docker exec db pg_isready -U cachorros_admin -d cachorros && break
             sleep 2
           done
           docker run --rm --network ci --env-file ci.env cachorros-web:ci node scripts/migrate.mjs
-          docker run -d --name app --network ci --env-file ci.env -p 3000:3000 cachorros-web:ci
+          # Con el límite de memoria de producción (APP_MEMORY_LIMIT, especificación 12) desde el arranque; sin swap, para que un exceso sea OOM.
+          docker run -d --name app --network ci --env-file ci.env -p 3000:3000 \
+            --memory=512m --memory-swap=512m -v uploads:/data/uploads cachorros-web:ci
           for i in $(seq 1 30); do
             if curl -fsS http://localhost:3000/api/health; then exit 0; fi
             sleep 2
           done
           docker logs app
           exit 1
+      - name: Medir la memoria con --memory=512m (portada, panel y fotos de 12 MP)
+        run: bash .github/scripts/medir-memoria.sh

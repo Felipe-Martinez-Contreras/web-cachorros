@@ -2,10 +2,13 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardList,
+  Contact,
   FileText,
+  Handshake,
   History,
   House,
   Images,
+  Inbox,
   KeyRound,
   Landmark,
   ListOrdered,
@@ -15,6 +18,7 @@ import {
   Palette,
   Settings,
   Shield,
+  ShieldCheck,
   ShieldHalf,
   Trophy,
   UserCog,
@@ -96,6 +100,19 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
+    label: 'Comunidad',
+    items: [
+      { href: '/admin/socios', label: 'Socios', icon: Contact, permission: 'members:write' },
+      { href: '/admin/mensajes', label: 'Mensajes', icon: Inbox, permission: 'messages:write' },
+      {
+        href: '/admin/auspiciadores',
+        label: 'Auspiciadores',
+        icon: Handshake,
+        permission: 'sponsors:write',
+      },
+    ],
+  },
+  {
     label: 'Sistema',
     items: [
       {
@@ -106,6 +123,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       },
       { href: '/admin/usuarios', label: 'Usuarios', icon: UserCog, permission: 'users:manage' },
       { href: '/admin/actividad', label: 'Actividad', icon: History, permission: 'audit:read' },
+      {
+        href: '/admin/datos-personales',
+        label: 'Datos personales',
+        icon: ShieldCheck,
+        permission: 'privacy:manage',
+      },
       { href: '/admin/cuenta', label: 'Mi cuenta', icon: KeyRound, permission: 'panel:access' },
       {
         href: '/admin/sistema-de-diseno',
