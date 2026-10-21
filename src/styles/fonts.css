@@ -18,6 +18,22 @@
  * nombre, la prueba «no se mueve cuando la fuente llega tarde» de tests/e2e/portada.spec.ts falla.
  */
 
+/*
+ * Texto regular y medio, ancho normal. next/font genera esta cara solo con local("Arial"): en Linux (y en
+ * Android) no hay Arial y el texto caía en una fuente más ancha (DejaVu), con otros cortes de línea al llegar
+ * Archivo. Era el CLS de 0,116 de /plantel/honor en el CI. Mismas métricas que la de next/font.
+ */
+@font-face {
+  font-family: "Archivo Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Roboto");
+  font-weight: 100 500;
+  font-stretch: 100%;
+  ascent-override: 88.96%;
+  descent-override: 21.28%;
+  line-gap-override: 0%;
+  size-adjust: 98.7%;
+}
+
 /* Texto en negrita, ancho normal (next/font solo define la cara regular). */
 @font-face {
   font-family: "Archivo Fallback";

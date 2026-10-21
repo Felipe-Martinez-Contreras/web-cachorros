@@ -39,7 +39,13 @@
 | `pnpm test` (unitarias) | local | 310 de 310 |
 | `pnpm test:integration` | local | 242 de 242 |
 | e2e de los hitos (`workers=1`) | local | `csp`, `pwa`, `sistema`, `en-vivo` y `redes` en verde |
-| Suite completa, `ops`, VM simulada, Trivy y Lighthouse | CI del PR #13 | _se completa al revisar el CI_ |
+| e2e completa (360 y 1280 px) | CI del PR #13 (`e86cd63`) | 210 de 210, sin *flaky* |
+| Integración y unitarias | CI del PR #13 | 242 de 242 · 310 de 310 |
+| Imagen `ops`: tick, respaldo cifrado (se descifra), imágenes, prueba de restauración, disco, fallo registrado y restauración real | CI del PR #13 | todas en verde |
+| VM simulada: compose, Caddy, AOP, `deploy.sh` (ida, rollback, versión rota), PG 18 y `restore.sh` | CI del PR #13 | 13 de 13 |
+| Trivy (`cachorros-web` y `cachorros-ops`) | CI del PR #13 | sin CRITICAL con arreglo |
+| Memoria con `--memory=512m` (seed, panel, fotos de 12 MP y 4 tarjetas) | CI del PR #13 | pico de 221 MB de 512 MB |
+| Lighthouse móvil, mediana de 5 corridas (rendimiento / accesibilidad / buenas prácticas / SEO) | CI del PR #13 | portada 100 / 100 / 96 / 100 · noticia 100 / 100 / 96 / 100 · partido 100 / 100 / 96 / 100 · plantel 96 / 100 / 96 / 100 |
 
 ## Desviaciones y decisiones
 
@@ -54,8 +60,19 @@
   el CI. Cuenta solo las CRITICAL con arreglo publicado.
 - **El repositorio es público,** así que la VM lo clona con `git` y se actualiza con `git pull`. Si las imágenes de
   GHCR quedan privadas, `docker login` con un token de solo lectura (en la guía).
+- **Correcciones que dejó el CI:**
+  - la CSP de `next.config` ya no se aplica a `/media` ni a `/api` (pisaba el `sandbox` de los PDF);
+  - `form-action` permite `wa.me` y `api.whatsapp.com` (el pedido de la tienda redirige a WhatsApp);
+  - la imagen `ops` ya no trae `gosu` (CRITICAL de Go en Trivy; no se usa);
+  - en el plantel, la primera fila de retratos se carga sin espera (el LCP bajó de 3,1 s a 1,2 s).
 - **Arreglo en el panel:** con el layout sin esqueleto (Fase 4), la hoja «Más» del celular se podía abrir antes de
   la hidratación y se cerraba sola al hidratar. Ahora solo se cierra al cambiar de ruta.
+
+**CLS de `/plantel/honor` en Linux:** el puntaje pasa (96), pero su CLS quedó en 0,116, sobre el presupuesto de
+0,1. La causa: la cara regular de «Archivo Fallback» que genera `next/font` solo nombra `local("Arial")`; en Linux
+y en Android no existe y el texto de peso normal caía en una fuente más ancha. Se agregó en `fonts.css` una cara
+regular con Liberation Sans y Roboto. La comprobación queda en el CI del commit siguiente (en Windows el CLS ya
+era 0).
 
 ## Qué falta (PR 5b)
 
