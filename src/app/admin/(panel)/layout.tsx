@@ -15,6 +15,7 @@ export const instant = false
 
 /** Verifica la sesión en el servidor en cada carga (el proxy solo redirige de forma optimista). */
 export default async function PanelLayout({ children }: { children: ReactNode }) {
-  const user = await requirePanelUser()
+  // El layout también envuelve «Mi cuenta»: cada página decide si exige los dos pasos.
+  const user = await requirePanelUser('panel:access', { allowWithoutTwoFactor: true })
   return <PanelShell user={user}>{children}</PanelShell>
 }

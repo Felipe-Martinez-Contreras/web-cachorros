@@ -21,6 +21,14 @@ export default async function PublicLayout({ children }: { children: ReactNode }
       {children}
       {/* En desarrollo no hay service worker: serviría archivos viejos mientras se programa. */}
       {env.SITE_ENV !== 'development' && <ServiceWorker version={env.APP_VERSION} />}
+      {/* Cloudflare Web Analytics (2.10): sin cookies, diferido y solo si hay token (se lee en runtime). */}
+      {env.CF_WEB_ANALYTICS_TOKEN && (
+        <script
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={JSON.stringify({ token: env.CF_WEB_ANALYTICS_TOKEN })}
+        />
+      )}
     </SiteFrame>
   )
 }

@@ -1,0 +1,7 @@
+# Tareas del contenedor ops (especificación 12.8), en hora de America/Santiago (TZ de la imagen).
+# min hora día mes día-semana
+*/5 * * * * /usr/local/bin/cron-call.sh tick
+30 3 * * * /usr/local/bin/cron-call.sh daily
+15 4 * * * /usr/local/bin/backup.sh
+0 5 * * 0 /usr/local/bin/restore-test.sh
+30 5 * * 0 /usr/local/bin/disk-check.sh

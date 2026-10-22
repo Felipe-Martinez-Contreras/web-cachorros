@@ -74,7 +74,7 @@ export default async function SquadPage(props: Props) {
           </EmptyState>
         ) : (
           <>
-            {groups.map((group) => (
+            {groups.map((group, groupIndex) => (
               <section
                 key={group.position}
                 aria-labelledby={`linea-${group.position}`}
@@ -84,9 +84,13 @@ export default async function SquadPage(props: Props) {
                   {playerPositionGroupLabels[group.position]}
                 </h2>
                 <ul className={gridClass}>
-                  {group.players.map((player) => (
+                  {group.players.map((player, index) => (
                     <li key={`${player.shirtNumber}:${player.name}`}>
-                      <PlayerCard player={player} />
+                      {/* La primera fila se ve al abrir: sin `lazy`, y el primer retrato es el LCP. */}
+                      <PlayerCard
+                        player={player}
+                        loading={groupIndex > 0 || index >= 4 ? 'lazy' : index === 0 ? 'lcp' : 'eager'}
+                      />
                     </li>
                   ))}
                 </ul>

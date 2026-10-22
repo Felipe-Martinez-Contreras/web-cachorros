@@ -6,12 +6,32 @@ import type { ImageDTO } from '@/lib/images/dto'
 import { staffRoleLabels } from '@/lib/labels'
 import type { SquadPlayerDTO, StaffDTO } from '../dto'
 
+/**
+ * Cómo se carga el retrato: `lcp` (el primero de la página: sin espera y con prioridad alta), `eager` (la
+ * primera fila, visible al abrir) o `lazy` (el resto).
+ */
+export type PortraitLoading = 'lcp' | 'eager' | 'lazy'
+
 /** Retrato 4:5 con la silueta de reemplazo cuando no hay foto (especificación 4.6). */
-function Portrait({ photo, sizes }: { photo: ImageDTO | null; sizes: string }) {
+function Portrait({
+  photo,
+  sizes,
+  loading,
+}: {
+  photo: ImageDTO | null
+  sizes: string
+  loading: PortraitLoading
+}) {
   return (
     <span className="block aspect-[4/5] overflow-hidden rounded-md bg-neutral-100">
       {photo ? (
-        <ClubImage image={photo} alt="" sizes={sizes} className="size-full object-cover" />
+        <ClubImage
+          image={photo}
+          alt=""
+          sizes={sizes}
+          priority={loading === 'lcp'}
+          className="size-full object-cover"
+        />
       ) : (
         // biome-ignore lint/performance/noImgElement: archivo estático pequeño, sin optimizador (2.7)
         <img
@@ -19,7 +39,8 @@ function Portrait({ photo, sizes }: { photo: ImageDTO | null; sizes: string }) {
           alt=""
           width={320}
           height={400}
-          loading="lazy"
+          loading={loading === 'lazy' ? 'lazy' : 'eager'}
+          fetchPriority={loading === 'lcp' ? 'high' : undefined}
           className="size-full object-cover"
         />
       )}
@@ -30,10 +51,18 @@ function Portrait({ photo, sizes }: { photo: ImageDTO | null; sizes: string }) {
 const PORTRAIT_SIZES = '(min-width: 1024px) 220px, (min-width: 640px) 30vw, 45vw'
 
 /** Tarjeta de jugador del plantel. Solo enlaza a la ficha si el jugador tiene una (los menores no). */
-export function PlayerCard({ player, className }: { player: SquadPlayerDTO; className?: string }) {
+export function PlayerCard({
+  player,
+  loading = 'lazy',
+  className,
+}: {
+  player: SquadPlayerDTO
+  loading?: PortraitLoading
+  className?: string
+}) {
   return (
     <div className={cn('relative grid gap-2', className)}>
-      <Portrait photo={player.photo} sizes={PORTRAIT_SIZES} />
+      <Portrait photo={player.photo} sizes={PORTRAIT_SIZES} loading={loading} />
       <div className="flex items-start gap-2">
         {player.shirtNumber !== null && (
           <span
@@ -44,7 +73,9 @@ export function PlayerCard({ player, className }: { player: SquadPlayerDTO; clas
           </span>
         )}
         <div className="grid min-w-0 grid-cols-1 gap-0.5">
-          <h3 className="leading-tight font-semibold wrap-anywhere">
+          {/* Siempre reserva dos líneas: si el nombre cambia de una a dos líneas al llegar la fuente, la
+              tarjeta no cambia de alto y nada de abajo se mueve (CLS medido en Linux, sección 10). */}
+          <h3 className="min-h-[2lh] leading-tight font-semibold wrap-anywhere">
             {player.slug ? (
               <Link
                 href={`/jugadores/${player.slug}`}
@@ -73,7 +104,7 @@ export function PlayerCard({ player, className }: { player: SquadPlayerDTO; clas
 export function StaffCard({ member, className }: { member: StaffDTO; className?: string }) {
   return (
     <div className={cn('grid gap-2', className)}>
-      <Portrait photo={member.photo} sizes={PORTRAIT_SIZES} />
+      <Portrait photo={member.photo} sizes={PORTRAIT_SIZES} loading="lazy" />
       <div className="grid gap-0.5">
         <h3 className="leading-tight font-semibold wrap-anywhere">{member.name}</h3>
         <p className="text-meta text-(--muted)">{staffRoleLabels[member.role]}</p>

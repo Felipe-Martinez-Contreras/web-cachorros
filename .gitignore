@@ -25,6 +25,12 @@ blob-report/
 # Datos locales (subidas y caché de tarjetas)
 /data/
 
+# Despliegue: certificados e historial solo existen en la VM (y en el CI)
+/deploy/certs/
+/.deploy-history
+/cliente-ci/
+/bucket-ci/
+
 # Sistema y editores
 .DS_Store
 Thumbs.db

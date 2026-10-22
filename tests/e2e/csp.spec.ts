@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
 import { ADMIN, login, waitForTurnstile } from './support'
 
-// CSP en modo Report-Only (especificación 9.3): el navegador no bloquea, pero dispara
-// `securitypolicyviolation` por cada cosa que la política bloquearía. Ninguna página debe dispararlo.
+// CSP obligatoria (especificación 9.3): el navegador bloquea lo que no está permitido y dispara
+// `securitypolicyviolation`. Ninguna página debe dispararlo (y cada flujo debe seguir funcionando).
 
 type Violation = { directive: string; blocked: string; page: string }
 
@@ -33,7 +33,7 @@ test('sitio público: CSP fija y sin violaciones en portada, formulario, visor, 
   await stubThirdParties(page)
 
   const home = await page.goto('/')
-  const csp = home?.headers()['content-security-policy-report-only'] ?? ''
+  const csp = home?.headers()['content-security-policy'] ?? ''
   expect(csp).toContain("script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com")
   expect(csp).toContain('report-uri /api/csp-report')
   expect(csp).not.toContain('nonce-')
@@ -69,7 +69,7 @@ test('panel: CSP estricta con nonce en cada petición y sin violaciones', async 
   const violations = await watchViolations(page)
   const responses: string[] = []
   page.on('response', (response) => {
-    const header = response.headers()['content-security-policy-report-only']
+    const header = response.headers()['content-security-policy']
     if (response.request().resourceType() === 'document' && header) responses.push(header)
   })
   await login(page, ADMIN.email)
@@ -87,7 +87,7 @@ test('panel: CSP estricta con nonce en cada petición y sin violaciones', async 
   // Los scripts de Next llevan el nonce de su respuesta. El navegador oculta el atributo en el DOM, así
   // que se revisa el HTML tal como llega.
   const raw = await page.request.get('/admin/partidos')
-  const nonce = /'nonce-([^']+)'/.exec(raw.headers()['content-security-policy-report-only'] ?? '')?.[1]
+  const nonce = /'nonce-([^']+)'/.exec(raw.headers()['content-security-policy'] ?? '')?.[1]
   const html = await raw.text()
   expect(html).toContain(`<script nonce="${nonce}"`)
   expect(html.match(/<script(?![^>]*nonce=)[^>]*>/g) ?? []).toEqual([])

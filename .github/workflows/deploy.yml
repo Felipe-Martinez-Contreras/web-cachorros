@@ -1,0 +1,52 @@
+name: Desplegar
+
+# Despliegue desde GitHub (opcional, especificación 12.5): Workload Identity Federation (sin llaves JSON) →
+# SSH por IAP → deploy.sh <versión> en la VM. La cuenta de servicio de despliegue es otra que la de la VM
+# (que solo accede al bucket de respaldos). Configuración en docs/despliegue.md (variables del repositorio
+# GCP_WIF_PROVIDER, GCP_DEPLOY_SA, GCP_PROJECT, GCP_ZONE y GCP_VM, y el entorno «staging» o «produccion»).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a desplegar (sha-1a2b3c4) o «rollback»'
+        required: true
+      environment:
+        description: 'Entorno'
+        type: choice
+        options: [staging, produccion]
+        default: staging
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Desplegar ${{ inputs.version }} en ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Validar la versión
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$VERSION" == rollback || "$VERSION" =~ ^sha-[0-9a-f]{7}$ ]] || {
+            echo "Versión no válida: $VERSION (usa sha-1a2b3c4 o rollback)" >&2
+            exit 1
+          }
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: deploy.sh en la VM (SSH por IAP)
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          gcloud compute ssh "${{ vars.GCP_VM }}" --project "${{ vars.GCP_PROJECT }}" --zone "${{ vars.GCP_ZONE }}" \
+            --tunnel-through-iap --quiet \
+            --command "sudo -u \"\$(stat -c %U /opt/cachorros)\" bash -c 'cd /opt/cachorros && ./deploy/deploy.sh ${VERSION}'"

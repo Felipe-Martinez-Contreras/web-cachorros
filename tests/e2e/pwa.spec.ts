@@ -32,6 +32,10 @@ test('manifest instalable con nombre, idioma, íconos y accesos directos', async
   const home = await (await request.get(`${base}/`)).text()
   expect(home).toContain('<link rel="manifest" href="/manifest.webmanifest"')
   expect(home).toContain('/icons/apple-touch-icon.png')
+  // Con CF_WEB_ANALYTICS_TOKEN, el beacon de Cloudflare Web Analytics (diferido); sin token, nada.
+  expect(home).toMatch(/<script defer="" src="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js"/)
+  expect(home).toContain('token-e2e-de-analitica')
+  expect(await (await request.get('/')).text()).not.toContain('cloudflareinsights')
 })
 
 test('service worker: página offline sin red y nunca guarda el panel ni la API', async ({

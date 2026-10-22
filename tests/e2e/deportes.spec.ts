@@ -188,6 +188,54 @@ test('plantel: /plantel lleva a la serie destacada, agrupada por línea y con cu
   await expect(page.getByRole('heading', { level: 1, name: 'Plantel Senior 45' })).toBeVisible()
 })
 
+// Pendiente: en el CI (Linux) el CLS del plantel es 0,116; ver «Pendiente documentado» en docs/fases/fase-5a.md.
+test.fixme('plantel: no se mueve cuando la fuente llega tarde (presupuesto de CLS, sección 10)', async ({
+  page,
+}) => {
+  // Como Lighthouse en el celular: Archivo llega después del primer pintado. Si algo se mueve, el mensaje dice
+  // qué elemento y cuánto (las fuentes del sistema cambian entre Windows y Linux).
+  await page.setViewportSize({ width: 412, height: 823 })
+  await page.route('**/*.woff2', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    await route.continue()
+  })
+  await page.addInitScript(() => {
+    const w = window as unknown as { __shifts: { value: number; sources: string[] }[] }
+    w.__shifts = []
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as (PerformanceEntry & {
+        value: number
+        hadRecentInput: boolean
+        sources: { node?: Node; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[]
+      })[]) {
+        if (entry.hadRecentInput) continue
+        w.__shifts.push({
+          value: entry.value,
+          sources: entry.sources.map((source) => {
+            const el = source.node instanceof Element ? source.node : source.node?.parentElement
+            const name = el
+              ? `${el.tagName.toLowerCase()}.${String(el.className).split(' ').slice(0, 3).join('.')}`
+              : '?'
+            const text = (source.node?.textContent ?? '').trim().slice(0, 40)
+            return `${name} «${text}» y ${Math.round(source.previousRect.y)}→${Math.round(source.currentRect.y)} alto ${Math.round(source.previousRect.height)}→${Math.round(source.currentRect.height)}`
+          }),
+        })
+      }
+    }).observe({ type: 'layout-shift', buffered: true })
+  })
+  await page.goto('/plantel/honor')
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(800)
+  const shifts = await page.evaluate(
+    () => (window as unknown as { __shifts: { value: number; sources: string[] }[] }).__shifts,
+  )
+  const cls = shifts.reduce((sum, shift) => sum + shift.value, 0)
+  expect(
+    cls,
+    `CLS del plantel con la fuente retrasada: ${JSON.stringify(shifts, null, 1)}`,
+  ).toBeLessThanOrEqual(0.05)
+})
+
 test.describe('sin JavaScript', () => {
   test.use({ javaScriptEnabled: false })
 

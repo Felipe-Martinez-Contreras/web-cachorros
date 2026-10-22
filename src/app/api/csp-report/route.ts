@@ -11,7 +11,7 @@ const MAX_BYTES = 16 * 1024
 const accepted = () => new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } })
 
 /**
- * `POST /api/csp-report` (especificación 9.3): recibe las violaciones de la CSP en modo Report-Only y las
+ * `POST /api/csp-report` (especificación 9.3): recibe las violaciones de la CSP y las
  * registra con pino, resumidas (directiva, origen de lo bloqueado y ruta de la página) y sin la IP.
  * Siempre responde 204: el navegador no hace nada con la respuesta.
  */

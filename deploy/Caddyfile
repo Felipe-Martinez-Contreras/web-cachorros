@@ -1,0 +1,64 @@
+# Caddy delante de la app (especificación 12.4). Cloudflare ↔ VM en Full (strict) con el Origin CA, y
+# Authenticated Origin Pulls: solo Cloudflare puede conectarse (nadie se salta el WAF ni falsifica
+# CF-Connecting-IP). Validar con `caddy validate --config /etc/caddy/Caddyfile`.
+{
+	servers {
+		import /etc/caddy/cloudflare-trusted-proxies.caddy
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
+{$SITE_DOMAIN} {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file /etc/caddy/certs/cloudflare-aop-ca.pem
+		}
+	}
+
+	request_body {
+		max_size 15MB
+	}
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# La CSP la pone la app (src/lib/csp.ts); aquí solo se suma upgrade-insecure-requests, que en la app
+	# rompería el desarrollo en http://localhost. Diferido: se agrega a la cabecera que trae la respuesta.
+	header {
+		+Content-Security-Policy "upgrade-insecure-requests"
+		defer
+	}
+
+	# Staging y cualquier entorno que no sea producción nunca se indexa (especificación 11).
+	@noindex expression `{env.SITE_ENV} != "production"`
+	header @noindex X-Robots-Tag "noindex, nofollow"
+
+	# Las imágenes las sirve Caddy desde el volumen, en solo lectura; Node nunca las sirve (2.7).
+	handle_path /media/* {
+		root * /srv/app-data/uploads
+		header Cache-Control "public, max-age=31536000, immutable"
+		@pdf path *.pdf
+		header @pdf Content-Security-Policy "sandbox"
+		file_server
+	}
+
+	# Tareas internas: solo se llaman desde ops por la red de Docker.
+	handle /api/cron/* {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy app:3000 {
+			# Absorbe los reinicios de la app durante un despliegue.
+			lb_try_duration 15s
+			lb_try_interval 500ms
+		}
+	}
+}

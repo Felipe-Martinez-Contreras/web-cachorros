@@ -1,0 +1,116 @@
+# Producción y staging en la VM (especificación 12.3). La misma imagen sirve para cualquier dominio: todo lo
+# que cambia entre entornos está en .env (permisos 600, nunca en el repositorio).
+#   docker compose up -d                      # caddy, app (después de migrate), db y ops
+#   docker compose run --rm restore latest    # solo bajo demanda: lo orquesta deploy/restore.sh
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["443:443"]
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Falta SITE_DOMAIN en .env}
+      SITE_ENV: ${SITE_ENV:?Falta SITE_ENV en .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/cloudflare-trusted-proxies.caddy:/etc/caddy/cloudflare-trusted-proxies.caddy:ro
+      - ./deploy/certs:/etc/caddy/certs:ro
+      - app_data:/srv/app-data:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: "${CADDY_MEMORY_LIMIT:-64m}" } } }
+    logging: *logging
+
+  app:
+    image: ${GHCR_NAMESPACE:?Falta GHCR_NAMESPACE en .env}/cachorros-web:${APP_VERSION:?Falta APP_VERSION en .env}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_OPTIONS: --max-old-space-size=${APP_NODE_HEAP_MB:-320}
+      # Dentro del contenedor, las carpetas son las del volumen (aunque .env diga otra cosa).
+      UPLOADS_DIR: /data/uploads
+      SHARE_CACHE_DIR: /data/cache/share
+    volumes:
+      - app_data:/data
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    deploy: { resources: { limits: { memory: "${APP_MEMORY_LIMIT:-512m}" } } }
+    logging: *logging
+
+  migrate:
+    image: ${GHCR_NAMESPACE}/cachorros-web:${APP_VERSION}
+    command: ["node", "scripts/migrate.mjs"]
+    env_file: .env
+    restart: "no"
+    depends_on:
+      db: { condition: service_healthy }
+    logging: *logging
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-64MB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-256MB}
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
+      -c max_connections=20
+      -c max_parallel_workers_per_gather=0
+      -c jit=off
+      -c wal_compression=on
+      -c checkpoint_completion_target=0.9
+      -c log_min_duration_statement=500
+    volumes:
+      # PostgreSQL 18: la imagen oficial guarda los datos en /var/lib/postgresql/18/docker y declara el
+      # volumen en /var/lib/postgresql (trampa 11). Lo verifica el CI reiniciando la base.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    shm_size: 128m
+    deploy: { resources: { limits: { memory: "${DB_MEMORY_LIMIT:-256m}" } } }
+    logging: *logging
+
+  ops:
+    image: ${GHCR_NAMESPACE}/cachorros-ops:${APP_VERSION}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - app_data:/srv/app-data:ro
+      - ops_data:/srv/ops
+    depends_on:
+      db: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: "${OPS_MEMORY_LIMIT:-96m}" } } }
+    logging: *logging
+
+  restore:
+    image: ${GHCR_NAMESPACE}/cachorros-ops:${APP_VERSION}
+    profiles: ["manual"]
+    entrypoint: ["/usr/local/bin/restore-run.sh"]
+    env_file: .env
+    volumes:
+      # Lectura y escritura: puede restaurar las imágenes.
+      - app_data:/srv/app-data
+      - ops_data:/srv/ops
+    depends_on:
+      db: { condition: service_healthy }
+    logging: *logging
+
+volumes:
+  pgdata:
+  app_data:
+  ops_data:
+  caddy_data:
+  caddy_config:

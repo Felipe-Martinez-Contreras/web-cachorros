@@ -2,11 +2,12 @@ import type { Metadata } from 'next'
 import { ActionButton } from '@/components/admin/action-button'
 import { PageHeader } from '@/components/admin/resource-list'
 import { Badge } from '@/components/ui/badge'
+import { Alert } from '@/components/ui/feedback'
 import { cambiarMiContrasena, cerrarMisOtrasSesiones } from '@/features/users/actions'
 import { ChangePasswordForm } from '@/features/users/components/forms'
 import { TwoFactorPanel } from '@/features/users/components/two-factor-panel'
 import { getMyAccount } from '@/features/users/queries'
-import { getCurrentSessionId, requirePanelUser } from '@/lib/auth/session'
+import { getCurrentSessionId, mustEnableTwoFactor, requirePanelUser } from '@/lib/auth/session'
 import { formatLongDateTime } from '@/lib/format'
 
 export const metadata: Metadata = { title: 'Mi cuenta' }
@@ -14,7 +15,8 @@ export const metadata: Metadata = { title: 'Mi cuenta' }
 const cardClass = 'grid gap-4 rounded-lg border border-neutral-200 bg-paper p-4'
 
 export default async function MyAccountPage() {
-  const me = await requirePanelUser()
+  const me = await requirePanelUser('panel:access', { allowWithoutTwoFactor: true })
+  const twoFactorRequired = mustEnableTwoFactor(me)
   const account = await getMyAccount(me.id, await getCurrentSessionId())
   const others = account.sessions.filter((item) => !item.isCurrent).length
 
@@ -22,6 +24,12 @@ export default async function MyAccountPage() {
     <>
       <PageHeader title="Mi cuenta" description={`${me.name} · ${me.email}`} />
       <div className="grid gap-6">
+        {twoFactorRequired && (
+          <Alert variant="warning" title="Activa la verificación en dos pasos">
+            Para proteger los datos del club, el panel exige la verificación en dos pasos. Actívala aquí abajo
+            con una app de autenticación; después podrás usar todos los módulos.
+          </Alert>
+        )}
         <section aria-labelledby="dos-pasos" className={cardClass}>
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="dos-pasos" className="text-lg font-bold">

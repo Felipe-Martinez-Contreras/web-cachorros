@@ -7,6 +7,7 @@ import { newsSlugStatus } from '@/features/news/slug'
 import { playerSlugStatus, seriesSlugStatus } from '@/features/players/slug'
 import { productSlugStatus } from '@/features/store/slug'
 import { adminCsp, CSP_HEADER, newNonce } from '@/lib/csp'
+import { isDevServer } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import type { SlugStatus } from '@/lib/slug-status'
 
@@ -24,7 +25,7 @@ function adminProxy(request: NextRequest) {
   }
   // CSP estricta con un nonce por petición (9.3): Next lo lee de la cabecera de la petición y lo pone
   // en sus scripts; la respuesta lleva la misma política.
-  const csp = adminCsp(newNonce())
+  const csp = adminCsp(newNonce(), { dev: isDevServer })
   const headers = new Headers(request.headers)
   headers.set(CSP_HEADER, csp)
   const response = NextResponse.next({ request: { headers } })

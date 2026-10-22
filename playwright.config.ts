@@ -56,6 +56,8 @@ export default defineConfig({
         HOSTNAME: SECOND_SITE.hostname,
         SITE_URL: SECOND_SITE.url,
         SITE_ENV: 'production',
+        // Cloudflare Web Analytics: el beacon aparece solo con token.
+        CF_WEB_ANALYTICS_TOKEN: 'token-e2e-de-analitica',
         // Producción no arranca con las claves de prueba de Turnstile; esta instancia no envía formularios.
         TURNSTILE_SITE_KEY: '0x4AAAAAAA-e2e-sin-widget',
         TURNSTILE_SECRET_KEY: '0x4AAAAAAA-e2e-sin-widget-secreto',
