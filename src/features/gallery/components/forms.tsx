@@ -39,6 +39,7 @@ export function AlbumForm({
       defaultValues={defaults}
       mediaPreviews={{ coverMediaId: cover }}
       // Al crear se sigue al álbum, para subirle las fotos.
+      successMessage={isNew ? 'Álbum creado. Ahora sube las fotos.' : 'Guardado.'}
       redirectTo={isNew ? (id) => `/admin/galeria/${id}` : '/admin/galeria'}
       cancelHref="/admin/galeria"
       submitLabel={isNew ? 'Crear y subir las fotos' : 'Guardar'}

@@ -66,9 +66,13 @@ test('crear un jugador inscrito en una serie y editar su inscripción', async ({
   await page.getByRole('spinbutton', { name: /^Número de camiseta/ }).fill(shirt)
   await page.getByRole('button', { name: 'Crear jugador' }).click()
 
-  // Queda en la ficha, ya inscrito.
-  await expect(page.getByRole('heading', { name: `E2E Jugador ${lastName}`, level: 1 })).toBeVisible()
+  // Vuelve a la lista; el jugador ya aparece inscrito en su serie.
+  await expect(page).toHaveURL(/\/admin\/jugadores$/)
   await expect(page.getByText('Jugador creado.')).toBeVisible()
+  await page.goto(`/admin/jugadores?q=${lastName}`)
+  await expect(page.getByText(`Honor #${shirt}`)).toBeVisible()
+  await page.getByRole('link', { name: new RegExp(`${lastName}, E2E Jugador`) }).click()
+  await expect(page.getByRole('heading', { name: `E2E Jugador ${lastName}`, level: 1 })).toBeVisible()
   const registrations = page.getByRole('list', { name: 'Inscripciones' })
   await expect(registrations.getByText(/^Honor · /)).toBeVisible()
   await expect(registrations.getByText(`Camiseta ${shirt}`)).toBeVisible()

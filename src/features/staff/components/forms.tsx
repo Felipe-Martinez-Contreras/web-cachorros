@@ -27,9 +27,10 @@ export function StaffForm({
       action={action}
       defaultValues={defaults}
       mediaPreviews={{ photoMediaId: photo }}
-      submitLabel={isNew ? 'Crear' : 'Guardar'}
-      redirectTo={isNew ? (id) => `/admin/cuerpo-tecnico/${id}` : undefined}
-      cancelHref={isNew ? '/admin/cuerpo-tecnico' : undefined}
+      submitLabel={isNew ? 'Crear y asignar cargo' : 'Guardar'}
+      successMessage={isNew ? 'Persona creada. Ahora asígnale su cargo y serie.' : 'Guardado.'}
+      redirectTo={isNew ? (id) => `/admin/cuerpo-tecnico/${id}` : '/admin/cuerpo-tecnico'}
+      cancelHref="/admin/cuerpo-tecnico"
       fields={[
         { name: 'fullName', label: 'Nombre completo', type: 'text' },
         { name: 'photoMediaId', label: 'Foto', type: 'media', required: false },

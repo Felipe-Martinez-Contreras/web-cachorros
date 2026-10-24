@@ -45,8 +45,12 @@ export function NewsForm({
       mediaPreviews={{ coverMediaId: cover, ogMediaId: og }}
       autosave={autosave}
       submitLabel={mode === 'create' ? 'Guardar borrador' : 'Guardar'}
-      successMessage={mode === 'create' ? 'Borrador guardado.' : 'Noticia guardada.'}
-      redirectTo={mode === 'create' ? (id) => `/admin/noticias/${id}` : undefined}
+      successMessage={
+        mode === 'create'
+          ? 'Borrador guardado. Revísalo y pulsa «Publicar ahora» cuando esté listo.'
+          : 'Noticia guardada.'
+      }
+      redirectTo={mode === 'create' ? (id) => `/admin/noticias/${id}` : '/admin/noticias'}
       cancelHref="/admin/noticias"
       fields={[
         { name: 'title', label: 'Título', type: 'text' },

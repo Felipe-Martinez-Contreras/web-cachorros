@@ -42,6 +42,7 @@ export function ProductForm({
       action={action}
       defaultValues={defaults}
       // Al crear se sigue a la ficha, para agregar tallas y fotos.
+      successMessage={isNew ? 'Producto creado. Ahora agrega sus tallas y fotos.' : 'Guardado.'}
       redirectTo={isNew ? (id) => `/admin/tienda/${id}` : '/admin/tienda'}
       cancelHref="/admin/tienda"
       submitLabel={isNew ? 'Crear y seguir con tallas y fotos' : 'Guardar'}
