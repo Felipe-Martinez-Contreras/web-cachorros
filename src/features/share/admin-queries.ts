@@ -12,6 +12,7 @@ import {
   type ShareTemplate,
   weekendOf,
   weekendTitle,
+  withDesignRevision,
 } from './lib/cards'
 import { shareVersionOf } from './queries'
 
@@ -75,7 +76,7 @@ export async function matchShareCards(matchId: string): Promise<ShareCardLink[]>
     label: SHARE_TEMPLATE_LABELS[template],
     title: template === 'proximo' ? versus : scored,
     id: match.id,
-    version: String(match.version),
+    version: withDesignRevision(template, match.version),
     slug: match.slug,
   }))
 }

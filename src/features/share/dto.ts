@@ -7,6 +7,8 @@ import type { ShareTemplate } from './lib/cards'
 export type CardTeam = { name: string; crest: string | null }
 
 export type CardMatch = {
+  /** Las tarjetas son solo de partidos del club: de qué lado juega. */
+  clubSide: 'local' | 'visita'
   home: CardTeam
   away: CardTeam
   seriesName: string

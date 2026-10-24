@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   clampText,
+  fitDisplaySize,
   isGoalFor,
   isValidVersion,
   lastClubGoal,
@@ -13,6 +14,7 @@ import {
   shortHash,
   weekendOf,
   weekendTitle,
+  withDesignRevision,
 } from '@/features/share/lib/cards'
 
 const ID = '01a15f15-bb07-7e50-b715-4482a6b29aef'
@@ -135,5 +137,33 @@ describe('clampText', () => {
     expect(clampText('Campeonato Oficial [COMPLETAR: nombre de la asociación] · Fecha 7', 60)).toBe(
       'Campeonato Oficial · Fecha 7',
     )
+  })
+})
+
+describe('fitDisplaySize', () => {
+  it('mantiene el tamaño si el nombre cabe en las líneas pedidas', () => {
+    expect(fitDisplaySize('Cachorros', 400, 60)).toBe(60)
+    expect(fitDisplaySize('Deportivo Ejemplo', 400, 60)).toBe(60)
+  })
+
+  it('achica la letra en vez de cortar un nombre largo', () => {
+    const size = fitDisplaySize('Social y Deportivo Población Ejemplo del Sur', 400, 60)
+    expect(size).toBeLessThan(60)
+    expect(size).toBeGreaterThanOrEqual(30)
+    // Con más líneas permitidas, la letra puede ser más grande.
+    expect(fitDisplaySize('Social y Deportivo Población Ejemplo del Sur', 400, 60, 3)).toBeGreaterThan(size)
+  })
+
+  it('una palabra que no cabe a lo ancho también achica la letra', () => {
+    expect(fitDisplaySize('Supercalifragilístico', 300, 60, 2)).toBeLessThan(60)
+  })
+})
+
+describe('withDesignRevision', () => {
+  it('suma la revisión del diseño a las plantillas rediseñadas', () => {
+    expect(withDesignRevision('proximo', 3)).toBe('3d2')
+    expect(withDesignRevision('programacion', 'abc')).toBe('abcd2')
+    expect(withDesignRevision('resultado', 3)).toBe('3')
+    expect(isValidVersion(withDesignRevision('proximo', 12))).toBe(true)
   })
 })

@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 /** Scripts de consola que se empaquetan para la imagen (especificación 12.2). */
 export const SCRIPT_NAMES = ['migrate', 'create-admin', 'seed', 'content-pending']
 /** Scripts que solo existen en desarrollo. */
-export const DEV_SCRIPT_NAMES = ['db-reset', 'e2e-clean', 'pwa-icons']
+export const DEV_SCRIPT_NAMES = ['db-reset', 'e2e-clean', 'pwa-icons', 'share-preview']
 
 /** Fuentes que usa el seed para dibujar las imágenes de ejemplo (la imagen Docker no trae fuentes). */
 const FONTS_DIR = path.join(root, 'src', 'assets', 'fonts', 'og')
@@ -41,7 +41,11 @@ export async function bundleScripts(names, { outdir, standalone }) {
             js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
           },
         }
-      : { packages: 'external' }),
+      : {
+          packages: 'external',
+          // `next` no declara `exports`: Node no resuelve `next/og` sin la extensión (lo usa `share-preview`).
+          alias: { 'server-only': './scripts/lib/server-only-stub.mjs', 'next/og': 'next/og.js' },
+        }),
   })
   // En la imagen, el seed busca las fuentes en `scripts/assets/fonts`.
   if (standalone && names.includes('seed') && existsSync(FONTS_DIR)) {

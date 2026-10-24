@@ -22,6 +22,7 @@ import {
   shortHash,
   templateFitsStatus,
   weekendOf,
+  withDesignRevision,
 } from './lib/cards'
 
 export type ShareVersion = { version: string; slug: string }
@@ -41,13 +42,14 @@ export async function shareVersionOf(request: ShareRequest): Promise<ShareVersio
         .where(and(eq(matches.id, request.id), isClubMatch))
         .limit(1)
       if (!row || !templateFitsStatus(request.template, row.status)) return null
-      return { version: String(row.version), slug: row.slug }
+      return { version: withDesignRevision(request.template, row.version), slug: row.slug }
     }
     case 'programacion':
     case 'resultados': {
       const rows = await weekendRows(request.id, request.template)
       if (rows.length === 0) return null
-      return { version: shortHash(rows.map((row) => `${row.id}.${row.version}`)), slug: request.id }
+      const hash = shortHash(rows.map((row) => `${row.id}.${row.version}`))
+      return { version: withDesignRevision(request.template, hash), slug: request.id }
     }
     case 'noticia': {
       const [row] = await db
@@ -174,6 +176,7 @@ async function toCardMatch(row: MatchRow): Promise<CardMatch> {
     crestDataUri(row.awayCrest?.variants ?? null),
   ])
   return {
+    clubSide: row.clubSide === 'visita' ? 'visita' : 'local',
     home: { name: row.home.shortName, crest: homeCrest },
     away: { name: row.away.shortName, crest: awayCrest },
     seriesName: row.seriesName,
