@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DeleteSection } from '@/components/admin/delete-section'
-import { PageHeader } from '@/components/admin/resource-list'
+import { PageHeader, ResourceList } from '@/components/admin/resource-list'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { actualizarPartido, cambiarEstadoPartido, eliminarPartido } from '@/features/matches/actions'
@@ -12,20 +12,23 @@ import { MatchForm, MatchStatusForm } from '@/features/matches/components/admin-
 import { toSantiagoWallTime } from '@/features/matches/lib/schedule'
 import { matchShareCards } from '@/features/share/admin-queries'
 import { ShareCards } from '@/features/share/components/share-cards'
+import { matchFacebookState } from '@/features/social-publishing/admin-queries'
+import { PublicationRow } from '@/features/social-publishing/components/publication-row'
 import { requirePanelUser } from '@/lib/auth/session'
 import { isUuid } from '@/lib/form-schemas'
 import { formatLongDateTime } from '@/lib/format'
-import { matchStatusLabels } from '@/lib/labels'
+import { matchStatusLabels, publicationKindLabels } from '@/lib/labels'
 
 export const metadata: Metadata = { title: 'Editar partido' }
 
 export default async function EditMatchPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePanelUser('matches:write')
   const { id } = await params
-  const [match, options, cards] = await Promise.all([
+  const [match, options, cards, facebook] = await Promise.all([
     isUuid(id) ? getMatchAdmin(id) : null,
     matchFormOptions(),
     isUuid(id) ? matchShareCards(id) : [],
+    isUuid(id) ? matchFacebookState(id) : null,
   ])
   if (!match) notFound()
   const { date, time } = toSantiagoWallTime(match.kickoffAt)
@@ -76,6 +79,36 @@ export default async function EditMatchPage({ params }: { params: Promise<{ id: 
             celular.
           </p>
           <ShareCards cards={cards} />
+        </section>
+      )}
+
+      {facebook?.kind && (
+        <section aria-labelledby="facebook" className="mb-10 grid gap-3">
+          <h2 id="facebook" className="scroll-mt-20 text-lg font-bold">
+            Facebook
+          </h2>
+          {facebook.publication ? (
+            <ResourceList label="Publicación en Facebook">
+              <PublicationRow publication={facebook.publication} />
+            </ResourceList>
+          ) : facebook.blockedReason ? (
+            <p className="text-neutral-600">{facebook.blockedReason}</p>
+          ) : (
+            <>
+              <p className="text-neutral-600">
+                Sube la tarjeta «{publicationKindLabels[facebook.kind]}» a la página del club. Antes de
+                publicar ves la imagen y puedes cambiar el texto.
+              </p>
+              <div>
+                <Link
+                  href={`/admin/partidos/${match.id}/facebook`}
+                  className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                >
+                  Publicar en Facebook
+                </Link>
+              </div>
+            </>
+          )}
         </section>
       )}
 

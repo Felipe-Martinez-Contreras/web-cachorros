@@ -1,14 +1,16 @@
 import postgres from 'postgres'
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PublishChannel, PublishResult } from '@/features/social-publishing/channels/types'
 import { testDb } from './db-urls'
 import { cleanSport, createMatch, createSportFixture, type SportFixture } from './fixtures'
+import { actAs, ensureTestUsers } from './session'
 
 const { sql } = await import('@/db/client')
 const { santiagoWallTime } = await import('@/features/matches/lib/schedule')
 const { addDays, weekendOf } = await import('@/features/share/lib/cards')
 const { runSocialPublishing } = await import('@/features/social-publishing/tick')
 const { facebookChannel, GRAPH_API_VERSION } = await import('@/features/social-publishing/channels/facebook')
+const actions = await import('@/features/social-publishing/actions')
 
 // Publicación en Facebook con la Graph API simulada: nunca se llama a Facebook real.
 
@@ -76,6 +78,7 @@ async function publications() {
 }
 
 beforeAll(async () => {
+  await ensureTestUsers()
   await cleanSport(admin)
   f = await createSportFixture(admin)
 })
@@ -84,6 +87,10 @@ beforeEach(async () => {
   await admin`delete from social_publications`
   await admin`delete from matches`
   await setFacebook(enabled)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 afterAll(async () => {
@@ -288,5 +295,93 @@ describe('canal de Facebook (Graph API simulada)', () => {
     const result = await channel.publishPhoto({ image: Buffer.from('png'), filename: 'x.png', caption: '' })
     expect(result).toMatchObject({ ok: false, failure: { kind: 'definitivo' } })
     expect(JSON.stringify(result)).not.toContain(token)
+  })
+})
+
+describe('acciones del panel', () => {
+  /** Graph API simulada en el `fetch` global: la usa el canal real que arman las acciones. */
+  function graphReplies(body: unknown, status = 200) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json(body, { status }))
+  }
+
+  it('publicar a mano exige permiso', async () => {
+    const id = await createMatch(admin, f, 'fb-sin-permiso', 'programado')
+    await actAs('prensa')
+    expect(await actions.publicarEnFacebook(id, { message: 'Hola' })).toEqual({
+      ok: false,
+      message: 'No tienes permiso para hacer esto.',
+    })
+    expect(await publications()).toEqual([])
+  })
+
+  it('publica la previa con el texto editado y no deja publicarla dos veces', async () => {
+    const id = await createMatch(admin, f, 'fb-manual', 'programado')
+    await actAs('admin')
+    const fetchMock = graphReplies({ id: '1', post_id: '555_666' })
+    expect(await actions.publicarEnFacebook(id, { message: '  Texto revisado a mano  ' })).toMatchObject({
+      ok: true,
+    })
+    const form = fetchMock.mock.calls[0]?.[1]?.body as FormData
+    expect(form.get('caption')).toBe('Texto revisado a mano')
+    expect(await publications()).toMatchObject([
+      { kind: 'proximo', subject_key: id, status: 'publicado', external_id: '555_666' },
+    ])
+    const [log] = await admin<{ user_id: string | null }[]>`
+      select user_id from audit_log where action = 'social.publish.request' order by created_at desc limit 1`
+    expect(log?.user_id).toBeTruthy()
+
+    expect(await actions.publicarEnFacebook(id, { message: 'Otra vez' })).toEqual({
+      ok: false,
+      message: 'Este partido ya se publicó en Facebook (o está en la cola).',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('si Facebook falla, queda en la cola y «Reintentar» la publica', async () => {
+    const id = await createMatch(admin, f, 'fb-manual-error', 'programado')
+    await actAs('admin')
+    graphReplies({ error: { message: 'Temporarily unavailable', code: 2 } }, 503)
+    const result = await actions.publicarEnFacebook(id, { message: 'Previa' })
+    expect(result).toMatchObject({ ok: false, message: expect.stringContaining('se reintentará') })
+    const [row] = await admin<{ id: string; status: string }[]>`select id, status from social_publications`
+    expect(row?.status).toBe('error')
+
+    vi.restoreAllMocks()
+    graphReplies({ id: '1', post_id: '777_888' })
+    expect(await actions.reintentarPublicacion(row?.id ?? '')).toMatchObject({ ok: true })
+    expect(await publications()).toMatchObject([{ status: 'publicado', external_id: '777_888', attempts: 1 }])
+  })
+
+  it('no publica con la publicación desactivada', async () => {
+    const id = await createMatch(admin, f, 'fb-manual-apagado', 'programado')
+    await setFacebook({ ...enabled, enabled: false })
+    await actAs('admin')
+    const fetchMock = graphReplies({ id: '1', post_id: '1_1' })
+    expect(await actions.publicarEnFacebook(id, { message: 'Previa' })).toEqual({
+      ok: false,
+      message: 'La publicación en Facebook está desactivada en Configuración.',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('guardar la configuración anota desde cuándo está activa', async () => {
+    await setFacebook(null)
+    await actAs('admin')
+    expect(
+      await actions.guardarFacebook({ enabled: true, weekday: '4', time: '18:30', publishResults: false }),
+    ).toEqual({ ok: true, data: { id: '1' } })
+    const [row] = await admin<{ social_publishing: { facebook: Record<string, unknown> } }[]>`
+      select social_publishing from site_settings where id = 1`
+    expect(row?.social_publishing.facebook).toMatchObject({ enabled: true, weekday: 4, time: '18:30' })
+    expect(row?.social_publishing.facebook.enabledAt).toEqual(expect.any(String))
+  })
+
+  it('probar la conexión no publica nada', async () => {
+    await actAs('admin')
+    const fetchMock = graphReplies({ id: '1234567890', name: 'Página de prueba' })
+    expect(await actions.probarConexionFacebook()).toEqual({ ok: true, data: { name: 'Página de prueba' } })
+    const url = String(fetchMock.mock.calls[0]?.[0])
+    expect(url).toContain(`/${GRAPH_API_VERSION}/1234567890?fields=id%2Cname`)
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBeUndefined()
   })
 })

@@ -4,6 +4,8 @@ import { SECOND_SITE } from './tests/e2e/second-site'
 // Puerto propio, distinto del de `pnpm dev` (3000): las pruebas nunca corren contra otro servidor.
 const PORT = Number(process.env.E2E_PORT ?? 3100)
 const baseURL = `http://localhost:${PORT}`
+// Graph API de Meta simulada (`tests/e2e/graph-mock.mjs`): las e2e nunca llaman a Facebook real.
+const GRAPH_MOCK_PORT = 3190
 
 /**
  * E2E contra el build de producción (`pnpm build` antes de `pnpm test:e2e`).
@@ -42,7 +44,24 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       // SITE_URL debe coincidir con el puerto: Better Auth valida el origen y arma con ella los enlaces de correo.
-      env: { PORT: String(PORT), HOSTNAME: 'localhost', SITE_URL: baseURL, LIVE_POLL_MS: '2000' },
+      env: {
+        PORT: String(PORT),
+        HOSTNAME: 'localhost',
+        SITE_URL: baseURL,
+        LIVE_POLL_MS: '2000',
+        // Página de Facebook ficticia contra la API simulada (solo se acepta con SITE_ENV=development).
+        FACEBOOK_PAGE_ID: '1000000000001',
+        FACEBOOK_PAGE_TOKEN: 'token-de-pagina-e2e-0123456789',
+        FACEBOOK_ALLOW_NON_PRODUCTION: 'true',
+        FACEBOOK_GRAPH_URL: `http://localhost:${GRAPH_MOCK_PORT}`,
+      },
+    },
+    {
+      command: 'node tests/e2e/graph-mock.mjs',
+      url: `http://localhost:${GRAPH_MOCK_PORT}/__salud`,
+      reuseExistingServer: false,
+      timeout: 20_000,
+      env: { GRAPH_MOCK_PORT: String(GRAPH_MOCK_PORT) },
     },
     {
       // La misma build con otro dominio y como producción (especificación 3.7): solo la usa `seo.spec.ts`
