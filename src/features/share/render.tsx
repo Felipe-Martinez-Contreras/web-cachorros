@@ -6,17 +6,20 @@ import type { ReactNode } from 'react'
 import { formatDayMonth, formatLongDate, formatTime } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
 import type { CardMatch, CardTeam, MatchCardData, NewsCardData, ShareCardData, WeekendCardData } from './dto'
-import { clampText, SHARE_FORMATS, type ShareFormat, weekendTitle } from './lib/cards'
+import { BRAND } from './lib/brand'
+import { clampText, fitDisplaySize, SHARE_FORMATS, type ShareFormat, weekendTitle } from './lib/cards'
 
 // Plantillas de las tarjetas (especificación 2.8) con Satori (`next/og`): solo flexbox, fuentes TTF
 // estáticas y escudos como *data URI* PNG (trampa 8). Fondo negro, marcador en display condensada,
 // escudos enfrentados y franja de acento.
 
-const INK = '#0b0b0c'
-const PAPER = '#ffffff'
-const ACCENT = '#f27604'
-const MUTED = '#9e9e9e'
-const LIVE = '#d7263d'
+const INK = BRAND.ink
+const PAPER = BRAND.paper
+const ACCENT = BRAND.accent
+const MUTED = BRAND.neutral400
+const LIVE = BRAND.live
+const SURFACE = BRAND.neutral900
+const LINE = BRAND.neutral800
 const DISPLAY = 'Archivo Condensed'
 const TEXT = 'Archivo'
 
@@ -41,7 +44,7 @@ function loadFonts() {
 /** Dibuja la tarjeta en PNG (o JPEG ≤ 300 KB para Open Graph). Corre dentro de la cola de 1. */
 export async function renderShareCard(data: ShareCardData, format: ShareFormat): Promise<Buffer> {
   const { width, height } = SHARE_FORMATS[format]
-  const layout: Layout = { width, height, s: width / 1080, wide: format === 'og' }
+  const layout: Layout = { width, height, s: width / 1080, wide: format === 'og', tall: height > 1500 }
   const response = new ImageResponse(<Card data={data} layout={layout} />, {
     width,
     height,
@@ -65,7 +68,7 @@ async function toOgJpeg(png: Buffer): Promise<Buffer> {
   return jpeg
 }
 
-type Layout = { width: number; height: number; s: number; wide: boolean }
+type Layout = { width: number; height: number; s: number; wide: boolean; tall: boolean }
 
 function Card({ data, layout }: { data: ShareCardData; layout: Layout }) {
   const { width, height, s } = layout
@@ -82,8 +85,18 @@ function Card({ data, layout }: { data: ShareCardData; layout: Layout }) {
         position: 'relative',
       }}
     >
-      {data.kind === 'match' && <MatchCard data={data} layout={layout} />}
-      {data.kind === 'weekend' && <WeekendCard data={data} layout={layout} />}
+      {data.kind === 'match' &&
+        (data.template === 'proximo' ? (
+          <NextMatchCard data={data} layout={layout} />
+        ) : (
+          <MatchCard data={data} layout={layout} />
+        ))}
+      {data.kind === 'weekend' &&
+        (data.template === 'programacion' ? (
+          <ScheduleCard data={data} layout={layout} />
+        ) : (
+          <WeekendCard data={data} layout={layout} />
+        ))}
       {data.kind === 'news' && <NewsCard data={data} layout={layout} />}
       {/* Franja de acento al pie */}
       <div
@@ -187,11 +200,6 @@ function Crest({ team, size }: { team: CardTeam; size: number }) {
 
 function matchEyebrow(data: MatchCardData): { text: string; color: string } {
   if (data.template === 'gol') return { text: '¡Gol!', color: ACCENT }
-  if (data.template === 'proximo') {
-    return data.match.status === 'postergado'
-      ? { text: 'Partido postergado', color: ACCENT }
-      : { text: 'Próximo partido', color: ACCENT }
-  }
   if (data.match.status === 'en_vivo') return { text: 'En vivo', color: LIVE }
   if (data.match.status === 'suspendido') return { text: matchStatusLabels.suspendido, color: ACCENT }
   return { text: 'Resultado final', color: ACCENT }
@@ -221,9 +229,7 @@ function MatchCard({ data, layout }: { data: MatchCardData; layout: Layout }) {
   const { s, wide } = layout
   const size = matchSizes(layout)
   const eyebrow = matchEyebrow(data)
-  const showScore = data.template !== 'proximo'
-  const penalties = showScore ? penaltiesLine(match) : null
-  const date = capitalize(formatLongDate(match.kickoffAt).replace(/ de \d{4}$/, ''))
+  const penalties = penaltiesLine(match)
 
   return (
     <div
@@ -260,41 +266,17 @@ function MatchCard({ data, layout }: { data: MatchCardData; layout: Layout }) {
             style={{
               display: 'flex',
               fontFamily: DISPLAY,
-              fontSize: (showScore ? size.score : size.score * 0.5) * s,
+              fontSize: size.score * s,
               lineHeight: 1,
-              color: showScore ? PAPER : MUTED,
+              color: PAPER,
             }}
           >
-            {showScore ? `${match.homeScore}–${match.awayScore}` : 'VS'}
+            {`${match.homeScore}–${match.awayScore}`}
           </div>
           {penalties && <div style={{ display: 'flex', fontSize: 30 * s, color: MUTED }}>{penalties}</div>}
         </div>
         <TeamColumn team={match.away} crestSize={size.crest * s} nameSize={size.name * s} />
       </div>
-      {data.template === 'proximo' &&
-        (wide ? (
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 20 * s, fontSize: 34 * s }}>
-            <div style={{ display: 'flex' }}>{date}</div>
-            <div style={{ display: 'flex', fontFamily: DISPLAY, fontSize: 52 * s, color: ACCENT }}>
-              {`${formatTime(match.kickoffAt)} h`}
-            </div>
-            {match.venueName && (
-              <div style={{ display: 'flex', color: MUTED }}>{clampText(match.venueName, 28)}</div>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 * s, fontSize: 44 * s }}>
-            <div style={{ display: 'flex' }}>{date}</div>
-            <div
-              style={{ display: 'flex', fontFamily: DISPLAY, fontSize: 96 * s, lineHeight: 1, color: ACCENT }}
-            >
-              {`${formatTime(match.kickoffAt)} h`}
-            </div>
-            {match.venueName && (
-              <div style={{ display: 'flex', color: MUTED }}>{clampText(match.venueName, 40)}</div>
-            )}
-          </div>
-        ))}
       {data.template === 'resultado' && (
         <div style={{ display: 'flex', gap: 32 * s, fontSize: (wide ? 24 : 32) * s, paddingBottom: 16 * s }}>
           <ScorerList lines={data.scorers.home} align="flex-start" max={wide ? 2 : 5} />
@@ -515,6 +497,383 @@ function NewsCard({ data, layout }: { data: NewsCardData; layout: Layout }) {
           {clampText(data.title, 90)}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Próximo partido («cara a cara») ────────────────────────────────────────────────────────────────
+
+const SIDE_LABEL = { local: 'Local', visita: 'Visita' } as const
+/** Ancho de un dígito de la fuente display, en em (la hora «15:30» mide unos 5 de estos). */
+const DISPLAY_EM = 0.56
+
+/** «Sábado 31 de octubre» (sin año). */
+function dayLong(iso: string): string {
+  return capitalize(formatLongDate(iso).replace(/ de \d{4}$/, ''))
+}
+
+function NextTeam({
+  team,
+  crest,
+  width,
+  nameSize,
+}: {
+  team: CardTeam
+  crest: number
+  width: number
+  nameSize: number
+}) {
+  // El nombre nunca se corta con «…»: si no cabe en dos líneas, se achica la letra.
+  const name = clampText(team.name, 80)
+  return (
+    <div
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: nameSize * 0.35, width }}
+    >
+      <Crest team={team} size={crest} />
+      <div
+        style={{
+          display: 'flex',
+          fontFamily: DISPLAY,
+          fontSize: fitDisplaySize(name, width, nameSize, 3),
+          lineHeight: 1.02,
+          textAlign: 'center',
+          textTransform: 'uppercase',
+          justifyContent: 'center',
+        }}
+      >
+        {name}
+      </div>
+    </div>
+  )
+}
+
+/** Escudos grandes enfrentados y una banda de acento con fecha, hora, local o visita y cancha. */
+function NextMatchCard({ data, layout }: { data: MatchCardData; layout: Layout }) {
+  const { match } = data
+  const { s, wide, tall } = layout
+  const pad = (wide ? 44 : 64) * s
+  // En 9:16 los equipos van uno sobre otro: así llenan el alto en vez de dejarlo vacío.
+  const crest = (wide ? 190 : tall ? 360 : layout.height > 1200 ? 330 : 270) * s
+  const nameSize = (wide ? 44 : tall ? 76 : 62) * s
+  const teamWidth = tall ? layout.width - pad * 2 : (layout.width - pad * 2 - 150 * s) / 2
+  const timeSize = (wide ? 100 : 140) * s
+  const date = dayLong(match.kickoffAt)
+  // La fecha va en una línea junto a la hora: si no cabe, se achica.
+  const dateWidth = layout.width - pad * 2 - 32 * s - timeSize * DISPLAY_EM * 5
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', padding: pad, paddingBottom: 0, gap: 10 * s }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 * s }}>
+          <Eyebrow layout={layout}>
+            {match.status === 'postergado' ? 'Partido postergado' : 'Próximo partido'}
+          </Eyebrow>
+          <div
+            style={{
+              display: 'flex',
+              fontFamily: DISPLAY,
+              fontSize: (wide ? 30 : 40) * s,
+              textTransform: 'uppercase',
+              border: `${3 * s}px solid ${PAPER}`,
+              padding: `${6 * s}px ${18 * s}px`,
+              flexShrink: 0,
+            }}
+          >
+            {clampText(match.seriesName, 24)}
+          </div>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            fontSize: (wide ? 26 : 32) * s,
+            color: MUTED,
+            textTransform: 'uppercase',
+          }}
+        >
+          {clampText([match.competitionName, match.roundLabel].filter(Boolean).join(' · '), 56)}
+        </div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexGrow: 1,
+          flexDirection: tall ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: (tall ? 28 : 0) * s,
+          padding: `${(wide ? 8 : 24) * s}px ${pad}px`,
+        }}
+      >
+        <NextTeam team={match.home} crest={crest} width={teamWidth} nameSize={nameSize} />
+        <div
+          style={{
+            display: 'flex',
+            fontFamily: DISPLAY,
+            fontSize: (wide ? 80 : 120) * s,
+            color: ACCENT,
+            lineHeight: 1,
+          }}
+        >
+          VS
+        </div>
+        <NextTeam team={match.away} crest={crest} width={teamWidth} nameSize={nameSize} />
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 32 * s,
+          backgroundColor: ACCENT,
+          color: INK,
+          padding: `${(wide ? 18 : 32) * s}px ${pad}px ${(wide ? 30 : 48) * s}px`,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 * s, flexShrink: 1 }}>
+          <div
+            style={{
+              display: 'flex',
+              fontFamily: DISPLAY,
+              fontSize: fitDisplaySize(date, dateWidth, (wide ? 48 : 64) * s, 1),
+              lineHeight: 1,
+              textTransform: 'uppercase',
+            }}
+          >
+            {date}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 * s, fontSize: (wide ? 26 : 34) * s }}>
+            <div
+              style={{
+                display: 'flex',
+                fontFamily: DISPLAY,
+                textTransform: 'uppercase',
+                backgroundColor: INK,
+                color: PAPER,
+                padding: `${2 * s}px ${12 * s}px`,
+                flexShrink: 0,
+              }}
+            >
+              {SIDE_LABEL[match.clubSide]}
+            </div>
+            {match.venueName && (
+              <div style={{ display: 'flex' }}>{clampText(match.venueName, wide ? 34 : 30)}</div>
+            )}
+          </div>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            fontFamily: DISPLAY,
+            fontSize: timeSize,
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          {formatTime(match.kickoffAt)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Programación del fin de semana («grilla de jornada») ───────────────────────────────────────────
+
+const rivalOf = (match: CardMatch): CardTeam => (match.clubSide === 'local' ? match.away : match.home)
+
+/** Cuántos partidos caben y en cuántas columnas. */
+function scheduleGrid(layout: Layout, count: number): { max: number; columns: number } {
+  if (layout.wide) return { max: 4, columns: Math.min(Math.max(count, 1), 4) }
+  // Con pocos partidos, una columna: las tarjetas a lo ancho llenan el alto sin quedar vacías.
+  const single = count <= (layout.tall ? 4 : layout.height > 1200 ? 3 : 2)
+  return { max: layout.height > 1200 ? 8 : 6, columns: single ? 1 : 2 }
+}
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const rows: T[][] = []
+  for (let index = 0; index < items.length; index += size) rows.push(items.slice(index, index + size))
+  return rows
+}
+
+/** Hora del partido, o su estado si ya no se juega a esa hora (postergado, suspendido). */
+function matchTime(match: CardMatch): string {
+  return match.status === 'programado' || match.status === 'en_vivo'
+    ? formatTime(match.kickoffAt)
+    : matchStatusLabels[match.status]
+}
+
+/** Una tarjeta por serie con la hora en display; si todas juegan contra el mismo rival, va una vez arriba. */
+function ScheduleCard({ data, layout }: { data: WeekendCardData; layout: Layout }) {
+  const { s, wide } = layout
+  const pad = (wide ? 40 : 64) * s
+  const gap = (wide ? 12 : 16) * s
+  const { max, columns } = scheduleGrid(layout, data.matches.length)
+  const shown = data.matches.slice(0, max)
+  const rest = data.matches.length - shown.length
+  const rows = chunk(shown, columns)
+  const first = data.matches[0]
+  const shared =
+    first && new Set(data.matches.map((match) => rivalOf(match).name)).size === 1 ? rivalOf(first) : null
+  const sharedName = shared ? clampText(shared.name, 80) : ''
+  const tileWidth = (layout.width - pad * 2 - gap * (columns - 1)) / columns
+  // Alto disponible por fila, para escalar la hora: las filas llenan el alto de la tarjeta.
+  const headerHeight = (wide ? 110 : 190) * s + (shared ? (wide ? 70 : 120) * s : 0) + (rest > 0 ? 50 * s : 0)
+  const rowHeight = (layout.height - pad * 2 - 18 * s - headerHeight - gap * rows.length) / rows.length
+  // Con filas altas (pocos partidos) todo crece, para no dejar la tarjeta vacía.
+  const grow = wide ? 1 : Math.min(Math.max(rowHeight / (300 * s), 1), 1.6)
+  const timeCap = Math.min(rowHeight * (shared ? 0.42 : 0.32), (wide ? 70 : columns === 1 ? 280 : 200) * s)
+  const crestCap = (wide ? 48 : 110) * s * grow
+  const label = (wide ? 24 : 32) * s * grow
+  const detail = (wide ? 18 : 24) * s * grow
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flexGrow: 1,
+        padding: pad,
+        paddingBottom: pad + 18 * s,
+        gap: gap * 1.5,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 * s }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              display: 'flex',
+              fontFamily: DISPLAY,
+              fontSize: (wide ? 60 : 104) * s,
+              lineHeight: 1,
+              textTransform: 'uppercase',
+            }}
+          >
+            Jornada
+          </div>
+          <div style={{ display: 'flex', fontSize: (wide ? 26 : 36) * s, color: ACCENT }}>
+            {weekendTitle(data.saturday)}
+          </div>
+        </div>
+        <Crest team={{ name: data.clubName, crest: data.clubCrest }} size={(wide ? 80 : 130) * s} />
+      </div>
+      {shared && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 18 * s,
+            borderTop: `${2 * s}px solid ${LINE}`,
+            paddingTop: 16 * s,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              fontSize: (wide ? 24 : 30) * s,
+              color: MUTED,
+              textTransform: 'uppercase',
+            }}
+          >
+            Contra
+          </div>
+          <Crest team={shared} size={(wide ? 48 : 80) * s} />
+          <div
+            style={{
+              display: 'flex',
+              flex: 1,
+              fontFamily: DISPLAY,
+              fontSize: fitDisplaySize(sharedName, layout.width - pad * 2 - 260 * s, (wide ? 40 : 60) * s),
+              lineHeight: 1,
+              textTransform: 'uppercase',
+            }}
+          >
+            {sharedName}
+          </div>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, gap }}>
+        {rows.map((row) => (
+          <div
+            key={row.map((match) => match.kickoffAt + match.seriesName).join()}
+            style={{ display: 'flex', flex: 1, gap }}
+          >
+            {row.map((match) => {
+              const rival = rivalOf(match)
+              const versus = `vs ${clampText(rival.name, 80)}`
+              const time = matchTime(match)
+              const crestSize = Math.min(timeCap, crestCap)
+              // La hora también debe caber a lo ancho, junto al escudo del rival.
+              const free = tileWidth - (wide ? 28 : 44) * s - (shared ? 0 : crestSize + 12 * s)
+              const timeSize = Math.min(timeCap, free / (time.length * DISPLAY_EM))
+              return (
+                <div
+                  key={`${match.kickoffAt}-${match.seriesName}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    width: tileWidth,
+                    backgroundColor: SURFACE,
+                    borderTop: `${8 * s}px solid ${ACCENT}`,
+                    padding: `${(wide ? 10 : 18) * s}px ${(wide ? 14 : 22) * s}px`,
+                    gap: 4 * s,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      fontFamily: DISPLAY,
+                      fontSize: label,
+                      color: ACCENT,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {clampText(match.seriesName, 24)}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12 * s,
+                    }}
+                  >
+                    <div style={{ display: 'flex', fontFamily: DISPLAY, fontSize: timeSize, lineHeight: 1 }}>
+                      {time}
+                    </div>
+                    {!shared && <Crest team={rival} size={crestSize} />}
+                  </div>
+                  <div style={{ display: 'flex', fontSize: detail, color: BRAND.neutral200 }}>
+                    {[capitalize(formatDayMonth(match.kickoffAt)), SIDE_LABEL[match.clubSide]].join(' · ')}
+                  </div>
+                  {match.venueName && (
+                    <div style={{ display: 'flex', fontSize: detail, color: MUTED }}>
+                      {clampText(match.venueName, columns > 2 ? 22 : 34)}
+                    </div>
+                  )}
+                  {!shared && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        fontFamily: DISPLAY,
+                        fontSize: fitDisplaySize(versus, tileWidth - (wide ? 28 : 44) * s, label * 0.95),
+                        lineHeight: 1.05,
+                        textTransform: 'uppercase',
+                        marginTop: 4 * s,
+                      }}
+                    >
+                      {versus}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      {rest > 0 && (
+        <div
+          style={{ display: 'flex', fontSize: 28 * s, color: MUTED }}
+        >{`y ${rest} partidos más en el sitio`}</div>
+      )}
     </div>
   )
 }

@@ -32,6 +32,8 @@ ask bucket 'Bucket de respaldos en Cloud Storage'
 ask age_recipient 'Clave PÚBLICA de respaldos (age1…)'
 ask analytics 'Token de Cloudflare Web Analytics (opcional)'
 ask healthcheck 'URL de ping de healthchecks.io (opcional)'
+ask facebook_page_id 'Facebook: id de la página (opcional; ver docs/integraciones/facebook.md)'
+ask facebook_page_token 'Facebook: token de página de larga duración (opcional)'
 two_factor=false
 [[ "$site_env" == 'production' ]] && two_factor=true
 
@@ -81,6 +83,11 @@ CRON_SECRET=$(secret 32)
 
 # Analítica (opcional)
 CF_WEB_ANALYTICS_TOKEN=${analytics}
+
+# Facebook (opcional). Fuera de producción solo publica con FACEBOOK_ALLOW_NON_PRODUCTION=true.
+FACEBOOK_PAGE_ID=${facebook_page_id}
+FACEBOOK_PAGE_TOKEN=${facebook_page_token}
+FACEBOOK_ALLOW_NON_PRODUCTION=false
 
 # Medios
 UPLOADS_DIR=/data/uploads

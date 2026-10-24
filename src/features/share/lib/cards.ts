@@ -101,7 +101,18 @@ export function shareFilename({ template, format }: ShareRequest, slug: string):
   return `${template}-${slug}-${format}.${SHARE_FORMATS[format].ext}`.slice(0, 120)
 }
 
-/** Una versión es un entero (partido) o un hash corto (fin de semana, noticia). */
+/**
+ * Revisión del diseño de cada plantilla: se suma a su versión para que un rediseño cambie la URL (las
+ * tarjetas se sirven como inmutables y Cloudflare las guarda) y la caché en disco se regenere sola.
+ */
+const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = { proximo: 'd2', programacion: 'd2' }
+
+/** Versión pública de una tarjeta: la de sus datos más la revisión del diseño de la plantilla. */
+export function withDesignRevision(template: ShareTemplate, version: string | number): string {
+  return `${version}${DESIGN_REVISION[template] ?? ''}`
+}
+
+/** Una versión es un entero (partido) o un hash corto (fin de semana, noticia), más la revisión del diseño. */
 export function isValidVersion(value: string | null): value is string {
   return value !== null && /^[0-9a-z]{1,16}$/.test(value)
 }
@@ -210,6 +221,37 @@ export function clampText(text: string, max: number): string {
   return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
 }
 
+/** Ancho medio de una mayúscula de Archivo Condensed ExtraBold, en em (medido sobre nombres de clubes). */
+const DISPLAY_CHAR_EM = 0.56
+
+/**
+ * Tamaño de letra (display, en mayúsculas) para que un nombre quepa entero en `maxLines` líneas de `width`
+ * px, sin cortarlo con «…»: parte de `size` y achica hasta `min`. Satori parte las líneas en los espacios.
+ */
+export function fitDisplaySize(text: string, width: number, size: number, maxLines = 2, min = size * 0.5) {
+  const words = text.toUpperCase().split(/\s+/).filter(Boolean)
+  for (let current = size; current > min; current *= 0.94) {
+    if (lineCount(words, width / (current * DISPLAY_CHAR_EM)) <= maxLines) return Math.floor(current)
+  }
+  return Math.floor(min)
+}
+
+/** Líneas que ocupan las palabras con `perLine` caracteres por línea (`Infinity` si una no cabe). */
+function lineCount(words: readonly string[], perLine: number): number {
+  let lines = 0
+  let used = 0
+  for (const word of words) {
+    if (word.length > perLine) return Number.POSITIVE_INFINITY
+    if (lines === 0 || used + 1 + word.length > perLine) {
+      lines++
+      used = word.length
+    } else {
+      used += 1 + word.length
+    }
+  }
+  return lines
+}
+
 type OgCard = { url: string; width: number; height: number; alt: string }
 
 /** `og:image` de un partido: la tarjeta versionada (resultado o previa); `null` si no corresponde. */
@@ -221,7 +263,12 @@ export function matchOgImage(
   const template = matchOgTemplate(match.status)
   if (!template) return null
   const { width, height } = SHARE_FORMATS.og
-  return { url: shareUrl(template, match.id, 'og', version), width, height, alt }
+  return {
+    url: shareUrl(template, match.id, 'og', withDesignRevision(template, version)),
+    width,
+    height,
+    alt,
+  }
 }
 
 /** `og:image` de una noticia: su versión es la fecha de la última edición. */

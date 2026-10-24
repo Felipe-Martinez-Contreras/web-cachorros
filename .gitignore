@@ -38,3 +38,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# Propuestas de diseño y otras salidas locales
+/tmp/

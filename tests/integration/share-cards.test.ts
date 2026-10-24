@@ -99,7 +99,10 @@ describe('tarjetas para redes', () => {
 
   it('la imagen Open Graph es JPEG de 1200 × 630 y pesa 300 KB o menos', async () => {
     const id = await createMatch(admin, f, 'tarjeta-og', 'programado')
-    const response = await getCard('proximo', id, 'og', '?v=1')
+    // La versión lleva la revisión del diseño de la plantilla (`1d2`).
+    const version = (await shareVersionOf({ template: 'proximo', id, format: 'og' }))?.version
+    expect(version).toBe('1d2')
+    const response = await getCard('proximo', id, 'og', `?v=${version}`)
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('image/jpeg')
     expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')

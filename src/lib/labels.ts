@@ -16,6 +16,8 @@ import type {
   newsType,
   playerPosition,
   positionDetail,
+  publicationKind,
+  publicationStatus,
   registrationStatus,
   seriesKind,
   socialPlatform,
@@ -252,6 +254,7 @@ export const auditEntityLabels: Record<string, string> = {
   series: 'Series',
   site_settings: 'Configuración',
   social_post: 'Redes sociales',
+  social_publication: 'Publicaciones en Facebook',
   sponsor: 'Auspiciadores',
   sponsorship_inquiry: 'Solicitudes de auspicio',
   squad_registration: 'Inscripciones',
@@ -273,4 +276,19 @@ export const weekdayLabels: Record<number, string> = {
   5: 'Viernes',
   6: 'Sábado',
   7: 'Domingo',
+}
+
+export const publicationKindLabels: Labels<typeof publicationKind> = {
+  programacion: 'Programación del fin de semana',
+  proximo: 'Próximo partido',
+  resultado: 'Resultado final',
+}
+
+export const publicationStatusLabels: Labels<typeof publicationStatus> = {
+  pendiente: 'Pendiente',
+  publicando: 'Publicando',
+  publicado: 'Publicado',
+  error: 'Con error',
+  incierto: 'Sin confirmar',
+  descartado: 'Descartado',
 }
