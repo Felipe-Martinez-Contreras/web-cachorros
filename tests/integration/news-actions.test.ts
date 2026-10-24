@@ -323,6 +323,8 @@ describe('estados', () => {
       ok: true,
       publishedNews: 1,
       notifications: { sent: 0, failed: 0 },
+      // Facebook está desactivado en Configuración: no encola ni publica nada.
+      social: { skipped: 'desactivada', queued: 0, published: 0, failed: 0 },
     })
     expect(invalidatedTags()).toEqual(['news', `news:${id}`])
   })

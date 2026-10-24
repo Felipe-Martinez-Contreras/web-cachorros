@@ -9,12 +9,15 @@ export type AuditEntry = {
   meta?: Record<string, unknown>
 }
 
-/** Registra una acción en la auditoría, dentro de la misma transacción que la escritura. */
+/**
+ * Registra una acción en la auditoría, dentro de la misma transacción que la escritura. `user = null` es
+ * una tarea del sistema (por ejemplo, la publicación automática en redes).
+ */
 export async function audit(
   tx: Tx,
-  user: { id: string },
+  user: { id: string } | null,
   action: string,
   entry: AuditEntry = {},
 ): Promise<void> {
-  await tx.insert(auditLog).values({ userId: user.id, action, ...entry })
+  await tx.insert(auditLog).values({ userId: user?.id ?? null, action, ...entry })
 }

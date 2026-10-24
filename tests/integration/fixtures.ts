@@ -5,7 +5,7 @@ type Sql = postgres.Sql
 /** Borra los datos deportivos en orden de dependencias (sin TRUNCATE … CASCADE, que vaciaría `site_settings`). */
 export async function cleanSport(sql: Sql) {
   await sql.unsafe(`
-    DELETE FROM news_series; DELETE FROM news; DELETE FROM album_items; DELETE FROM albums;
+    DELETE FROM social_publications; DELETE FROM news_series; DELETE FROM news; DELETE FROM album_items; DELETE FROM albums;
     DELETE FROM match_events; DELETE FROM match_lineups; DELETE FROM matches;
     DELETE FROM player_stat_adjustments; DELETE FROM squad_registrations; DELETE FROM players;
     DELETE FROM standings_rows; DELETE FROM standings_tables;

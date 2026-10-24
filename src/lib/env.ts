@@ -15,6 +15,9 @@ export const isDevServer = process.env.NODE_ENV === 'development'
 const skipValidation =
   process.env.SKIP_ENV_VALIDATION === '1' || process.env.NEXT_PHASE === 'phase-production-build'
 
+/** La Graph API real de Meta. */
+export const FACEBOOK_GRAPH_DEFAULT = 'https://graph.facebook.com'
+
 const requerida = (ayuda: string) => z.string({ error: `Falta definirla. ${ayuda}` }).min(1)
 
 export const env = createEnv({
@@ -72,11 +75,33 @@ export const env = createEnv({
     // Intervalo base del polling en vivo, en ms. Solo vale con SITE_ENV=development (e2e más rápidas);
     // en staging y producción siempre es el de la especificación (20 s).
     LIVE_POLL_MS: z.coerce.number().int().min(500).max(60_000).optional(),
+
+    // Publicación en la página de Facebook del club (docs/integraciones/facebook.md). Sin las dos, la
+    // función queda desactivada y el panel lo explica.
+    FACEBOOK_PAGE_ID: z
+      .string()
+      .regex(/^\d+$/, { error: 'Debe ser el id numérico de la página.' })
+      .optional(),
+    FACEBOOK_PAGE_TOKEN: z.string().min(20, { error: 'No parece un token de página de Meta.' }).optional(),
+    // Fuera de producción no se publica en Facebook, salvo que se pida a propósito (para probar en staging).
+    FACEBOOK_ALLOW_NON_PRODUCTION: z
+      .enum(['true', 'false'], { error: 'Debe ser true o false.' })
+      .default('false')
+      .transform((value) => value === 'true'),
+    // Dirección de la Graph API. Otra solo se acepta con SITE_ENV=development (la API simulada de las e2e).
+    FACEBOOK_GRAPH_URL: z.url({ error: 'Debe ser una URL.' }).default(FACEBOOK_GRAPH_DEFAULT),
   },
   experimental__runtimeEnv: {},
   // Las claves de prueba de Turnstile dejan pasar a cualquiera: producción no arranca con ellas.
   createFinalSchema: (shape) =>
     z.object(shape).superRefine((values, context) => {
+      if (values.SITE_ENV !== 'development' && values.FACEBOOK_GRAPH_URL !== FACEBOOK_GRAPH_DEFAULT) {
+        context.addIssue({
+          code: 'custom',
+          path: ['FACEBOOK_GRAPH_URL'],
+          message: `Solo se cambia en desarrollo (la API simulada de las pruebas). Bórrala o usa ${FACEBOOK_GRAPH_DEFAULT}.`,
+        })
+      }
       if (values.SITE_ENV !== 'production') return
       for (const key of ['TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY'] as const) {
         if (TURNSTILE_TEST_KEY.test(values[key])) {
