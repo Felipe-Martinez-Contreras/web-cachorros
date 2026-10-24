@@ -204,6 +204,10 @@ remitente, bucket (`cachorros-web-respaldos`), clave pública de `age`, token de
 healthchecks.io (si todavía no la tienes, déjala vacía: se agrega en el paso 7). Con `production`, deja
 `AUTH_REQUIRE_2FA=true`.
 
+También pregunta el id y el token de la página de Facebook (opcionales: déjalos vacíos y cárgalos después con
+[la guía de Facebook](integraciones/facebook.md)). En staging no se publica en Facebook salvo con
+`FACEBOOK_ALLOW_NON_PRODUCTION=true`.
+
 ### 5.5 Primer despliegue
 
 ```bash

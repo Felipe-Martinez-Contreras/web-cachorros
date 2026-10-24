@@ -42,6 +42,14 @@ Esta guía describe cómo activar más adelante el proveedor `instagram_api` sin
 4. Pruebas: unitarias del mapeo de la respuesta de Meta y de integración de la tarea con una respuesta
    simulada.
 
+## Publicar en Instagram (también pendiente)
+
+La publicación automática en Facebook ya existe ([guía](facebook.md), [ADR 0009](../adr/0009-publicacion-en-redes-graph-api.md))
+y dejó todo listo para sumar Instagram con la misma app de Meta: el canal `instagram` ya está en la tabla
+`social_publications` y en `PublishChannel`. La diferencia es que la API de Instagram pide la imagen por URL
+pública (`image_url`), no como archivo: el canal usará la URL versionada de la tarjeta y solo funcionará en
+producción.
+
 ## Mientras tanto
 
 - Las publicaciones del seed tienen el enlace como `[COMPLETAR: URL de la publicación]`: aparecen en

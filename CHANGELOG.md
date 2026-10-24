@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Redes — Matchday y publicación en Facebook
+
+- Tarjetas «Próximo partido» (cara a cara, con local o visita) y «Programación del fin de semana» (grilla de
+  jornada) rediseñadas; los nombres de los rivales ya no se cortan.
+- Publicación en la página de Facebook vía Graph API: programación automática (día y hora configurables),
+  resultados opcionales y botón «Publicar en Facebook» en cada partido, con vista previa y texto editable.
+  Cola idempotente con reintentos desde `tick` (migración `0005`, ADR 0009). Guía en
+  `docs/integraciones/facebook.md`.
+
 ### Fase 2b — Noticias, historia, configuración, usuarios y SEO
 
 - Noticias: editor de texto enriquecido (Tiptap) con lista blanca de nodos, fotos de la biblioteca y videos
