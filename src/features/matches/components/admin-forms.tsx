@@ -41,8 +41,8 @@ export function MatchForm({
       defaultValues={defaults}
       submitLabel={isNew ? 'Programar partido' : 'Guardar'}
       successMessage={isNew ? 'Partido programado.' : 'Guardado.'}
-      redirectTo={isNew ? '/admin/partidos' : undefined}
-      cancelHref={isNew ? '/admin/partidos' : undefined}
+      redirectTo="/admin/partidos"
+      cancelHref="/admin/partidos"
       fields={[
         { name: 'seriesId', label: 'Serie', type: 'select', options: options.series },
         { name: 'competitionId', label: 'Competencia', type: 'select', options: options.competitions },

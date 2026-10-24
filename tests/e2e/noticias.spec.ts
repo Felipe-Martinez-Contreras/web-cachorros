@@ -125,7 +125,8 @@ test('crear una noticia con foto desde el panel: se ve en el sitio en la carga s
   expect(moved.status()).toBe(301)
   expect(moved.headers().location).toContain(`/noticias/${slug}-nueva`)
 
-  // Al volver a borrador deja de existir en el sitio.
+  // Al volver a borrador deja de existir en el sitio (guardar llevó a la lista: se vuelve a la noticia).
+  await page.goto(editUrl)
   await page.getByRole('button', { name: 'Volver a borrador' }).click()
   await page.getByRole('button', { name: 'Sí, despublicar' }).click()
   await expect(page.getByText('La noticia volvió a borrador.')).toBeVisible()

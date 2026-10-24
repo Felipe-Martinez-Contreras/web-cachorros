@@ -309,13 +309,20 @@ test.describe('sin JavaScript', () => {
       .getByRole('spinbutton', { name: /^Número de camiseta/ })
       .fill(testInfo.project.name === 'celular' ? '93' : '94')
     await panel.getByRole('button', { name: 'Crear jugador' }).click()
+    // Al crear vuelve a la lista: se entra a la ficha desde ahí.
+    await expect(panel).toHaveURL(/\/admin\/jugadores$/)
+    await panel.goto(`/admin/jugadores?q=Antes${stamp}`)
+    await panel.getByRole('link', { name: new RegExp(`Antes${stamp}, E2E Jugador`) }).click()
     await expect(panel.getByRole('heading', { name: `E2E Jugador Antes${stamp}`, level: 1 })).toBeVisible()
 
     expect((await page.goto(oldPath))?.status()).toBe(200)
 
     await panel.getByRole('textbox', { name: 'Apellido' }).fill(`Despues${stamp}`)
     await panel.getByRole('button', { name: 'Guardar', exact: true }).click()
-    await expect(panel.getByRole('heading', { name: `E2E Jugador Despues${stamp}`, level: 1 })).toBeVisible()
+    // Al editar también vuelve a la lista, ya con el nombre nuevo.
+    await expect(panel).toHaveURL(/\/admin\/jugadores$/)
+    await panel.goto(`/admin/jugadores?q=Despues${stamp}`)
+    await expect(panel.getByRole('link', { name: new RegExp(`Despues${stamp}, E2E Jugador`) })).toBeVisible()
     await panelContext.close()
 
     // Sin seguir la redirección: el estado es 301 y `Location` apunta al slug vigente, con su consulta.

@@ -80,7 +80,7 @@ export function NewPlayerForm({
       defaultValues={defaults}
       submitLabel="Crear jugador"
       successMessage="Jugador creado."
-      redirectTo={(id) => `/admin/jugadores/${id}`}
+      redirectTo="/admin/jugadores"
       cancelHref="/admin/jugadores"
       fields={[
         ...PLAYER_FIELDS.slice(0, 5),
@@ -123,6 +123,8 @@ export function PlayerForm({
       action={action}
       defaultValues={defaults}
       mediaPreviews={{ photoMediaId: photo }}
+      redirectTo="/admin/jugadores"
+      cancelHref="/admin/jugadores"
       fields={PLAYER_FIELDS}
     />
   )

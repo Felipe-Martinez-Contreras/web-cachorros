@@ -225,6 +225,7 @@ export function SettingsForm({
       mediaPreviews={previews}
       fields={fieldsOf(section, options)}
       successMessage="Configuración guardada."
+      redirectTo="/admin/configuracion"
       cancelHref="/admin/configuracion"
     />
   )

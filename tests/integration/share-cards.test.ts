@@ -148,13 +148,14 @@ describe('tarjetas para redes', () => {
   })
 
   it('programación y resultados del fin de semana: solo partidos del club de sábado y domingo', async () => {
-    const saturday = '2026-10-24'
+    // Un fin de semana lejano: con una fecha cercana, los partidos «de hoy» de otras pruebas caían en él.
+    const saturday = '2030-06-01'
     const sat = await createMatch(admin, f, 'sabado', 'programado')
     const sun = await createMatch(admin, f, 'domingo', 'finalizado')
     const monday = await createMatch(admin, f, 'lunes', 'programado')
-    await admin`update matches set kickoff_at = '2026-10-24T19:00:00Z' where id = ${sat}`
-    await admin`update matches set kickoff_at = '2026-10-25T18:00:00Z' where id = ${sun}`
-    await admin`update matches set kickoff_at = '2026-10-26T15:00:00Z' where id = ${monday}`
+    await admin`update matches set kickoff_at = '2030-06-01T19:00:00Z' where id = ${sat}`
+    await admin`update matches set kickoff_at = '2030-06-02T18:00:00Z' where id = ${sun}`
+    await admin`update matches set kickoff_at = '2030-06-03T15:00:00Z' where id = ${monday}`
 
     const schedule = await loadShareCard({ template: 'programacion', id: saturday, format: 'cuadrado' })
     expect(schedule?.kind === 'weekend' && schedule.matches.length).toBe(2)

@@ -2,22 +2,16 @@
 # Renovate aplica la misma regla (renovate.json).
 minimumReleaseAge: 10080
 
-# Excepción por seguridad (AGENTS.md: parches de Next y React en ≤ 48 h): 16.4.0 y 19.3.0 tienen RCE
-# críticas (GHSA-673q-mjm6-r5xr en `use cache`, GHSA-xqc2-xf4c-x3h3 en React Server Components).
-# Acotada a estas versiones exactas; se quita cuando cumplan los 7 días (22 de octubre de 2026).
+# Excepción por seguridad (AGENTS.md): parches de dependencias con avisos de `pnpm audit --prod` que aún no
+# cumplen los 7 días. nodemailer 10.1.7 (avisos moderados, < 10.1.4) y fast-uri 3.1.9 (vía
+# @hookform/resolvers > ajv; GHSA-xhq7-xmqj-769h y GHSA-333x-w4r6-6crp). Acotada a estas versiones exactas;
+# se quita cuando cumplan los 7 días (26 de octubre de 2026).
 minimumReleaseAgeExclude:
-  - next@16.4.2
-  - '@next/env@16.4.2'
-  - '@next/swc-darwin-arm64@16.4.2'
-  - '@next/swc-darwin-x64@16.4.2'
-  - '@next/swc-linux-arm64-gnu@16.4.2'
-  - '@next/swc-linux-arm64-musl@16.4.2'
-  - '@next/swc-linux-x64-gnu@16.4.2'
-  - '@next/swc-linux-x64-musl@16.4.2'
-  - '@next/swc-win32-arm64-msvc@16.4.2'
-  - '@next/swc-win32-x64-msvc@16.4.2'
-  - react@19.3.1
-  - react-dom@19.3.1
+  - nodemailer@10.1.7
+  - fast-uri@3.1.9
+
+overrides:
+  fast-uri: '^3.1.9'
 
 # Únicos paquetes autorizados a ejecutar scripts de instalación.
 allowBuilds:
