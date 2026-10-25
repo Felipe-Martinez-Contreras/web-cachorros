@@ -4,7 +4,7 @@ import { db } from '@/db/client'
 import { socialPublications } from '@/db/schema'
 import { getShareImage } from '@/features/share/images'
 import type { ShareRequest } from '@/features/share/lib/cards'
-import { loadShareCard, shareVersionOf } from '@/features/share/queries'
+import { loadShareCard, shareVersionOf, weekendMatchIds } from '@/features/share/queries'
 import { audit } from '@/lib/audit'
 import { env } from '@/lib/env'
 import { publicationKindLabels } from '@/lib/labels'
@@ -32,26 +32,49 @@ export function shareRequestFor(kind: PublicationKind, subjectKey: string): Shar
 
 const siteLink = (path: string) => new URL(path, env.SITE_URL).toString()
 
-export type PublicationContent = { version: string; caption: string; slug: string }
+export type PublicationContent = {
+  /** La tarjeta que se sube (la programación de un solo partido usa la de «Próximo partido»). */
+  request: ShareRequest
+  version: string
+  caption: string
+  slug: string
+}
 
 /** Versión vigente de la tarjeta y el texto sugerido; `null` si el partido o el fin de semana ya no aplica. */
 export async function publicationContent(
   kind: PublicationKind,
   subjectKey: string,
 ): Promise<PublicationContent | null> {
-  const request = shareRequestFor(kind, subjectKey)
-  const current = await shareVersionOf(request)
-  if (!current) return null
-  const data = await loadShareCard(request)
-  if (!data) return null
-  if (data.kind === 'weekend') {
-    return { ...current, caption: weekendCaption(data, siteLink('/partidos')) }
+  if (kind === 'programacion') {
+    // Con un solo partido el fin de semana, la tarjeta matchday de ese partido dice más que una grilla.
+    const ids = await weekendMatchIds(subjectKey)
+    const [only] = ids
+    if (ids.length === 1 && only) return matchContent('proximo', only, 'Partido del fin de semana')
   }
-  if (data.kind !== 'match') return null
+  const request = shareRequestFor(kind, subjectKey)
+  if (request.template === 'programacion') {
+    const current = await shareVersionOf(request)
+    const data = current ? await loadShareCard(request) : null
+    if (!current || data?.kind !== 'weekend') return null
+    return { request, ...current, caption: weekendCaption(data, siteLink('/partidos')) }
+  }
+  return matchContent(kind, subjectKey)
+}
+
+async function matchContent(
+  kind: PublicationKind,
+  matchId: string,
+  heading?: string,
+): Promise<PublicationContent | null> {
+  const request = shareRequestFor(kind, matchId)
+  const current = await shareVersionOf(request)
+  const data = current ? await loadShareCard(request) : null
+  if (!current || data?.kind !== 'match') return null
   const link = siteLink(`/partidos/${current.slug}`)
   return {
+    request,
     ...current,
-    caption: kind === 'resultado' ? resultCaption(data, link) : nextMatchCaption(data, link),
+    caption: kind === 'resultado' ? resultCaption(data, link) : nextMatchCaption(data, link, heading),
   }
 }
 
@@ -94,12 +117,10 @@ export async function processPublication(
     return finishWith(claimed, 'El partido o el fin de semana ya no está disponible para publicar.', now)
   }
   const image = content
-    ? await getShareImage(shareRequestFor(claimed.kind, claimed.subjectKey), content.version).catch(
-        (error: unknown) => {
-          logger.error({ err: error, ...subject }, 'redes: no se pudo dibujar la tarjeta')
-          return null
-        },
-      )
+    ? await getShareImage(content.request, content.version).catch((error: unknown) => {
+        logger.error({ err: error, ...subject }, 'redes: no se pudo dibujar la tarjeta')
+        return null
+      })
     : null
   if (!content || !image) {
     // Falla nuestra (base o disco), no de Facebook: se reintenta como una falla transitoria.
@@ -113,7 +134,7 @@ export async function processPublication(
   const caption = claimed.message ?? content.caption
   const result = await channel.publishPhoto({
     image: image.bytes,
-    filename: `${claimed.kind}-${content.slug}.png`,
+    filename: `${content.request.template}-${content.slug}.png`,
     caption,
   })
   if (!result.ok) return fail(claimed, result.failure, now)

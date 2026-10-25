@@ -72,6 +72,8 @@ export type SocialPublishingSettings = {
     /** Desde cuándo está activa: no se publica nada programado antes. */
     enabledAt?: string
     resultsEnabledAt?: string
+    /** Fotos de los 3 paneles de «Próximo partido» (ids de la biblioteca; `null` = fondo del club). */
+    photos?: (string | null)[]
   }
 }
 

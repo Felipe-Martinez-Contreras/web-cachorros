@@ -146,6 +146,30 @@ describe('programación automática', () => {
     expect(log).toEqual({ user_id: null, action: 'social.publish' })
   })
 
+  it('con un solo partido el fin de semana publica su tarjeta matchday', async () => {
+    const id = await weekendMatch('fb-unico', saturday, '15:30')
+    const { channel, publishPhoto } = fakeChannel(published())
+    await runSocialPublishing(fridayAt('12:02'), channel)
+    expect(publishPhoto).toHaveBeenCalledTimes(1)
+    const [input] = publishPhoto.mock.calls[0] as unknown as [{ caption: string; filename: string }]
+    expect(input.filename).toMatch(/^proximo-/)
+    expect(input.caption).toMatch(/^⚽ Partido del fin de semana · Honor/)
+    expect(input.caption).toContain(`/partidos/fb-unico`)
+    // Sigue siendo la publicación del fin de semana: una sola por sábado.
+    expect(await publications()).toMatchObject([{ kind: 'programacion', subject_key: saturday }])
+    expect(id).toBeTruthy()
+  })
+
+  it('con un solo partido cuya previa ya se publicó, la programación no sale', async () => {
+    const id = await weekendMatch('fb-unico-previa', saturday, '15:30')
+    await admin`insert into social_publications (channel, kind, subject_key, match_id, trigger, status)
+      values ('facebook', 'proximo', ${id}, ${id}, 'manual', 'publicado')`
+    const { channel, publishPhoto } = fakeChannel(published())
+    await runSocialPublishing(fridayAt('12:02'), channel)
+    expect(publishPhoto).not.toHaveBeenCalled()
+    expect(await publications()).toMatchObject([{ kind: 'proximo' }])
+  })
+
   it('sin partidos ese fin de semana no publica nada', async () => {
     const { channel, publishPhoto } = fakeChannel(published())
     expect(await runSocialPublishing(fridayAt('12:02'), channel)).toEqual({

@@ -1,13 +1,22 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 import { santiagoWallTime } from '@/features/matches/lib/schedule'
-import type { CardMatch, CardTeam, MatchCardData, ShareCardData, WeekendCardData } from '@/features/share/dto'
+import type {
+  CardMatch,
+  CardTeam,
+  MatchCardData,
+  MatchdayData,
+  ShareCardData,
+  WeekendCardData,
+} from '@/features/share/dto'
+import { treatMatchdayPhoto } from '@/features/share/images'
 import { SHARE_FORMATS, type ShareFormat } from '@/features/share/lib/cards'
 import { renderShareCard } from '@/features/share/render'
 
-// Dibuja las plantillas «Próximo partido» y «Programación» con datos de ejemplo (rivales y canchas
-// ficticios, nunca datos del club) en `tmp/tarjetas/`, para revisar un diseño sin la base de datos.
+// Dibuja las plantillas «Próximo partido» y «Programación» con datos de ejemplo (rivales, canchas y
+// auspiciador ficticios, nunca datos del club) en `tmp/tarjetas/`, para revisar un diseño sin la base de
+// datos. Las fotos de ejemplo son las imágenes del seed en `UPLOADS_DIR` (corre `pnpm db:seed` antes).
 // Solo desarrollo: `node scripts/run.mjs share-preview`.
 
 const root = process.cwd()
@@ -49,21 +58,45 @@ async function main() {
   })
   const away = (team: CardTeam, overrides: Partial<CardMatch> = {}) =>
     match({ clubSide: 'visita', home: team, away: club, venueName: 'Estadio de ejemplo', ...overrides })
-  const next = (data: CardMatch): MatchCardData => ({
+  // Fotos de muestra: las que dejes en `tmp/fotos-muestra/` (1 en grises, 2 a color, 3 con velo naranjo).
+  // Nunca van al repositorio. Si no están, las tarjetas se dibujan con el fondo del club.
+  const samples = ['zapatos.jpg', 'balon.jpg', 'estadio.jpg']
+  const samplePhotos = await Promise.all(
+    samples.map(async (file, index) => {
+      const bytes = await readFile(path.join(root, 'tmp', 'fotos-muestra', file)).catch(() => null)
+      return bytes ? treatMatchdayPhoto(bytes, { focalX: 0.5, focalY: 0.6 }, index) : null
+    }),
+  )
+  const withPhotos: MatchdayData = {
+    sponsor: 'Ferretería de Ejemplo',
+    photoSources: [null, null, null],
+    photos: samplePhotos,
+  }
+  const noPhotos: MatchdayData = {
+    sponsor: 'Ferretería de Ejemplo',
+    photoSources: [null, null, null],
+    photos: [null, null, null],
+  }
+  const next = (data: CardMatch, matchday: MatchdayData = withPhotos): MatchCardData => ({
     kind: 'match',
     template: 'proximo',
     clubName,
     match: data,
     scorers: { home: [], away: [] },
     goal: null,
+    matchday,
   })
-  const weekend = (matches: CardMatch[]): WeekendCardData => ({
+  const weekend = (
+    matches: CardMatch[],
+    sponsor: string | null = 'Ferretería de Ejemplo',
+  ): WeekendCardData => ({
     kind: 'weekend',
     template: 'programacion',
     clubName,
     clubCrest,
     saturday: '2026-10-31',
     matches,
+    sponsor,
   })
 
   const sameRival = [
@@ -79,20 +112,17 @@ async function main() {
   ]
   const all: ShareFormat[] = ['vertical', 'cuadrado', 'historia', 'og']
   const cases: { name: string; formats: ShareFormat[]; data: ShareCardData }[] = [
-    { name: 'proximo', formats: all, data: next(match({})) },
+    { name: 'matchday-con-fotos', formats: all, data: next(match({})) },
+    { name: 'matchday-sin-fotos', formats: ['vertical', 'historia'], data: next(match({}), noPhotos) },
+    { name: 'matchday-rival-sin-escudo', formats: ['vertical', 'cuadrado'], data: next(away(longRival)) },
     {
-      name: 'proximo-visita-sin-escudo',
+      name: 'matchday-nombre-muy-largo',
       formats: ['vertical', 'historia', 'og'],
-      data: next(away(longRival)),
-    },
-    {
-      name: 'proximo-nombre-muy-largo',
-      formats: ['vertical', 'cuadrado'],
       data: next(away(longestRival, { seriesName: 'Súper Senior' })),
     },
-    { name: 'programacion-mismo-rival', formats: all, data: weekend(sameRival) },
     { name: 'programacion-varios-rivales', formats: all, data: weekend(mixed) },
-    { name: 'programacion-1-partido', formats: ['vertical', 'historia'], data: weekend([away(longRival)]) },
+    { name: 'programacion-mismo-rival', formats: ['vertical', 'historia'], data: weekend(sameRival) },
+    { name: 'programacion-sin-auspiciador', formats: ['vertical'], data: weekend(mixed, null) },
   ]
 
   await mkdir(OUT, { recursive: true })

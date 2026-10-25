@@ -191,6 +191,10 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `newsOgImage`. Las fuentes TTF llegan al standalone por `outputFileTracingIncludes`. Al rediseñar una
   plantilla, sube su revisión en `DESIGN_REVISION` (`lib/cards.ts`): cambia la URL y la caché se regenera. Los
   colores salen de `lib/brand.ts` (copia de `tokens.css`, verificada por `tests/unit/share-brand.test.ts`).
+  «Próximo partido» y «Programación» siguen la plantilla matchday del club (`docs/diseno/`, fuentes Bebas Neue y
+  Barlow Condensed). Las fotos y el auspiciador del matchday salen de `src/features/share/matchday.ts`
+  (`matchdayRevision()` entra en la versión: si cambian, o una foto pasa a «contiene menores», cambia la URL).
+  Satori no tiene filtros: el blanco y negro de las fotos lo hace sharp en `images.ts`, dentro de la cola.
 - **Publicación en Facebook (ADR 0009):** `src/features/social-publishing/`. Toda publicación es una fila de
   `social_publications` (único `(channel, kind, subject_key)`): se encola con `ON CONFLICT DO NOTHING` y se
   publica con `processPublication()`, que la toma con `FOR UPDATE SKIP LOCKED`; nunca se llama a la Graph API

@@ -4,8 +4,9 @@ import path from 'node:path'
 import { env } from '@/lib/env'
 import { runHeavy } from '@/lib/heavy-queue'
 import { logger } from '@/lib/logger'
+import type { MatchdayPhotoSource } from './dto'
 import { type ShareRequest, shareCachePath } from './lib/cards'
-import { loadShareCard } from './queries'
+import { loadShareCard, readMediaFile } from './queries'
 
 // Tarjetas generadas una vez por versión (especificación 2.8): se guardan en `SHARE_CACHE_DIR` y se
 // sirven con URL versionada. La generación pasa por la cola de 1 que comparte con sharp.
@@ -33,6 +34,9 @@ export async function getShareImage(request: ShareRequest, version: string): Pro
 
     const data = await loadShareCard(request)
     if (!data) return null
+    if (data.kind === 'match' && data.matchday) {
+      data.matchday.photos = await Promise.all(data.matchday.photoSources.map(matchdayPhoto))
+    }
     const started = performance.now()
     const { renderShareCard } = await import('./render')
     const bytes = await renderShareCard(data, request.format)
@@ -77,4 +81,49 @@ async function removeOldVersions(request: ShareRequest, current: string): Promis
   } catch (error) {
     logger.warn({ err: error }, 'no se pudieron borrar tarjetas antiguas')
   }
+}
+
+/** Tratamiento de cada panel del matchday, como la plantilla: blanco y negro, color y color (velo en el render). */
+const PANEL_TREATMENT = ['gris', 'color', 'color'] as const
+/** Proporción de los paneles (ancho / alto) y su tamaño: alcanza para el más alto (9:16) sin pesar de más. */
+const PANEL_RATIO = 0.4
+const PANEL_HEIGHT = 1200
+
+/**
+ * Foto de un panel como *data URI* JPEG: recortada a la proporción del panel alrededor de su punto focal y,
+ * en el primero, en escala de grises (Satori no aplica filtros). `null` si el archivo no está.
+ */
+export async function matchdayPhoto(
+  source: MatchdayPhotoSource | null,
+  index: number,
+): Promise<string | null> {
+  if (!source) return null
+  const bytes = await readMediaFile(source.file)
+  return bytes ? treatMatchdayPhoto(bytes, source, index) : null
+}
+
+/** El recorte y el tratamiento de un panel a partir de los bytes de la foto (también lo usa `share-preview`). */
+export async function treatMatchdayPhoto(
+  bytes: Buffer,
+  focal: { focalX: number; focalY: number },
+  index: number,
+): Promise<string | null> {
+  const { default: sharp } = await import('sharp')
+  // Primero se endereza según su EXIF, para que el recorte use las medidas reales.
+  const { data, info } = await sharp(bytes, { limitInputPixels: 50_000_000 })
+    .rotate()
+    .toBuffer({ resolveWithObject: true })
+  const { width, height } = info
+  if (width === 0 || height === 0) return null
+  // Recorte de la proporción del panel, centrado en el punto focal y sin salirse de la foto.
+  const cropWidth = Math.min(width, Math.round(height * PANEL_RATIO))
+  const cropHeight = Math.min(height, Math.round(cropWidth / PANEL_RATIO))
+  const left = Math.round(Math.min(Math.max(focal.focalX * width - cropWidth / 2, 0), width - cropWidth))
+  const top = Math.round(Math.min(Math.max(focal.focalY * height - cropHeight / 2, 0), height - cropHeight))
+  let pipeline = sharp(data)
+    .extract({ left, top, width: cropWidth, height: cropHeight })
+    .resize({ height: PANEL_HEIGHT, withoutEnlargement: true })
+  if (PANEL_TREATMENT[index] === 'gris') pipeline = pipeline.grayscale()
+  const jpeg = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
+  return `data:image/jpeg;base64,${jpeg.toString('base64')}`
 }

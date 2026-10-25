@@ -18,7 +18,8 @@ import { getMatchDetail, resolveSlugRedirect } from '@/features/matches/public-q
 import { JsonLd } from '@/features/seo/components/json-ld'
 import { sportsEventJsonLd } from '@/features/seo/lib/json-ld'
 import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
-import { matchOgImage } from '@/features/share/lib/cards'
+import { matchOgImage, matchOgTemplate } from '@/features/share/lib/cards'
+import { matchdayRevision } from '@/features/share/matchday'
 import { env } from '@/lib/env'
 import { formatLongDateTime } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
@@ -45,7 +46,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `${scoreText(match)}. ${match.seriesName}, ${match.competitionName}.`
       : `${versus}: ${formatLongDateTime(match.kickoffAt)}. ${match.seriesName}, ${match.competitionName}.`,
     path: `/partidos/${match.slug}`,
-    ogImage: matchOgImage(match, shareVersion, `${versus} · ${match.seriesName}`),
+    ogImage: matchOgImage(
+      match,
+      shareVersion,
+      `${versus} · ${match.seriesName}`,
+      // Solo la previa lleva fotos y auspiciador: el resultado no consulta nada más.
+      matchOgTemplate(match.status) === 'proximo' ? await matchdayRevision() : '',
+    ),
   })
 }
 

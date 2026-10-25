@@ -46,6 +46,9 @@ export default async function FacebookSettingsPage() {
             weekday: String(settings.weekday),
             time: settings.time,
             publishResults: settings.publishResults,
+            photo1: settings.photos?.[0] ?? '',
+            photo2: settings.photos?.[1] ?? '',
+            photo3: settings.photos?.[2] ?? '',
           }}
         />
 

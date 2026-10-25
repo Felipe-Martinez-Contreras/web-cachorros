@@ -17,6 +17,7 @@ import type { CardMatch, ShareCardData } from './dto'
 import {
   addDays,
   lastClubGoal,
+  matchCardVersion,
   type ShareRequest,
   scorerLines,
   shortHash,
@@ -24,6 +25,7 @@ import {
   weekendOf,
   withDesignRevision,
 } from './lib/cards'
+import { loadCardSponsor, loadMatchday, matchdayRevision } from './matchday'
 
 export type ShareVersion = { version: string; slug: string }
 
@@ -42,13 +44,16 @@ export async function shareVersionOf(request: ShareRequest): Promise<ShareVersio
         .where(and(eq(matches.id, request.id), isClubMatch))
         .limit(1)
       if (!row || !templateFitsStatus(request.template, row.status)) return null
-      return { version: withDesignRevision(request.template, row.version), slug: row.slug }
+      const matchday = request.template === 'proximo' ? await matchdayRevision(request.photos) : ''
+      return { version: matchCardVersion(request.template, row.version, matchday), slug: row.slug }
     }
     case 'programacion':
     case 'resultados': {
       const rows = await weekendRows(request.id, request.template)
       if (rows.length === 0) return null
-      const hash = shortHash(rows.map((row) => `${row.id}.${row.version}`))
+      // La programación lleva el auspiciador: si cambia, cambia la versión.
+      const sponsor = request.template === 'programacion' ? ((await loadCardSponsor()) ?? '') : ''
+      const hash = shortHash([...rows.map((row) => `${row.id}.${row.version}`), sponsor])
       return { version: withDesignRevision(request.template, hash), slug: request.id }
     }
     case 'noticia': {
@@ -82,6 +87,11 @@ async function weekendRows(saturday: string, template: 'programacion' | 'resulta
     .limit(MAX_WEEKEND_MATCHES)
 }
 
+/** Partidos del club de un fin de semana que todavía se juegan (para la programación), por hora. */
+export async function weekendMatchIds(saturday: string): Promise<string[]> {
+  return (await weekendRows(saturday, 'programacion')).map((row) => row.id)
+}
+
 /** Lo que cabe en una tarjeta de fin de semana. */
 export const MAX_WEEKEND_MATCHES = 8
 
@@ -112,6 +122,7 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
         clubName: club.name,
         match: await toCardMatch(row),
         scorers: { home: scorerLines(events, 'home'), away: scorerLines(events, 'away') },
+        matchday: request.template === 'proximo' ? await loadMatchday(request.photos) : null,
         goal: goal
           ? {
               scorer: goal.type === 'autogol' ? 'Autogol' : (goal.playerName ?? ''),
@@ -132,6 +143,7 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
         clubCrest: club.crest,
         saturday: weekendOf(request.id),
         matches: await Promise.all(rows.map(toCardMatch)),
+        sponsor: request.template === 'programacion' ? await loadCardSponsor() : null,
       }
     }
     case 'noticia': {
@@ -234,7 +246,7 @@ async function newsPhoto(variants: MediaVariants | null): Promise<string | null>
   return `data:image/jpeg;base64,${jpeg.toString('base64')}`
 }
 
-async function readMediaFile(relativePath: string): Promise<Buffer | null> {
+export async function readMediaFile(relativePath: string): Promise<Buffer | null> {
   const root = uploadsDir()
   const file = path.resolve(/* turbopackIgnore: true */ root, relativePath)
   // Las rutas vienen de la BD, pero igual se verifica que no salgan de la carpeta de subidas.

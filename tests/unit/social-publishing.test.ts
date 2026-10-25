@@ -57,6 +57,7 @@ const matchCard = (
   match: data,
   scorers,
   goal: null,
+  matchday: null,
 })
 
 const weekend = (matches: CardMatch[]): WeekendCardData => ({
@@ -66,6 +67,7 @@ const weekend = (matches: CardMatch[]): WeekendCardData => ({
   clubCrest: null,
   saturday: '2026-10-31',
   matches,
+  sponsor: null,
 })
 
 describe('texto de las publicaciones', () => {
@@ -321,6 +323,9 @@ describe('ajustes de Facebook', () => {
       weekday: 5,
       time: '12:00',
       publishResults: false,
+      photo1: null,
+      photo2: null,
+      photo3: null,
     })
     expect(facebookSettingsSchema.safeParse({ weekday: '7', time: '12:00' }).success).toBe(false)
     expect(facebookSettingsSchema.safeParse({ weekday: '5', time: '25:00' }).success).toBe(false)
@@ -331,13 +336,29 @@ describe('ajustes de Facebook', () => {
     const t2 = new Date('2026-10-02T00:00:00Z')
     const on = nextFacebookSettings(
       FACEBOOK_DEFAULTS,
-      { enabled: true, weekday: 5, time: '12:00', publishResults: true },
+      {
+        enabled: true,
+        weekday: 5,
+        time: '12:00',
+        publishResults: true,
+        photo1: null,
+        photo2: null,
+        photo3: null,
+      },
       t1,
     )
     expect(on).toMatchObject({ enabledAt: t1.toISOString(), resultsEnabledAt: t1.toISOString() })
     const again = nextFacebookSettings(
       on,
-      { enabled: true, weekday: 4, time: '18:00', publishResults: true },
+      {
+        enabled: true,
+        weekday: 4,
+        time: '18:00',
+        publishResults: true,
+        photo1: null,
+        photo2: null,
+        photo3: null,
+      },
       t2,
     )
     expect(again).toMatchObject({
@@ -347,7 +368,15 @@ describe('ajustes de Facebook', () => {
     })
     const off = nextFacebookSettings(
       again,
-      { enabled: false, weekday: 4, time: '18:00', publishResults: false },
+      {
+        enabled: false,
+        weekday: 4,
+        time: '18:00',
+        publishResults: false,
+        photo1: null,
+        photo2: null,
+        photo3: null,
+      },
       t2,
     )
     expect(off.enabledAt).toBeUndefined()

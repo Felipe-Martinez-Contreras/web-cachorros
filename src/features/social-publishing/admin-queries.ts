@@ -9,7 +9,7 @@ import { env } from '@/lib/env'
 import { facebookAvailability, loadFacebookSettings } from './config'
 import { publicationKindFor } from './lib/rules'
 import type { FacebookSettings } from './lib/settings'
-import { publicationContent, shareRequestFor } from './publish'
+import { publicationContent } from './publish'
 
 // Lo que muestra el panel de la publicación en Facebook. Solo DTOs: nunca el token.
 
@@ -149,7 +149,7 @@ export async function manualPublishDraft(matchId: string): Promise<ManualPublish
   if (!state?.kind) return null
   const content = await publicationContent(state.kind, matchId)
   if (!content) return null
-  const request = shareRequestFor(state.kind, matchId)
+  const { request } = content
   return {
     kind: state.kind,
     caption: content.caption,

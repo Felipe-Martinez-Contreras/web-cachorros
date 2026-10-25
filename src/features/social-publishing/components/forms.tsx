@@ -14,7 +14,15 @@ export function FacebookSettingsForm({
   defaults,
 }: {
   action: Action
-  defaults: { enabled: boolean; weekday: string; time: string; publishResults: boolean }
+  defaults: {
+    enabled: boolean
+    weekday: string
+    time: string
+    publishResults: boolean
+    photo1: string
+    photo2: string
+    photo3: string
+  }
 }) {
   return (
     <EntityForm

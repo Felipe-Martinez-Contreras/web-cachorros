@@ -43,8 +43,13 @@ export async function bundleScripts(names, { outdir, standalone }) {
         }
       : {
           packages: 'external',
-          // `next` no declara `exports`: Node no resuelve `next/og` sin la extensión (lo usa `share-preview`).
-          alias: { 'server-only': './scripts/lib/server-only-stub.mjs', 'next/og': 'next/og.js' },
+          // `next` no declara `exports`: Node no resuelve `next/og` ni `next/cache` sin la extensión (los usa
+          // `share-preview`).
+          alias: {
+            'server-only': './scripts/lib/server-only-stub.mjs',
+            'next/og': 'next/og.js',
+            'next/cache': 'next/cache.js',
+          },
         }),
   })
   // En la imagen, el seed busca las fuentes en `scripts/assets/fonts`.

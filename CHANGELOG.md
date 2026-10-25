@@ -6,8 +6,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ### Redes — Matchday y publicación en Facebook
 
-- Tarjetas «Próximo partido» (cara a cara, con local o visita) y «Programación del fin de semana» (grilla de
-  jornada) rediseñadas; los nombres de los rivales ya no se cortan.
+- «Próximo partido» con la plantilla matchday del club (`docs/diseno/`): «MATCHDAY», tres paneles de fotos
+  (grises, color y velo naranja; sin fotos, los degradados del club), «POWERED BY» con el auspiciador y el pie
+  con escudos, «VS», cancha, hora, fecha y local o visita. «Programación del fin de semana» en grilla por serie,
+  con las mismas fuentes (Bebas Neue y Barlow Condensed, OFL). Los nombres de los rivales nunca se cortan.
+- Naranja oficial del club `#f27405` en `tokens.css`.
 - Publicación en la página de Facebook vía Graph API: programación automática (día y hora configurables),
   resultados opcionales y botón «Publicar en Facebook» en cada partido, con vista previa y texto editable.
   Cola idempotente con reintentos desde `tick` (migración `0005`, ADR 0009). Guía en

@@ -4,7 +4,7 @@
 export const BRAND = {
   ink: '#0b0b0c',
   paper: '#ffffff',
-  accent: '#f27604',
+  accent: '#f27405',
   accentSoft: '#fdeedd',
   live: '#d7263d',
   neutral200: '#dcdcdc',

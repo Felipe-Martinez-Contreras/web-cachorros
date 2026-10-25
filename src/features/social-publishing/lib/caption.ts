@@ -32,12 +32,15 @@ function finish(lines: (string | null | false)[]): string {
   return text.length > MAX_CAPTION ? `${text.slice(0, MAX_CAPTION - 1)}…` : text
 }
 
-/** «⚽ Próximo partido · Honor», los equipos, fecha y hora, cancha y el enlace al partido. */
-export function nextMatchCaption(data: MatchCardData, link: string): string {
+/**
+ * «⚽ Próximo partido · Honor», los equipos, fecha y hora, cancha y el enlace al partido. La programación de
+ * un fin de semana con un solo partido usa este texto con otro encabezado («Partido del fin de semana»).
+ */
+export function nextMatchCaption(data: MatchCardData, link: string, heading = 'Próximo partido'): string {
   const { match } = data
   const postponed = match.status === 'postergado'
   return finish([
-    `⚽ ${postponed ? 'Partido postergado' : 'Próximo partido'} · ${clean(match.seriesName)}`,
+    `⚽ ${postponed ? 'Partido postergado' : heading} · ${clean(match.seriesName)}`,
     versus(match),
     '',
     postponed

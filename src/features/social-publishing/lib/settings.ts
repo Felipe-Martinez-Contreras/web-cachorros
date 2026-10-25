@@ -1,6 +1,6 @@
 import * as z from 'zod'
 import type { SocialPublishingSettings } from '@/db/schema/system'
-import { checkbox, requiredTime } from '@/lib/form-schemas'
+import { checkbox, optionalUuid, requiredTime } from '@/lib/form-schemas'
 
 // Configuración de la publicación en Facebook (panel → Configuración → Facebook). Lógica pura.
 
@@ -12,6 +12,7 @@ export const FACEBOOK_DEFAULTS: FacebookSettings = {
   weekday: 5,
   time: '12:00',
   publishResults: false,
+  photos: [null, null, null],
 }
 
 /** Días en que puede salir la programación: de lunes (1) a sábado (6). */
@@ -29,6 +30,9 @@ export const facebookSettingsSchema = z.object({
     ),
   time: requiredTime('Escribe la hora, por ejemplo 12:00.'),
   publishResults: checkbox(),
+  photo1: optionalUuid(),
+  photo2: optionalUuid(),
+  photo3: optionalUuid(),
 })
 
 export type FacebookSettingsInput = z.infer<typeof facebookSettingsSchema>
@@ -40,7 +44,15 @@ const stored = z.object({
   publishResults: z.boolean(),
   enabledAt: z.string().optional(),
   resultsEnabledAt: z.string().optional(),
+  photos: z.array(z.uuid().nullable()).length(3).default([null, null, null]),
 })
+
+/** Fotos de los 3 paneles de «Próximo partido»: en blanco y negro, a color y con velo naranja. */
+export const MATCHDAY_PHOTO_LABELS = [
+  'Foto 1 (en blanco y negro)',
+  'Foto 2 (a color)',
+  'Foto 3 (con velo naranjo)',
+] as const
 
 /** Lo guardado en `site_settings.social_publishing`, o los valores por defecto si falta o no es válido. */
 export function readFacebookSettings(value: SocialPublishingSettings | null | undefined): FacebookSettings {
@@ -58,8 +70,10 @@ export function nextFacebookSettings(
   now: Date,
 ): FacebookSettings {
   const at = now.toISOString()
+  const { photo1, photo2, photo3, ...rest } = input
   return {
-    ...input,
+    ...rest,
+    photos: [photo1 ?? null, photo2 ?? null, photo3 ?? null],
     enabledAt: input.enabled ? (current.enabled ? current.enabledAt : at) : undefined,
     resultsEnabledAt: input.publishResults
       ? current.publishResults

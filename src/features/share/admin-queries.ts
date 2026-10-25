@@ -7,13 +7,14 @@ import { isClubMatch } from '@/features/matches/queries'
 import { toIsoDate } from '@/lib/format'
 import {
   addDays,
+  matchCardVersion,
   matchTemplatesFor,
   SHARE_TEMPLATE_LABELS,
   type ShareTemplate,
   weekendOf,
   weekendTitle,
-  withDesignRevision,
 } from './lib/cards'
+import { matchdayRevision } from './matchday'
 import { shareVersionOf } from './queries'
 
 // Tarjetas que el panel ofrece para descargar y compartir (especificación 7.3 y 2.8).
@@ -69,14 +70,16 @@ export async function matchShareCards(matchId: string): Promise<ShareCardLink[]>
       (((event.type === 'gol' || event.type === 'gol_penal') && event.teamId === clubTeamId) ||
         (event.type === 'autogol' && event.teamId !== null && event.teamId !== clubTeamId)),
   )
+  const templates = matchTemplatesFor(match.status, hasClubGoal)
+  const matchday = templates.includes('proximo') ? await matchdayRevision() : ''
   const versus = `${match.seriesName}: ${match.homeName} vs ${match.awayName}`
   const scored = `${match.seriesName}: ${match.homeName} ${match.homeScore}–${match.awayScore} ${match.awayName}`
-  return matchTemplatesFor(match.status, hasClubGoal).map((template) => ({
+  return templates.map((template) => ({
     template,
     label: SHARE_TEMPLATE_LABELS[template],
     title: template === 'proximo' ? versus : scored,
     id: match.id,
-    version: withDesignRevision(template, match.version),
+    version: matchCardVersion(template, match.version, matchday),
     slug: match.slug,
   }))
 }

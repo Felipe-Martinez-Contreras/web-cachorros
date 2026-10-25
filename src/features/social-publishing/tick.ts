@@ -5,6 +5,7 @@ import { matches, socialPublications } from '@/db/schema'
 import { santiagoWallTime } from '@/features/matches/lib/schedule'
 import { isClubMatch } from '@/features/matches/queries'
 import { addDays } from '@/features/share/lib/cards'
+import { weekendMatchIds } from '@/features/share/queries'
 import { logger } from '@/lib/logger'
 import type { PublishChannel } from './channels/types'
 import { facebook, facebookAvailability, loadFacebookSettings } from './config'
@@ -57,7 +58,7 @@ export async function runSocialPublishing(
     enabledAt: settings.enabledAt,
     firstKickoff: await firstKickoff(saturday),
   })
-  if (decision.publish) {
+  if (decision.publish && !(await singleMatchAlreadyPublished(decision.saturday))) {
     const inserted = await db
       .insert(socialPublications)
       .values({
@@ -134,6 +135,29 @@ export async function runSocialPublishing(
     else if (outcome.status !== 'omitida') failed++
   }
   return { queued, published, failed }
+}
+
+/**
+ * Con un solo partido el fin de semana, la programación publica la tarjeta de ese partido: si su previa ya
+ * se publicó (a mano), sería el mismo post dos veces.
+ */
+async function singleMatchAlreadyPublished(saturday: string): Promise<boolean> {
+  const ids = await weekendMatchIds(saturday)
+  const [only] = ids
+  if (ids.length !== 1 || !only) return false
+  const [row] = await db
+    .select({ id: socialPublications.id })
+    .from(socialPublications)
+    .where(
+      and(
+        eq(socialPublications.channel, 'facebook'),
+        eq(socialPublications.kind, 'proximo'),
+        eq(socialPublications.subjectKey, only),
+        ne(socialPublications.status, 'descartado'),
+      ),
+    )
+    .limit(1)
+  return Boolean(row)
 }
 
 /** Primer partido del club del fin de semana (sábado y domingo en Santiago) que no está cancelado. */

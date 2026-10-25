@@ -32,6 +32,20 @@ export type MatchCardData = {
   scorers: { home: string[]; away: string[] }
   /** Solo en «¡Gol!»: quién y en qué minuto. */
   goal: { scorer: string; minute: string } | null
+  /** Solo en «Próximo partido» (matchday): el auspiciador y las fotos de los 3 paneles. */
+  matchday: MatchdayData | null
+}
+
+/** Archivo de una foto de la biblioteca (relativo a `UPLOADS_DIR`) y su punto focal. */
+export type MatchdayPhotoSource = { file: string; focalX: number; focalY: number }
+
+export type MatchdayData = {
+  /** «POWERED BY …»: el auspiciador de las tarjetas, si está vigente. */
+  sponsor: string | null
+  /** Las 3 fotos (o `null`: el panel usa el fondo del club). Ninguna marcada «contiene menores». */
+  photoSources: (MatchdayPhotoSource | null)[]
+  /** Las mismas, ya recortadas y tratadas como *data URI* JPEG (las llena `images.ts`, dentro de la cola). */
+  photos: (string | null)[]
 }
 
 export type WeekendCardData = {
@@ -42,6 +56,8 @@ export type WeekendCardData = {
   /** Sábado `YYYY-MM-DD`. */
   saturday: string
   matches: CardMatch[]
+  /** Solo en «Programación»: «POWERED BY …» con el auspiciador de las tarjetas, si está vigente. */
+  sponsor: string | null
 }
 
 export type NewsCardData = {
