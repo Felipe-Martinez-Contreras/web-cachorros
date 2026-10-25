@@ -5,6 +5,10 @@ import { testDb } from './db-urls'
 import { cleanSport, createMatch, createSportFixture, type SportFixture } from './fixtures'
 import { actAs, ensureTestUsers } from './session'
 
+// Antes de importar los módulos que leen el entorno: si algo llamara a la Graph API sin simularla, esta
+// dirección falla al instante y nunca se llega a Facebook.
+vi.stubEnv('FACEBOOK_GRAPH_URL', 'http://127.0.0.1:9')
+
 const { sql } = await import('@/db/client')
 const { santiagoWallTime } = await import('@/features/matches/lib/schedule')
 const { addDays, weekendOf } = await import('@/features/share/lib/cards')
@@ -99,6 +103,7 @@ afterAll(async () => {
   await admin`delete from audit_log where entity_type = 'social_publication'`
   await admin.end()
   await sql.end()
+  vi.unstubAllEnvs()
 })
 
 describe('programación automática', () => {
