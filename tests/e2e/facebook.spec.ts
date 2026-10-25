@@ -4,6 +4,10 @@ import { ADMIN, expectAccessible, login } from './support'
 
 // Publicación en Facebook contra la Graph API simulada (`graph-mock.mjs`): nunca se llama a Facebook real.
 
+/** Fecha `AAAA-MM-DD` en Santiago dentro de `days` días (como la escribe el panel). */
+const santiagoDate = (days: number) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(Date.now() + days * 86_400_000)
+
 const GRAPH_MOCK = 'http://localhost:3190'
 
 type Received = {
@@ -19,7 +23,8 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   request,
 }, testInfo) => {
   const isMobile = testInfo.project.name === 'celular'
-  const round = isMobile ? 44 : 45
+  // Números de fecha propios (resultados.spec usa del 40 al 45): las pruebas filtran los partidos por fecha.
+  const round = isMobile ? 46 : 47
   await login(page, ADMIN.email)
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
 
@@ -44,7 +49,9 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   await page.goto('/admin/partidos/nuevo')
   await page.getByRole('combobox', { name: 'Serie' }).selectOption({ label: 'Honor' })
   await page.getByRole('combobox', { name: 'Visita' }).selectOption({ label: 'Deportivo Los Litres' })
-  await page.getByLabel('Hora', { exact: true }).fill('23:50')
+  // Lejos en el calendario: así no pasa a ser el «próximo partido» de la portada para las demás pruebas.
+  await page.getByLabel('Día', { exact: true }).fill(santiagoDate(120))
+  await page.getByLabel('Hora', { exact: true }).fill('16:00')
   await page.getByRole('spinbutton', { name: /^Número de fecha/ }).fill(String(round))
   await page.getByRole('button', { name: 'Programar partido' }).click()
   await expect(page.getByText('Partido programado.')).toBeVisible()
