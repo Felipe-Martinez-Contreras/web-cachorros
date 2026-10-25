@@ -143,6 +143,17 @@ prueba** (no la oficial) y `FACEBOOK_ALLOW_NON_PRODUCTION=true`; al terminar, vu
 2. Marca **Publicar en Facebook**, revisa el día y la hora, decide si se publican los resultados y guarda.
 3. Para probar sin esperar al viernes, abre un partido programado y usa **Publicar en Facebook**.
 
+### Las fotos del «Próximo partido»
+
+La tarjeta matchday lleva tres fotos: la primera sale en blanco y negro, la segunda a color y la tercera con un
+velo naranjo. Elígelas en **Configuración → Facebook** desde la biblioteca de medios. Sin fotos, cada panel usa
+un fondo con los colores del club.
+
+- Las fotos marcadas «contiene menores» no se pueden elegir, y si una foto se marca así después, deja de usarse
+  sola.
+- Al publicar un partido a mano, en **Fotos de esta publicación** puedes cambiarlas solo para ese post: la
+  vista previa se actualiza antes de confirmar.
+
 Lo que se publica aparece en **Configuración → Facebook → Publicaciones recientes**, con su estado:
 
 | Estado | Qué significa | Qué hacer |

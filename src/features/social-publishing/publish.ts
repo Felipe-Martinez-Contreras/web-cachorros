@@ -26,8 +26,14 @@ import {
 /** Las publicaciones van en 4:5: ocupan más pantalla en el feed del celular. */
 const PUBLISH_FORMAT = 'vertical' as const
 
-export function shareRequestFor(kind: PublicationKind, subjectKey: string): ShareRequest {
-  return { template: kind, id: subjectKey, format: PUBLISH_FORMAT }
+/** La tarjeta de una publicación. `photos`: las del matchday elegidas para ella (solo «Próximo partido»). */
+export function shareRequestFor(
+  kind: PublicationKind,
+  subjectKey: string,
+  photos?: readonly (string | null)[] | null,
+): ShareRequest {
+  const request: ShareRequest = { template: kind, id: subjectKey, format: PUBLISH_FORMAT }
+  return kind === 'proximo' && photos ? { ...request, photos } : request
 }
 
 const siteLink = (path: string) => new URL(path, env.SITE_URL).toString()
@@ -44,6 +50,7 @@ export type PublicationContent = {
 export async function publicationContent(
   kind: PublicationKind,
   subjectKey: string,
+  photos?: readonly (string | null)[] | null,
 ): Promise<PublicationContent | null> {
   if (kind === 'programacion') {
     // Con un solo partido el fin de semana, la tarjeta matchday de ese partido dice más que una grilla.
@@ -58,15 +65,16 @@ export async function publicationContent(
     if (!current || data?.kind !== 'weekend') return null
     return { request, ...current, caption: weekendCaption(data, siteLink('/partidos')) }
   }
-  return matchContent(kind, subjectKey)
+  return matchContent(kind, subjectKey, undefined, photos)
 }
 
 async function matchContent(
   kind: PublicationKind,
   matchId: string,
   heading?: string,
+  photos?: readonly (string | null)[] | null,
 ): Promise<PublicationContent | null> {
-  const request = shareRequestFor(kind, matchId)
+  const request = shareRequestFor(kind, matchId, photos)
   const current = await shareVersionOf(request)
   const data = current ? await loadShareCard(request) : null
   if (!current || data?.kind !== 'match') return null
@@ -109,10 +117,12 @@ export async function processPublication(
   if (!claimed) return { status: 'omitida' }
 
   const subject = { kind: claimed.kind, subject: claimed.subjectKey, channel: claimed.channel }
-  const content = await publicationContent(claimed.kind, claimed.subjectKey).catch((error: unknown) => {
-    logger.error({ err: error, ...subject }, 'redes: no se pudo preparar la publicación')
-    return undefined
-  })
+  const content = await publicationContent(claimed.kind, claimed.subjectKey, claimed.photoIds).catch(
+    (error: unknown) => {
+      logger.error({ err: error, ...subject }, 'redes: no se pudo preparar la publicación')
+      return undefined
+    },
+  )
   if (content === null) {
     return finishWith(claimed, 'El partido o el fin de semana ya no está disponible para publicar.', now)
   }

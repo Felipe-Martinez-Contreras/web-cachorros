@@ -3,6 +3,7 @@ import {
   check,
   date,
   index,
+  jsonb,
   pgTable,
   smallint,
   text,
@@ -33,6 +34,8 @@ export const socialPublications = pgTable(
     trigger: publicationTrigger('trigger').notNull(),
     /** Texto del post: el editado a mano, o el generado al publicar si es automática. */
     message: text('message'),
+    /** Fotos del matchday elegidas para esta publicación (`null`: las de Configuración). */
+    photoIds: jsonb('photo_ids').$type<(string | null)[]>(),
     imageVersion: text('image_version'),
     status: publicationStatus('status').notNull().default('pendiente'),
     attempts: smallint('attempts').notNull().default(0),

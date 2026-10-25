@@ -7,6 +7,7 @@ import {
   resultCaption,
   weekendCaption,
 } from '@/features/social-publishing/lib/caption'
+import { encodePhotos, manualPhotosSchema, parsePhotos } from '@/features/social-publishing/lib/photos'
 import {
   classifyGraphResponse,
   classifyNetworkError,
@@ -381,5 +382,33 @@ describe('ajustes de Facebook', () => {
     )
     expect(off.enabledAt).toBeUndefined()
     expect(off.resultsEnabledAt).toBeUndefined()
+  })
+})
+
+describe('fotos de una publicación', () => {
+  const a = '0192f1d2-0000-7000-8000-000000000001'
+  const c = '0192f1d2-0000-7000-8000-000000000003'
+
+  it('ida y vuelta por la dirección, con huecos para el fondo del club', () => {
+    expect(encodePhotos([a, null, c])).toBe(`${a},,${c}`)
+    expect(parsePhotos(encodePhotos([a, null, c]))).toEqual([a, null, c])
+    expect(parsePhotos(',,')).toEqual([null, null, null])
+  })
+
+  it('ignora lo que no corresponde', () => {
+    expect(parsePhotos(null)).toBeNull()
+    expect(parsePhotos('')).toBeNull()
+    expect(parsePhotos(`${a},${c}`)).toBeNull()
+    expect(parsePhotos(`${a},no-es-un-id,`)).toBeNull()
+    expect(parsePhotos(`${a},,,`)).toBeNull()
+  })
+
+  it('el formulario acepta vacíos y rechaza ids inválidos', () => {
+    expect(manualPhotosSchema.safeParse({ photo1: a, photo2: '', photo3: '' }).data).toEqual({
+      photo1: a,
+      photo2: null,
+      photo3: null,
+    })
+    expect(manualPhotosSchema.safeParse({ photo1: 'x' }).success).toBe(false)
   })
 })

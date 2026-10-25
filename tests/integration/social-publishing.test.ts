@@ -15,6 +15,7 @@ const { addDays, weekendOf } = await import('@/features/share/lib/cards')
 const { runSocialPublishing } = await import('@/features/social-publishing/tick')
 const { facebookChannel, GRAPH_API_VERSION } = await import('@/features/social-publishing/channels/facebook')
 const actions = await import('@/features/social-publishing/actions')
+const previewRoute = await import('@/app/api/admin/tarjetas/[id]/route')
 
 // Publicación en Facebook con la Graph API simulada: nunca se llama a Facebook real.
 
@@ -99,6 +100,7 @@ afterEach(() => {
 
 afterAll(async () => {
   await cleanSport(admin)
+  await admin`delete from media_assets where storage_key like 'fb-foto-%'`
   await setFacebook(null)
   await admin`delete from audit_log where entity_type = 'social_publication'`
   await admin.end()
@@ -336,7 +338,7 @@ describe('acciones del panel', () => {
   it('publicar a mano exige permiso', async () => {
     const id = await createMatch(admin, f, 'fb-sin-permiso', 'programado')
     await actAs('prensa')
-    expect(await actions.publicarEnFacebook(id, { message: 'Hola' })).toEqual({
+    expect(await actions.publicarEnFacebook(id, null, { message: 'Hola' })).toEqual({
       ok: false,
       message: 'No tienes permiso para hacer esto.',
     })
@@ -347,7 +349,9 @@ describe('acciones del panel', () => {
     const id = await createMatch(admin, f, 'fb-manual', 'programado')
     await actAs('admin')
     const fetchMock = graphReplies({ id: '1', post_id: '555_666' })
-    expect(await actions.publicarEnFacebook(id, { message: '  Texto revisado a mano  ' })).toMatchObject({
+    expect(
+      await actions.publicarEnFacebook(id, null, { message: '  Texto revisado a mano  ' }),
+    ).toMatchObject({
       ok: true,
     })
     const form = fetchMock.mock.calls[0]?.[1]?.body as FormData
@@ -359,7 +363,7 @@ describe('acciones del panel', () => {
       select user_id from audit_log where action = 'social.publish.request' order by created_at desc limit 1`
     expect(log?.user_id).toBeTruthy()
 
-    expect(await actions.publicarEnFacebook(id, { message: 'Otra vez' })).toEqual({
+    expect(await actions.publicarEnFacebook(id, null, { message: 'Otra vez' })).toEqual({
       ok: false,
       message: 'Este partido ya se publicó en Facebook (o está en la cola).',
     })
@@ -370,7 +374,7 @@ describe('acciones del panel', () => {
     const id = await createMatch(admin, f, 'fb-manual-error', 'programado')
     await actAs('admin')
     graphReplies({ error: { message: 'Temporarily unavailable', code: 2 } }, 503)
-    const result = await actions.publicarEnFacebook(id, { message: 'Previa' })
+    const result = await actions.publicarEnFacebook(id, null, { message: 'Previa' })
     expect(result).toMatchObject({ ok: false, message: expect.stringContaining('se reintentará') })
     const [row] = await admin<{ id: string; status: string }[]>`select id, status from social_publications`
     expect(row?.status).toBe('error')
@@ -386,7 +390,7 @@ describe('acciones del panel', () => {
     await setFacebook({ ...enabled, enabled: false })
     await actAs('admin')
     const fetchMock = graphReplies({ id: '1', post_id: '1_1' })
-    expect(await actions.publicarEnFacebook(id, { message: 'Previa' })).toEqual({
+    expect(await actions.publicarEnFacebook(id, null, { message: 'Previa' })).toEqual({
       ok: false,
       message: 'La publicación en Facebook está desactivada en Configuración.',
     })
@@ -412,5 +416,87 @@ describe('acciones del panel', () => {
     const url = String(fetchMock.mock.calls[0]?.[0])
     expect(url).toContain(`/${GRAPH_API_VERSION}/1234567890?fields=id%2Cname`)
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBeUndefined()
+  })
+})
+
+describe('fotos del matchday', () => {
+  /** Una imagen de la biblioteca (sin archivo: la tarjeta usa el fondo del club, basta para las reglas). */
+  async function photo(key: string, containsMinors: boolean) {
+    const [row] = await admin<{ id: string }[]>`
+      insert into media_assets (kind, storage_key, mime, bytes, alt_text, contains_minors,
+        minors_consent_confirmed_at)
+      values ('imagen', ${`fb-foto-${key}`}, 'image/jpeg', 10, 'Foto de prueba', ${containsMinors},
+        ${containsMinors ? new Date() : null})
+      returning id`
+    return row?.id ?? ''
+  }
+
+  it('Configuración no acepta fotos con menores y guarda las demás', async () => {
+    const ok = await photo('ok', false)
+    const minors = await photo('menores', true)
+    await actAs('admin')
+    const base = { enabled: true, weekday: '5', time: '12:00', publishResults: false, photo3: '' }
+    expect(await actions.guardarFacebook({ ...base, photo1: ok, photo2: minors })).toMatchObject({
+      ok: false,
+      fieldErrors: { photo2: [expect.stringContaining('menores')] },
+    })
+    expect(await actions.guardarFacebook({ ...base, photo1: ok, photo2: '' })).toEqual({
+      ok: true,
+      data: { id: '1' },
+    })
+    const [row] = await admin<{ social_publishing: { facebook: { photos: (string | null)[] } } }[]>`
+      select social_publishing from site_settings where id = 1`
+    expect(row?.social_publishing.facebook.photos).toEqual([ok, null, null])
+  })
+
+  it('elegir las fotos de un post las valida y no guarda nada', async () => {
+    const ok = await photo('post-ok', false)
+    const minors = await photo('post-menores', true)
+    await actAs('prensa')
+    expect(await actions.elegirFotosPublicacion({ photo1: ok })).toMatchObject({ ok: false })
+    await actAs('admin')
+    expect(await actions.elegirFotosPublicacion({ photo1: ok, photo2: minors, photo3: '' })).toMatchObject({
+      ok: false,
+      fieldErrors: { photo2: [expect.stringContaining('menores')] },
+    })
+    expect(await actions.elegirFotosPublicacion({ photo1: ok, photo2: '', photo3: ok })).toEqual({
+      ok: true,
+      data: { id: `${ok},,${ok}` },
+    })
+  })
+
+  it('la publicación manual guarda sus fotos y vuelve a revisar la regla de menores', async () => {
+    const ok = await photo('pub-ok', false)
+    const minors = await photo('pub-menores', true)
+    await actAs('admin')
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ id: '1', post_id: '9_9' }))
+    const first = await createMatch(admin, f, 'fb-fotos-menores', 'programado')
+    expect(await actions.publicarEnFacebook(first, `${minors},,`, { message: 'Previa' })).toMatchObject({
+      ok: false,
+    })
+    expect(await publications()).toEqual([])
+
+    const second = await createMatch(admin, f, 'fb-fotos-ok', 'programado')
+    expect(await actions.publicarEnFacebook(second, `${ok},,`, { message: 'Previa' })).toMatchObject({
+      ok: true,
+    })
+    const [row] = await admin<{ photo_ids: (string | null)[] | null }[]>`
+      select photo_ids from social_publications where subject_key = ${second}`
+    expect(row?.photo_ids).toEqual([ok, null, null])
+  })
+
+  it('la vista previa con fotos elegidas es solo del panel', async () => {
+    const id = await createMatch(admin, f, 'fb-fotos-vista', 'programado')
+    const get = () =>
+      previewRoute.GET(new Request(`http://localhost:3000/api/admin/tarjetas/${id}?fotos=,,`), {
+        params: Promise.resolve({ id }),
+      })
+    await actAs('nadie')
+    expect((await get()).status).toBe(401)
+    await actAs('admin')
+    const response = await get()
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('image/png')
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
   })
 })

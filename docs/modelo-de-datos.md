@@ -23,7 +23,7 @@ migraciones revisadas de `drizzle/`.
 | `auth.ts` | `user`, `session`, `account`, `verification`, `rate_limit` y `two_factor` (Better Auth). `two_factor` guarda cifrados el secreto TOTP y los códigos de respaldo de quien activó la verificación en dos pasos (migración `0003`) |
 | `system.ts` | `audit_log`, `site_settings`, `page_blocks`, `slug_redirects`, `ops_runs` |
 | `media.ts` | `media_assets` |
-| `publishing.ts` | `social_publications`: publicaciones en redes, una por canal, tipo y sujeto (migración `0005`, ADR 0009) |
+| `publishing.ts` | `social_publications`: publicaciones en redes, una por canal, tipo y sujeto (migración `0005`, ADR 0009); `photo_ids`, las fotos del matchday elegidas para un post (migración `0006`) |
 | `sport.ts` | `seasons`, `series`, `competitions`, `teams`, `venues`, `matches`, `match_events`, `match_lineups`, `players`, `squad_registrations`, `staff_members`, `staff_assignments`, `player_stat_adjustments`, `standings_tables`, `standings_rows`, `training_schedules` y la vista `v_player_season_stats` |
 | `content.ts` | `news_categories`, `news`, `news_series`, `albums`, `album_items`, `videos`, `social_posts`, `history_milestones`, `honours`, `hall_of_fame`, `historic_kits` |
 | `club.ts` | `board_members`, `documents`, `events`, `sponsors`, `sponsor_clicks_daily`, `product_categories`, `products`, `product_images`, `product_variants`, `membership_plans`, `membership_requests`, `members`, `sponsorship_inquiries`, `contact_messages` |

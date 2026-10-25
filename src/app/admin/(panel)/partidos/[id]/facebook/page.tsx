@@ -3,16 +3,19 @@ import { notFound, redirect } from 'next/navigation'
 import { PageHeader } from '@/components/admin/resource-list'
 import { Alert } from '@/components/ui/feedback'
 import { getMatchAdmin } from '@/features/matches/admin-queries'
-import { publicarEnFacebook } from '@/features/social-publishing/actions'
+import { elegirFotosPublicacion, publicarEnFacebook } from '@/features/social-publishing/actions'
 import { manualPublishDraft, matchFacebookState } from '@/features/social-publishing/admin-queries'
-import { ManualPublishForm } from '@/features/social-publishing/components/forms'
+import { ManualPhotosForm, ManualPublishForm } from '@/features/social-publishing/components/forms'
+import { encodePhotos, parsePhotos } from '@/features/social-publishing/lib/photos'
 import { requirePanelUser } from '@/lib/auth/session'
 import { isUuid } from '@/lib/form-schemas'
 import { publicationKindLabels } from '@/lib/labels'
 
 export const metadata: Metadata = { title: 'Publicar en Facebook' }
 
-export default async function PublishMatchPage({ params }: { params: Promise<{ id: string }> }) {
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ fotos?: string | string[] }> }
+
+export default async function PublishMatchPage({ params, searchParams }: Props) {
   await requirePanelUser('social:write')
   const { id } = await params
   if (!isUuid(id)) notFound()
@@ -20,7 +23,10 @@ export default async function PublishMatchPage({ params }: { params: Promise<{ i
   if (!match || !state) notFound()
   // Ya publicado (o en la cola): la ficha del partido muestra su estado y el enlace.
   if (state.publication) redirect(`/admin/partidos/${id}`)
-  const draft = state.kind && !state.blockedReason ? await manualPublishDraft(id) : null
+  // Fotos elegidas solo para este post (`?fotos=`); si no vienen, las de Configuración → Facebook.
+  const { fotos } = await searchParams
+  const chosen = parsePhotos(typeof fotos === 'string' ? fotos : null)
+  const draft = state.kind && !state.blockedReason ? await manualPublishDraft(id, chosen) : null
 
   return (
     <>
@@ -40,7 +46,7 @@ export default async function PublishMatchPage({ params }: { params: Promise<{ i
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <figure className="grid content-start gap-2">
-            {/* biome-ignore lint/performance/noImgElement: la tarjeta ya viene en su tamaño final desde /api/share. */}
+            {/* biome-ignore lint/performance/noImgElement: la tarjeta ya viene en su tamaño final. */}
             <img
               src={draft.previewUrl}
               width={1080}
@@ -49,14 +55,38 @@ export default async function PublishMatchPage({ params }: { params: Promise<{ i
               className="h-auto w-full max-w-sm rounded-md border border-neutral-200"
             />
             <figcaption className="text-sm text-neutral-600">
-              {publicationKindLabels[draft.kind]} · la imagen 4:5 que se subirá.
+              {publicationKindLabels[draft.kind]} · la imagen 4:5 que se subirá
+              {chosen ? ', con las fotos elegidas para este post.' : '.'}
             </figcaption>
           </figure>
-          <ManualPublishForm
-            action={publicarEnFacebook.bind(null, id)}
-            caption={draft.caption}
-            matchId={id}
-          />
+          <div className="grid content-start gap-8">
+            <ManualPublishForm
+              action={publicarEnFacebook.bind(null, id, chosen ? encodePhotos(chosen) : null)}
+              caption={draft.caption}
+              matchId={id}
+            />
+            {draft.kind === 'proximo' && (
+              <section aria-labelledby="fotos-del-post" className="grid gap-3">
+                <h2 id="fotos-del-post" className="text-lg font-bold">
+                  Fotos de esta publicación
+                </h2>
+                <p className="text-neutral-600">
+                  Por defecto se usan las de Configuración → Facebook. Si las cambias aquí, la vista previa se
+                  actualiza y solo este post las lleva.
+                </p>
+                <ManualPhotosForm
+                  action={elegirFotosPublicacion}
+                  defaults={{
+                    photo1: draft.photos[0] ?? '',
+                    photo2: draft.photos[1] ?? '',
+                    photo3: draft.photos[2] ?? '',
+                  }}
+                  previews={draft.photoPreviews}
+                  matchId={id}
+                />
+              </section>
+            )}
+          </div>
         </div>
       )}
     </>

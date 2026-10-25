@@ -2,9 +2,10 @@
 
 import { and, eq, inArray } from 'drizzle-orm'
 import * as z from 'zod'
-import { db } from '@/db/client'
+import { db, type Tx } from '@/db/client'
 import { matches, siteSettings, socialPublications } from '@/db/schema'
 import { isClubMatch } from '@/features/matches/queries'
+import { assertPublishableMedia } from '@/features/media/guards'
 import { type ActionResult, fail, ok } from '@/lib/action-result'
 import { audit } from '@/lib/audit'
 import { requirePermission } from '@/lib/auth/session'
@@ -12,6 +13,7 @@ import { assertId, mutate, Rejection } from '@/lib/entity-action'
 import { publicationKindLabels } from '@/lib/labels'
 import { runAction } from '@/lib/run-action'
 import { facebook, facebookAvailability, loadFacebookSettings } from './config'
+import { encodePhotos, manualPhotosSchema, parsePhotos } from './lib/photos'
 import { publicationKindFor } from './lib/rules'
 import { facebookSettingsSchema, nextFacebookSettings, readFacebookSettings } from './lib/settings'
 import { type ProcessOutcome, processPublication } from './publish'
@@ -37,6 +39,7 @@ export async function guardarFacebook(input: unknown): Promise<ActionResult<{ id
         .where(eq(siteSettings.id, 1))
         .for('update')
       if (!row) throw new Rejection('No encontramos la configuración del club. Avisa a soporte.')
+      await assertPublishablePhotos(tx, [data.photo1, data.photo2, data.photo3])
       const next = nextFacebookSettings(readFacebookSettings(row.socialPublishing), data, new Date())
       await tx
         .update(siteSettings)
@@ -45,7 +48,12 @@ export async function guardarFacebook(input: unknown): Promise<ActionResult<{ id
       return {
         id: '1',
         summary: `Cambió la configuración: Facebook (${data.enabled ? 'activada' : 'desactivada'})`,
-        meta: { section: 'facebook', enabled: data.enabled, publishResults: data.publishResults },
+        meta: {
+          section: 'facebook',
+          enabled: data.enabled,
+          publishResults: data.publishResults,
+          photos: next.photos?.filter(Boolean).length ?? 0,
+        },
       }
     },
   })
@@ -67,6 +75,37 @@ export async function probarConexionFacebook(): Promise<ActionResult<{ name: str
       }),
     )
     return result.ok ? ok({ name: result.name }) : fail(result.message)
+  })
+}
+
+/** Cada foto del matchday debe existir y no estar marcada «contiene menores» (6.3). */
+async function assertPublishablePhotos(tx: Tx, photos: readonly (string | null)[]): Promise<void> {
+  for (const [index, photo] of photos.entries()) {
+    await assertPublishableMedia(tx, photo ?? null, `photo${index + 1}`)
+  }
+}
+
+/**
+ * Elige las fotos del matchday solo para el post que se está preparando: valida y devuelve las 3 (como
+ * texto para la dirección), sin guardar nada. La publicación las vuelve a validar al enviarse.
+ */
+export async function elegirFotosPublicacion(input: unknown): Promise<ActionResult<{ id: string }>> {
+  return runAction('social.publish.photos', async () => {
+    await requirePermission('social:write')
+    const parsed = manualPhotosSchema.safeParse(input)
+    if (!parsed.success) return fail(parsed.error)
+    const photos = [parsed.data.photo1, parsed.data.photo2, parsed.data.photo3]
+    try {
+      await db.transaction((tx) => assertPublishablePhotos(tx, photos))
+    } catch (error) {
+      if (!(error instanceof Rejection)) throw error
+      return {
+        ok: false,
+        message: 'Revisa los campos marcados.',
+        fieldErrors: error.field ? { [error.field]: [error.message] } : undefined,
+      }
+    }
+    return ok({ id: encodePhotos(photos) })
   })
 }
 
@@ -93,6 +132,7 @@ function afterPublish(outcome: ProcessOutcome, id: string): ActionResult<{ id: s
  */
 export async function publicarEnFacebook(
   matchId: string,
+  photos: string | null,
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   const queued = await mutate({
@@ -112,6 +152,12 @@ export async function publicarEnFacebook(
       if (!match) throw new Rejection('No encontramos ese partido. Puede que lo hayan eliminado.')
       const kind = publicationKindFor(match.status)
       if (!kind) throw new Rejection('Este partido no se puede publicar en su estado actual.')
+      // Las fotos llegan enlazadas desde la página: se vuelven a validar aquí.
+      const photoIds = photos && kind === 'proximo' ? parsePhotos(photos) : null
+      if (photos && kind === 'proximo' && !photoIds) {
+        throw new Rejection('Las fotos elegidas ya no son válidas. Vuelve a elegirlas.')
+      }
+      if (photoIds) await assertPublishablePhotos(tx, photoIds)
       const [row] = await tx
         .insert(socialPublications)
         .values({
@@ -121,6 +167,7 @@ export async function publicarEnFacebook(
           matchId: id,
           trigger: 'manual',
           message: data.message,
+          photoIds,
           requestedBy: user.id,
         })
         .onConflictDoNothing()
@@ -129,7 +176,7 @@ export async function publicarEnFacebook(
       return {
         id: row.id,
         summary: `Publicó en Facebook: ${publicationKindLabels[kind].toLowerCase()}`,
-        meta: { kind, matchId: id },
+        meta: { kind, matchId: id, ownPhotos: photoIds !== null },
       }
     },
   })

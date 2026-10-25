@@ -1,12 +1,14 @@
 import 'server-only'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { db } from '@/db/client'
-import { matches, series, socialPublications, teams } from '@/db/schema'
+import { matches, mediaAssets, series, socialPublications, teams } from '@/db/schema'
 import { isClubMatch } from '@/features/matches/queries'
+import { type MediaThumbDTO, toMediaThumbDTO } from '@/features/media/dto'
 import { shareUrl, weekendTitle } from '@/features/share/lib/cards'
 import { env } from '@/lib/env'
 import { facebookAvailability, loadFacebookSettings } from './config'
+import { encodePhotos } from './lib/photos'
 import { publicationKindFor } from './lib/rules'
 import type { FacebookSettings } from './lib/settings'
 import { publicationContent } from './publish'
@@ -89,6 +91,33 @@ export type FacebookPanelState = {
   /** Solo para avisar que es staging con publicación permitida a propósito. */
   nonProductionAllowed: boolean
   publications: PublicationDTO[]
+  /** Miniaturas de las 3 fotos del matchday (por campo del formulario). */
+  photoPreviews: Record<string, MediaThumbDTO | null>
+}
+
+/** Miniaturas de las fotos, por nombre de campo (`photo1`…`photo3`), para los formularios del panel. */
+async function photoThumbs(
+  photos: readonly (string | null)[],
+): Promise<Record<string, MediaThumbDTO | null>> {
+  const ids = photos.filter((id): id is string => Boolean(id))
+  const rows =
+    ids.length > 0
+      ? await db
+          .select({
+            id: mediaAssets.id,
+            variants: mediaAssets.variants,
+            altText: mediaAssets.altText,
+            containsMinors: mediaAssets.containsMinors,
+          })
+          .from(mediaAssets)
+          .where(inArray(mediaAssets.id, ids))
+      : []
+  return Object.fromEntries(
+    [0, 1, 2].map((index) => {
+      const row = rows.find((item) => item.id === photos[index])
+      return [`photo${index + 1}`, row ? toMediaThumbDTO(row) : null]
+    }),
+  )
 }
 
 /** Estado de Configuración → Facebook: ajustes, si se puede publicar y las últimas publicaciones. */
@@ -102,6 +131,7 @@ export async function facebookPanelState(limit = 20): Promise<FacebookPanelState
     blockedReason: availability.ok ? null : availability.message,
     nonProductionAllowed: env.SITE_ENV !== 'production' && env.FACEBOOK_ALLOW_NON_PRODUCTION,
     publications: rows.map(toPublicationDTO),
+    photoPreviews: await photoThumbs(settings.photos ?? []),
   }
 }
 
@@ -141,18 +171,37 @@ export async function matchFacebookState(matchId: string): Promise<MatchFacebook
   }
 }
 
-export type ManualPublishDraft = { kind: 'proximo' | 'resultado'; caption: string; previewUrl: string }
+export type ManualPublishDraft = {
+  kind: 'proximo' | 'resultado'
+  caption: string
+  previewUrl: string
+  /** Las fotos del matchday que lleva la vista previa (las elegidas o las de Configuración). */
+  photos: (string | null)[]
+  photoPreviews: Record<string, MediaThumbDTO | null>
+}
 
-/** Lo que se muestra antes de publicar a mano: la tarjeta 4:5 que se subirá y el texto sugerido. */
-export async function manualPublishDraft(matchId: string): Promise<ManualPublishDraft | null> {
+/**
+ * Lo que se muestra antes de publicar a mano: la tarjeta 4:5 que se subirá y el texto sugerido. Con
+ * `photos` (elegidas para este post) la vista previa sale de la ruta del panel, que no es pública.
+ */
+export async function manualPublishDraft(
+  matchId: string,
+  photos: (string | null)[] | null = null,
+): Promise<ManualPublishDraft | null> {
   const state = await matchFacebookState(matchId)
   if (!state?.kind) return null
-  const content = await publicationContent(state.kind, matchId)
+  const chosen = state.kind === 'proximo' ? photos : null
+  const content = await publicationContent(state.kind, matchId, chosen)
   if (!content) return null
   const { request } = content
+  const current = chosen ?? (await loadFacebookSettings()).photos ?? [null, null, null]
   return {
     kind: state.kind,
     caption: content.caption,
-    previewUrl: shareUrl(request.template, request.id, request.format, content.version),
+    previewUrl: chosen
+      ? `/api/admin/tarjetas/${matchId}?fotos=${encodeURIComponent(encodePhotos(chosen))}&v=${content.version}`
+      : shareUrl(request.template, request.id, request.format, content.version),
+    photos: current,
+    photoPreviews: await photoThumbs(current),
   }
 }

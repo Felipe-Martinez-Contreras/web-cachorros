@@ -41,6 +41,7 @@ export default async function FacebookSettingsPage() {
 
         <FacebookSettingsForm
           action={guardarFacebook}
+          previews={state.photoPreviews}
           defaults={{
             enabled: settings.enabled,
             weekday: String(settings.weekday),

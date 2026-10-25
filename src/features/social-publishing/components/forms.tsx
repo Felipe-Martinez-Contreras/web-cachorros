@@ -1,18 +1,38 @@
 'use client' // Cliente: formularios de Facebook (react-hook-form + Zod).
 
-import { EntityForm } from '@/components/admin/entity-form'
+import { EntityForm, type FieldDef } from '@/components/admin/entity-form'
+import type { MediaThumbDTO } from '@/features/media/dto'
 import type { ActionResult } from '@/lib/action-result'
 import { weekdayLabels } from '@/lib/labels'
 import { MAX_CAPTION } from '../lib/caption'
-import { facebookSettingsSchema, PUBLISH_WEEKDAYS } from '../lib/settings'
+import { manualPhotosSchema } from '../lib/photos'
+import { facebookSettingsSchema, MATCHDAY_PHOTO_LABELS, PUBLISH_WEEKDAYS } from '../lib/settings'
 import { manualPublishSchema } from '../schemas'
 
 type Action = (input: unknown) => Promise<ActionResult<unknown>>
 
+const PHOTO_HELP = [
+  'Primer plano: se publica en blanco y negro. Las fotos con menores no se pueden usar.',
+  'Jugada o balón: se publica a color.',
+  'Un detalle (camiseta, estadio): se publica con un velo naranjo.',
+] as const
+
+/** Las 3 fotos de «Próximo partido». Sin foto, el panel usa el fondo del club. */
+const MATCHDAY_PHOTO_FIELDS: FieldDef[] = MATCHDAY_PHOTO_LABELS.map((label, index) => ({
+  name: `photo${index + 1}`,
+  label,
+  type: 'media',
+  kind: 'photo',
+  required: false,
+  help: PHOTO_HELP[index],
+}))
+
 export function FacebookSettingsForm({
   action,
   defaults,
+  previews,
 }: {
+  previews: Record<string, MediaThumbDTO | null>
   action: Action
   defaults: {
     enabled: boolean
@@ -29,6 +49,7 @@ export function FacebookSettingsForm({
       schema={facebookSettingsSchema}
       action={action}
       defaultValues={defaults}
+      mediaPreviews={previews}
       successMessage="Configuración de Facebook guardada."
       fields={[
         {
@@ -56,6 +77,7 @@ export function FacebookSettingsForm({
           type: 'checkbox',
           help: 'Sale unos 10 minutos después de finalizarlo, por si hay que corregir el marcador.',
         },
+        ...MATCHDAY_PHOTO_FIELDS,
       ]}
     />
   )
@@ -89,6 +111,32 @@ export function ManualPublishForm({
           help: 'Se armó con los datos del partido. Puedes cambiarlo antes de publicar.',
         },
       ]}
+    />
+  )
+}
+
+/** «Fotos de esta publicación»: cambia las del matchday solo para el post que se está preparando. */
+export function ManualPhotosForm({
+  action,
+  defaults,
+  previews,
+  matchId,
+}: {
+  action: (input: unknown) => Promise<ActionResult<{ id: string }>>
+  defaults: { photo1: string; photo2: string; photo3: string }
+  previews: Record<string, MediaThumbDTO | null>
+  matchId: string
+}) {
+  return (
+    <EntityForm
+      schema={manualPhotosSchema}
+      action={action}
+      defaultValues={defaults}
+      mediaPreviews={previews}
+      submitLabel="Ver con estas fotos"
+      successMessage="Vista previa actualizada."
+      redirectTo={(photos) => `/admin/partidos/${matchId}/facebook?fotos=${encodeURIComponent(photos)}`}
+      fields={MATCHDAY_PHOTO_FIELDS}
     />
   )
 }
