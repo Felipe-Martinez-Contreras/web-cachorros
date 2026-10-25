@@ -27,7 +27,12 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   await page.goto('/admin/configuracion/facebook')
   await expect(page.getByRole('heading', { name: 'Facebook', level: 1 })).toBeVisible()
   await expect(page.getByText('Sitio de pruebas con publicación permitida')).toBeVisible()
-  await page.getByRole('checkbox', { name: 'Publicar en Facebook' }).check()
+  // El formulario se habilita al hidratar: un clic anterior se perdería.
+  const enable = page.getByRole('checkbox', { name: 'Publicar en Facebook' })
+  await expect(enable).toBeEnabled()
+  await expect(async () => {
+    await enable.check()
+  }).toPass()
   await expect(page.getByRole('combobox', { name: 'Día de la programación' })).toHaveValue('5')
   await expectAccessible(page)
   await page.getByRole('button', { name: 'Guardar' }).click()
