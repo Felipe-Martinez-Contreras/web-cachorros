@@ -27,6 +27,11 @@ export default defineConfig({
       TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
       IP_HASH_SALT: 'sal-solo-para-pruebas-de-integracion-0123456789',
       LOG_LEVEL: 'silent',
+      // Página de Facebook ficticia. La Graph API simulada la fija solo `social-publishing.test.ts`
+      // (FACEBOOK_GRAPH_URL se acepta únicamente con SITE_ENV=development).
+      FACEBOOK_PAGE_ID: '1234567890',
+      FACEBOOK_PAGE_TOKEN: 'token-de-pagina-solo-para-pruebas-0123456789',
+      FACEBOOK_ALLOW_NON_PRODUCTION: 'true',
       // Las subidas de las pruebas no se mezclan con las de desarrollo.
       UPLOADS_DIR: path.join(tmpdir(), 'cachorros-test-uploads'),
       // Dentro del proyecto (en .gitignore) para poder revisar las tarjetas generadas.

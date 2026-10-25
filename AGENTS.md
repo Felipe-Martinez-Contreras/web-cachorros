@@ -69,6 +69,7 @@ detrás de Cloudflare.
 | `pnpm admin:create` | Crea un administrador (no hay registro público); `--restablecer` cambia su contraseña |
 | `pnpm content:pending` | Regenera `docs/pendientes-contenido.md` |
 | `pnpm build:scripts` | Empaqueta `scripts/` con esbuild a `.mjs` autocontenidos |
+| `node scripts/run.mjs share-preview` | Dibuja «Próximo partido» y «Programación» con datos de ejemplo en `tmp/tarjetas/` (revisar un diseño sin la BD) |
 | `pnpm pwa:icons [archivo]` | Regenera los íconos de la PWA en `public/icons/` desde el escudo (por defecto `public/placeholder/escudo.svg`) |
 
 Arranque local desde un clon limpio:
@@ -187,7 +188,23 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   sharp), se guardan en `SHARE_CACHE_DIR` por versión (`share_version` del partido; hash para el fin de semana y la
   noticia) y se sirven inmutables; sin versión o con una vieja, redirige a la vigente. Los datos pasan por los
   mismos DTO públicos (menores con nombre e inicial). `og:image` de partidos y noticias usa `matchOgImage` /
-  `newsOgImage`. Las fuentes TTF llegan al standalone por `outputFileTracingIncludes`.
+  `newsOgImage`. Las fuentes TTF llegan al standalone por `outputFileTracingIncludes`. Al rediseñar una
+  plantilla, sube su revisión en `DESIGN_REVISION` (`lib/cards.ts`): cambia la URL y la caché se regenera. Los
+  colores salen de `lib/brand.ts` (copia de `tokens.css`, verificada por `tests/unit/share-brand.test.ts`).
+  «Próximo partido» y «Programación» siguen la plantilla matchday del club (`docs/diseno/`, fuentes Bebas Neue y
+  Barlow Condensed). Las fotos y el auspiciador del matchday salen de `src/features/share/matchday.ts`
+  (`matchdayRevision()` entra en la versión: si cambian, o una foto pasa a «contiene menores», cambia la URL).
+  Satori no tiene filtros: el blanco y negro de las fotos lo hace sharp en `images.ts`, dentro de la cola.
+  Las fotos se guardan en `site_settings.social_publishing` (o en `social_publications.photo_ids` si se
+  eligieron para un post) y siempre pasan por `assertPublishableMedia`. Con fotos elegidas, la vista previa
+  sale de `GET /api/admin/tarjetas/[id]?fotos=` (con sesión), nunca de la ruta pública.
+- **Publicación en Facebook (ADR 0009):** `src/features/social-publishing/`. Toda publicación es una fila de
+  `social_publications` (único `(channel, kind, subject_key)`): se encola con `ON CONFLICT DO NOTHING` y se
+  publica con `processPublication()`, que la toma con `FOR UPDATE SKIP LOCKED`; nunca se llama a la Graph API
+  dentro de una transacción. `tick` encola y reintenta (`runSocialPublishing`). El texto sale de los mismos DTO
+  de las tarjetas. Secretos solo en `.env` (`FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`); fuera de producción no se
+  publica salvo `FACEBOOK_ALLOW_NON_PRODUCTION=true`. Las pruebas nunca llaman a Facebook: `fetch` simulado en
+  integración y `tests/e2e/graph-mock.mjs` (puerto 3190) en las e2e.
 - **Feed de redes (2.9):** curado en el panel → Redes sociales; la portada lee `socialFeed().latest()`
   (`src/features/social/provider.ts`). «Ver aquí» crea el iframe del embed oficial solo al tocarlo.
 - **PWA (6.16):** `app/manifest.ts` en runtime, íconos en `public/icons/` y `public/sw.js`, que se registra como

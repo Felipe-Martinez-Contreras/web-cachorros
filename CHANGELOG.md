@@ -4,6 +4,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Redes — Matchday y publicación en Facebook
+
+- «Próximo partido» con la plantilla matchday del club (`docs/diseno/`): «MATCHDAY», tres paneles de fotos
+  (grises, color y velo naranja; sin fotos, los degradados del club), «POWERED BY» con el auspiciador y el pie
+  con escudos, «VS», cancha, hora, fecha y local o visita. «Programación del fin de semana» en grilla por serie,
+  con las mismas fuentes (Bebas Neue y Barlow Condensed, OFL). Los nombres de los rivales nunca se cortan.
+- Naranja oficial del club `#f27405` en `tokens.css`.
+- Las 3 fotos del matchday se eligen en Configuración → Facebook (nunca fotos con menores) y se pueden cambiar
+  para un post en la publicación manual, con vista previa (migración `0006`, solo aditiva).
+- Publicación en la página de Facebook vía Graph API: programación automática (día y hora configurables),
+  resultados opcionales y botón «Publicar en Facebook» en cada partido, con vista previa y texto editable.
+  Cola idempotente con reintentos desde `tick` (migración `0005`, ADR 0009). Guía en
+  `docs/integraciones/facebook.md`.
+
 ### Fase 2b — Noticias, historia, configuración, usuarios y SEO
 
 - Noticias: editor de texto enriquecido (Tiptap) con lista blanca de nodos, fotos de la biblioteca y videos

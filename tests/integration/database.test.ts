@@ -15,8 +15,9 @@ describe('migraciones', () => {
     const rows = await admin<{ table_name: string; table_type: string }[]>`
       select table_name, table_type from information_schema.tables where table_schema = 'public' order by 1`
     const tables = rows.filter((r) => r.table_type === 'BASE TABLE').map((r) => r.table_name)
-    // 52 del modelo + `two_factor` (verificación en dos pasos, migración 0003).
-    expect(tables).toHaveLength(53)
+    // 52 del modelo + `two_factor` (verificación en dos pasos, migración 0003) + `social_publications`
+    // (publicación en redes, migración 0005).
+    expect(tables).toHaveLength(54)
     expect(tables).toEqual(
       expect.arrayContaining([
         'account',
@@ -28,6 +29,7 @@ describe('migraciones', () => {
         'rate_limit',
         'session',
         'site_settings',
+        'social_publications',
         'sponsors',
         'two_factor',
         'user',

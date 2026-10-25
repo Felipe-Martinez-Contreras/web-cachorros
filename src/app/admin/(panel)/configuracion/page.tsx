@@ -44,6 +44,11 @@ export default async function SettingsPage() {
               />
             )
           })}
+          <ResourceRow
+            title="Facebook"
+            href="/admin/configuracion/facebook"
+            subtitle="Publicación automática de la programación y los resultados en la página del club."
+          />
         </ResourceList>
       )}
     </>

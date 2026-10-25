@@ -36,6 +36,20 @@
       "when": 1792504400385,
       "tag": "0004_consentimiento_y_reintentos",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792884175016,
+      "tag": "0005_publicaciones_redes",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792898927965,
+      "tag": "0006_fotos_publicacion",
+      "breakpoints": true
     }
   ]
 }

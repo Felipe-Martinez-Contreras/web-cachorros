@@ -60,6 +60,22 @@ export type HeroSettings = {
   mobileMediaId?: string
 }
 export type SeoDefaults = { description?: string; ogMediaId?: string }
+/** Publicación automática en redes (panel → Configuración → Facebook); se valida con Zod en su dominio. */
+export type SocialPublishingSettings = {
+  facebook?: {
+    enabled: boolean
+    /** Día de la publicación de la programación: 1 = lunes … 6 = sábado. */
+    weekday: number
+    /** Hora de pared en Santiago, `HH:MM`. */
+    time: string
+    publishResults: boolean
+    /** Desde cuándo está activa: no se publica nada programado antes. */
+    enabledAt?: string
+    resultsEnabledAt?: string
+    /** Fotos de los 3 paneles de «Próximo partido» (ids de la biblioteca; `null` = fondo del club). */
+    photos?: (string | null)[]
+  }
+}
 
 /** Configuración del club: fila única (`id = 1`). Los `jsonb` se validan con Zod en su dominio. */
 export const siteSettings = pgTable(
@@ -89,6 +105,7 @@ export const siteSettings = pgTable(
       onDelete: 'set null',
     }),
     seoDefaults: jsonb('seo_defaults').$type<SeoDefaults>(),
+    socialPublishing: jsonb('social_publishing').$type<SocialPublishingSettings>(),
     ...timestamps(),
   },
   (table) => [

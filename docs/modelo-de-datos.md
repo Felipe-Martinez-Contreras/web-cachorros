@@ -23,6 +23,7 @@ migraciones revisadas de `drizzle/`.
 | `auth.ts` | `user`, `session`, `account`, `verification`, `rate_limit` y `two_factor` (Better Auth). `two_factor` guarda cifrados el secreto TOTP y los códigos de respaldo de quien activó la verificación en dos pasos (migración `0003`) |
 | `system.ts` | `audit_log`, `site_settings`, `page_blocks`, `slug_redirects`, `ops_runs` |
 | `media.ts` | `media_assets` |
+| `publishing.ts` | `social_publications`: publicaciones en redes, una por canal, tipo y sujeto (migración `0005`, ADR 0009); `photo_ids`, las fotos del matchday elegidas para un post (migración `0006`) |
 | `sport.ts` | `seasons`, `series`, `competitions`, `teams`, `venues`, `matches`, `match_events`, `match_lineups`, `players`, `squad_registrations`, `staff_members`, `staff_assignments`, `player_stat_adjustments`, `standings_tables`, `standings_rows`, `training_schedules` y la vista `v_player_season_stats` |
 | `content.ts` | `news_categories`, `news`, `news_series`, `albums`, `album_items`, `videos`, `social_posts`, `history_milestones`, `honours`, `hall_of_fame`, `historic_kits` |
 | `club.ts` | `board_members`, `documents`, `events`, `sponsors`, `sponsor_clicks_daily`, `product_categories`, `products`, `product_images`, `product_variants`, `membership_plans`, `membership_requests`, `members`, `sponsorship_inquiries`, `contact_messages` |
@@ -76,6 +77,7 @@ erDiagram
 | Una imagen exige texto alternativo | `CHECK` en `media_assets` |
 | Todo evento que no sea comentario tiene equipo | `CHECK` en `match_events` |
 | Fila única de configuración | `CHECK (id = 1)` en `site_settings` |
+| Lo mismo no se publica dos veces en una red | Único `(channel, kind, subject_key)` en `social_publications` (su prueba está en `social-publishing.test.ts`) |
 | PJ y DIF de la tabla manual | Columnas generadas `played` y `goal_diff` en `standings_rows` |
 
 Todas tienen prueba en `tests/integration/constraints.test.ts`.

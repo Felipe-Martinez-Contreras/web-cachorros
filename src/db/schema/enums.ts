@@ -116,3 +116,15 @@ export const videoProvider = pgEnum('video_provider', ['youtube', 'facebook'])
 export const mediaKind = pgEnum('media_kind', ['imagen', 'documento'])
 export const opsRunKind = pgEnum('ops_run_kind', ['respaldo', 'prueba_restauracion', 'limpieza', 'disco'])
 export const opsRunStatus = pgEnum('ops_run_status', ['ok', 'error'])
+// Publicación en redes (Facebook; Instagram queda listo para sumarse, ADR 0009).
+export const socialChannel = pgEnum('social_channel', ['facebook', 'instagram'])
+export const publicationKind = pgEnum('publication_kind', ['programacion', 'proximo', 'resultado'])
+export const publicationStatus = pgEnum('publication_status', [
+  'pendiente',
+  'publicando',
+  'publicado',
+  'error',
+  'incierto',
+  'descartado',
+])
+export const publicationTrigger = pgEnum('publication_trigger', ['automatica', 'manual'])

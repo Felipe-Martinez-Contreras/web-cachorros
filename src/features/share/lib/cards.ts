@@ -65,7 +65,16 @@ export function matchTemplatesFor(status: string, hasClubGoal: boolean): MatchTe
   )
 }
 
-export type ShareRequest = { template: ShareTemplate; id: string; format: ShareFormat }
+export type ShareRequest = {
+  template: ShareTemplate
+  id: string
+  format: ShareFormat
+  /**
+   * Solo «Próximo partido» desde el panel: fotos elegidas para una publicación en lugar de las de
+   * Configuración. Nunca llega desde la URL pública.
+   */
+  photos?: readonly (string | null)[]
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -101,7 +110,33 @@ export function shareFilename({ template, format }: ShareRequest, slug: string):
   return `${template}-${slug}-${format}.${SHARE_FORMATS[format].ext}`.slice(0, 120)
 }
 
-/** Una versión es un entero (partido) o un hash corto (fin de semana, noticia). */
+/**
+ * Revisión del diseño de cada plantilla: se suma a su versión para que un rediseño cambie la URL (las
+ * tarjetas se sirven como inmutables y Cloudflare las guarda) y la caché en disco se regenere sola.
+ */
+const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = { proximo: 'd3', programacion: 'd3' }
+
+/** Versión pública de una tarjeta: la de sus datos más la revisión del diseño de la plantilla. */
+export function withDesignRevision(template: ShareTemplate, version: string | number): string {
+  return `${version}${DESIGN_REVISION[template] ?? ''}`
+}
+
+/**
+ * Versión de la tarjeta de un partido: la del partido (`share_version`) y la revisión del diseño. «Próximo
+ * partido» suma la del matchday (fotos y auspiciador de Configuración, o las elegidas para una publicación).
+ */
+export function matchCardVersion(
+  template: MatchTemplate,
+  shareVersion: number | string,
+  matchdayRevision: string,
+): string {
+  return withDesignRevision(
+    template,
+    template === 'proximo' ? `${shareVersion}${matchdayRevision}` : shareVersion,
+  )
+}
+
+/** Una versión es un entero (partido) o un hash corto (fin de semana, noticia), más la revisión del diseño. */
 export function isValidVersion(value: string | null): value is string {
   return value !== null && /^[0-9a-z]{1,16}$/.test(value)
 }
@@ -210,6 +245,53 @@ export function clampText(text: string, max: number): string {
   return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
 }
 
+/**
+ * Ancho medio de una mayúscula, en em, de cada fuente display de las tarjetas (medido sobre nombres de
+ * clubes): Archivo Condensed ExtraBold y Bebas Neue.
+ */
+export const CHAR_EM = { archivo: 0.56, bebas: 0.42 } as const
+
+/**
+ * Tamaño de letra (display, en mayúsculas) para que un nombre quepa entero en `maxLines` líneas de `width`
+ * px, sin cortarlo con «…»: parte de `size` y achica hasta `min`. Satori parte las líneas en los espacios.
+ */
+export function fitDisplaySize(
+  text: string,
+  width: number,
+  size: number,
+  maxLines = 2,
+  min = size * 0.5,
+  charEm: number = CHAR_EM.archivo,
+) {
+  const words = text.toUpperCase().split(/\s+/).filter(Boolean)
+  for (let current = size; current > min; current *= 0.94) {
+    if (lineCount(words, width / (current * charEm)) <= maxLines) return Math.floor(current)
+  }
+  return Math.floor(min)
+}
+
+/** Líneas que ocupa un nombre en display (mayúsculas) con ese ancho y tamaño de letra. */
+export function displayLines(text: string, width: number, size: number, charEm: number = CHAR_EM.archivo) {
+  const words = text.toUpperCase().split(/\s+/).filter(Boolean)
+  return Math.max(1, Math.min(lineCount(words, width / (size * charEm)), 3))
+}
+
+/** Líneas que ocupan las palabras con `perLine` caracteres por línea (`Infinity` si una no cabe). */
+function lineCount(words: readonly string[], perLine: number): number {
+  let lines = 0
+  let used = 0
+  for (const word of words) {
+    if (word.length > perLine) return Number.POSITIVE_INFINITY
+    if (lines === 0 || used + 1 + word.length > perLine) {
+      lines++
+      used = word.length
+    } else {
+      used += 1 + word.length
+    }
+  }
+  return lines
+}
+
 type OgCard = { url: string; width: number; height: number; alt: string }
 
 /** `og:image` de un partido: la tarjeta versionada (resultado o previa); `null` si no corresponde. */
@@ -217,11 +299,17 @@ export function matchOgImage(
   match: { id: string; status: string },
   version: number,
   alt: string,
+  matchdayRevision: string,
 ): OgCard | null {
   const template = matchOgTemplate(match.status)
   if (!template) return null
   const { width, height } = SHARE_FORMATS.og
-  return { url: shareUrl(template, match.id, 'og', version), width, height, alt }
+  return {
+    url: shareUrl(template, match.id, 'og', matchCardVersion(template, version, matchdayRevision)),
+    width,
+    height,
+    alt,
+  }
 }
 
 /** `og:image` de una noticia: su versión es la fecha de la última edición. */

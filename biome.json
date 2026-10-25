@@ -2,7 +2,14 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["**", "!drizzle/meta", "!pnpm-lock.yaml", "!docs/ESPECIFICACION.md", "!public"]
+    "includes": [
+      "**",
+      "!drizzle/meta",
+      "!pnpm-lock.yaml",
+      "!docs/ESPECIFICACION.md",
+      "!docs/diseno",
+      "!public"
+    ]
   },
   "formatter": {
     "enabled": true,

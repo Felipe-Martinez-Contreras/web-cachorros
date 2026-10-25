@@ -3,8 +3,8 @@
   /* Marca */
   --color-ink: #0b0b0c; /* negro base */
   --color-paper: #ffffff; /* blanco base */
-  /* Naranja del león, tomado del escudo entregado. [VERIFICAR: color oficial del club con la directiva] */
-  --color-accent: #f27604;
+  /* Naranja oficial del club (plantilla matchday, docs/diseno). */
+  --color-accent: #f27405;
   --color-accent-strong: #b05500; /* acento para texto, enlaces e indicadores sobre fondo claro */
   --color-accent-soft: #fdeedd; /* fondos sutiles */
 

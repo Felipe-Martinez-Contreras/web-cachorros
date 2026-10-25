@@ -22,7 +22,7 @@ test.describe('capturas del reporte de fase', () => {
   test('fases 0 y 1: portada, sección provisional, login, panel y sistema de diseño', async ({
     page,
   }, testInfo) => {
-    test.skip(/^fase-[2-9]/.test(fase), 'Estas capturas son de las fases 0 y 1.')
+    test.skip(!/^fase-[01]\b/.test(fase), 'Estas capturas son de las fases 0 y 1.')
     test.setTimeout(120_000)
     const width = page.viewportSize()?.width ?? testInfo.project.name
 
@@ -367,5 +367,41 @@ test.describe('capturas del reporte de fase', () => {
 
     await page.goto('/offline')
     await page.screenshot({ path: `${dir}/offline-${width}.png` })
+  })
+
+  test('redes-facebook: configuración de Facebook y publicación manual', async ({ page }, testInfo) => {
+    test.skip(fase !== 'redes-facebook', 'Estas capturas son de la publicación en Facebook.')
+    test.setTimeout(120_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+
+    await page.goto('/admin/configuracion/facebook')
+    // El formulario se habilita al hidratar: un clic anterior se perdería.
+    const enable = page.getByRole('checkbox', { name: 'Publicar en Facebook' })
+    await expect(enable).toBeEnabled()
+    await expect(async () => {
+      await enable.check()
+    }).toPass()
+    await page.getByRole('button', { name: 'Guardar' }).click()
+    await expect(page.getByText('Configuración de Facebook guardada.')).toBeVisible()
+    await page.reload()
+    await page.screenshot({ path: `${dir}/panel-facebook-${width}.png`, fullPage: true })
+
+    // Un partido programado del seed: su ficha ofrece publicarlo.
+    await page.goto('/admin/partidos')
+    await page
+      .getByRole('main')
+      .getByRole('link')
+      .filter({ hasText: /Cachorros|Honor/ })
+      .first()
+      .click()
+    const section = page.getByRole('region', { name: 'Facebook' })
+    await section.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${dir}/panel-partido-facebook-${width}.png`, fullPage: true })
+    await section.getByRole('link', { name: 'Publicar en Facebook' }).click()
+    const preview = page.getByRole('img', { name: /que se subirá a Facebook/ })
+    await expect.poll(() => preview.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1080)
+    await page.screenshot({ path: `${dir}/panel-publicar-facebook-${width}.png`, fullPage: true })
   })
 })

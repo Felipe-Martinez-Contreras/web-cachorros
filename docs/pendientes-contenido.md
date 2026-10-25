@@ -7,7 +7,7 @@ Marcadores que todavía están en el sitio (especificación, sección 0.3):
 
 | Marcador | Significado | Cantidad |
 |---|---|---|
-| `[COMPLETAR: …]` | Dato del club que aún no tenemos | 219 |
+| `[COMPLETAR: …]` | Dato del club que aún no tenemos | 222 |
 | `[DECIDIR: …]` | Decisión de producto pendiente (rige el default) | 5 |
 | `[VERIFICAR: …]` | Supuesto técnico o normativo por confirmar | 11 |
 
@@ -92,7 +92,7 @@ y decisiones anotados junto al código que los aplica.
 
 | Marcador | Dónde |
 |---|---|
-| [COMPLETAR: …] | `scripts/content-pending.ts:156`, `scripts/seed/data.ts:2`, `src/app/admin/(panel)/configuracion/page.tsx:38`, `src/features/pages/queries.ts:59`, `src/features/seo/lib/json-ld.ts:35`, `src/lib/form-schemas.ts:89`, `src/lib/markers.ts:4` |
+| [COMPLETAR: …] | `scripts/content-pending.ts:156`, `scripts/seed/data.ts:2`, `src/app/admin/(panel)/configuracion/page.tsx:38`, `src/features/pages/queries.ts:59`, `src/features/seo/lib/json-ld.ts:35`, `src/features/share/lib/cards.ts:212`, `src/features/social/schemas.ts:21`, `src/lib/form-schemas.ts:89`, `src/lib/markers.ts:4` |
 | [COMPLETAR: año, serie y relato del título] | `scripts/seed/content.ts:317` |
 | [COMPLETAR: año] | `scripts/seed/content.ts:283`, `scripts/seed/content.ts:289` |
 | [COMPLETAR: auspiciadores reales, niveles y enlaces] | `scripts/seed/club.ts:158` |
@@ -157,7 +157,7 @@ y decisiones anotados junto al código que los aplica.
 | [COMPLETAR: valor del completo y de la promoción] | `scripts/seed/club.ts:125` |
 | [COMPLETAR: valores, promociones y forma de reservar] | `scripts/seed/club.ts:123` |
 | [COMPLETAR: WhatsApp del club] | `scripts/seed/club.ts:40` |
-| [COMPLETAR] | `.env.example:22`, `.env.example:70`, `.env.example:71`, `scripts/content-pending.ts:1`, `src/app/admin/(panel)/galeria/videos/[id]/page.tsx:30`, `src/features/gallery/queries.ts:174`, `src/features/sponsors/lib/links.ts:19`, `src/lib/links.ts:18` |
+| [COMPLETAR] | `.env.example:22`, `.env.example:81`, `.env.example:82`, `scripts/content-pending.ts:1`, `src/app/admin/(panel)/galeria/videos/[id]/page.tsx:30`, `src/features/gallery/queries.ts:174`, `src/features/social-publishing/lib/caption.ts:7`, `src/features/sponsors/lib/links.ts:19`, `src/lib/links.ts:18` |
 | [DECIDIR: …] | `scripts/content-pending.ts:157` |
 | [DECIDIR: desempate en la tabla calculada. Default: PTS, DIF, GF y luego manual] | `src/features/matches/lib/standings.ts:33` |
 | [DECIDIR: mini-tabla en la portada. Default: sí] | `src/features/matches/queries.ts:235` |
