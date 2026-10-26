@@ -219,7 +219,7 @@ test('JSON-LD válido: club, sitio, migas, noticia y partido, con direcciones ab
   const matchPage = await html(request, `${base}/partidos/${seed.matchSlug}`)
   const matchImage = attr(matchPage, /<meta property="og:image" content="([^"]+)"/) ?? ''
   expect(matchImage.startsWith(`${base}/api/share/`)).toBe(true)
-  expect(matchImage).toMatch(/\/(proximo|resultado)\/[0-9a-f-]{36}\/og\?v=\d+(d\d+)?$/)
+  expect(matchImage).toMatch(/\/(proximo|resultado)\/[0-9a-f-]{36}\/og\?v=\d+([a-z]\d+)?$/)
   expect(attr(matchPage, /<meta property="og:image:width" content="([^"]+)"/)).toBe('1200')
   const match = jsonLd(matchPage)
   const event = match.find((item) => item['@type'] === 'SportsEvent')

@@ -11,6 +11,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
+import type { LogoMetrics } from '../../lib/images/crest'
 import { id, timestamps } from './_columns'
 import { user } from './auth'
 import { mediaKind } from './enums'
@@ -23,6 +24,10 @@ export type MediaVariants = {
   webp: { width: number; height: number; path: string }[]
   /** PNG de 512 px para Satori (escudos y logos). */
   png512?: string
+  /** Escudos y logos: el archivo tal como llegó (sin recortar), para poder volver a procesarlo. */
+  original?: string
+  /** Escudos y logos: medidas de lo visible, para el tamaño óptico (`crestScale`). */
+  logo?: LogoMetrics
 }
 
 /** Biblioteca de medios (especificación 2.7 y 7.5). */

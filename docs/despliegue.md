@@ -237,6 +237,27 @@ git pull                              # scripts, compose.yaml y Caddyfile
 ./deploy/deploy.sh rollback           # volver a la versión anterior
 ```
 
+#### Reprocesar los escudos ya subidos
+
+Desde la versión que recorta el margen vacío de los escudos y logos (y mide lo visible para que todos se vean
+del mismo tamaño), los que se subieron antes se vuelven a procesar una vez, después de desplegarla:
+
+```bash
+cd /opt/cachorros
+docker compose run --rm app node scripts/reprocess-logos.mjs   # solo los que quedaron con el proceso anterior
+docker compose restart app                                     # el sitio deja de usar en caché los archivos viejos
+```
+
+Se puede repetir sin riesgo: lo que ya está al día no se toca. No se pierde nada: cada logo queda en una
+carpeta nueva (`<clave>-l1`, así su URL cambia y Cloudflare no sirve la versión vieja) con el archivo original
+sin recortar en `original.png`, y la carpeta anterior se conserva. También sube la versión de las tarjetas de
+los partidos de esos equipos, que se vuelven a dibujar. Al día siguiente (cuando ya ninguna página en caché
+apunta a los archivos viejos), borra las carpetas anteriores:
+
+```bash
+docker compose run --rm app node scripts/reprocess-logos.mjs --limpiar
+```
+
 ## 6. Verificar
 
 Desde tu PC:

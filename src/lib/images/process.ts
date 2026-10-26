@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import sharp from 'sharp'
+import sharp, { type OutputInfo, type Sharp } from 'sharp'
 import type { MediaVariants } from '@/db/schema/media'
+import { LOGO_PIPELINE_VERSION, type LogoMetrics, measureLogo, trimBackground } from './crest'
 
 // Presupuesto de memoria de la VM (especificación 2.7): un hilo y sin caché interna.
 sharp.concurrency(1)
@@ -17,6 +18,8 @@ const MAX_MASTER_WIDTH = 2560
 const MAX_LOGO_WIDTH = 1024
 const MAX_INPUT_PIXELS = 50_000_000
 const LQIP_WIDTH = 24
+/** Diferencia de color tolerada al recortar el margen de un logo (bordes con ruido de compresión). */
+const TRIM_THRESHOLD = 24
 /** Densidades de rasterizado de SVG, de mayor a menor: se usa la primera que no exceda el tamaño útil. */
 const SVG_DENSITIES = [300, 200, 150, 110, 72]
 
@@ -52,12 +55,16 @@ export async function processImage(input: Buffer, options: ProcessImageOptions):
 
   const density = isSvg(input) ? await svgDensity(input) : undefined
   // Se decodifica una sola vez a píxeles crudos: las salidas no acumulan pérdidas de re-compresión.
-  const source = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, density })
+  const decoded = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, density })
     // Aplica la orientación EXIF antes de descartar los metadatos.
     .rotate()
-    .resize({ width: isLogo ? MAX_LOGO_WIDTH : MAX_MASTER_WIDTH, withoutEnlargement: true })
-    .raw()
-    .toBuffer({ resolveWithObject: true })
+  const logo = isLogo ? await prepareLogo(decoded) : null
+  const source =
+    logo?.source ??
+    (await decoded
+      .resize({ width: MAX_MASTER_WIDTH, withoutEnlargement: true })
+      .raw()
+      .toBuffer({ resolveWithObject: true }))
   const { width, height, channels } = source.info
   const pixels = () => sharp(source.data, { raw: { width, height, channels } })
   const keepAlpha = isLogo || channels === 4
@@ -86,13 +93,16 @@ export async function processImage(input: Buffer, options: ProcessImageOptions):
     })
   }
 
-  if (isLogo) {
+  if (logo) {
     const png = await pixels()
       .resize({ width: 512, height: 512, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer()
     await writeFile(path.join(dir, 'png512.png'), png)
     variants.png512 = `${storageKey}/png512.png`
+    await writeFile(path.join(dir, 'original.png'), logo.original)
+    variants.original = `${storageKey}/original.png`
+    variants.logo = logo.metrics
   }
 
   const lqip = await pixels().resize({ width: LQIP_WIDTH }).webp({ quality: 40 }).toBuffer()
@@ -106,6 +116,48 @@ export async function processImage(input: Buffer, options: ProcessImageOptions):
     variants,
     lqip: `data:image/webp;base64,${lqip.toString('base64')}`,
   }
+}
+
+type RawImage = { data: Buffer; info: OutputInfo }
+
+/**
+ * Escudos y logos: recorta el margen vacío (transparente o blanco) para que todos ocupen su caja igual, y
+ * mide lo visible para el tamaño óptico. Guarda el original sin recortar (PNG) para poder reprocesarlo.
+ */
+async function prepareLogo(decoded: Sharp): Promise<{
+  source: RawImage
+  original: Buffer
+  metrics: LogoMetrics
+}> {
+  const inside = {
+    width: MAX_LOGO_WIDTH,
+    height: MAX_LOGO_WIDTH,
+    fit: 'inside',
+    withoutEnlargement: true,
+  } as const
+  // Se recorta a doble resolución: el recorte no pierde detalle al reducirlo después.
+  const full = await decoded
+    .resize({ ...inside, width: MAX_LOGO_WIDTH * 2, height: MAX_LOGO_WIDTH * 2 })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const raw = (image: RawImage) =>
+    sharp(image.data, { raw: { width: image.info.width, height: image.info.height, channels: 4 } })
+  const original = await raw(full).png({ compressionLevel: 9 }).toBuffer()
+
+  const background = trimBackground({ data: full.data, width: full.info.width, height: full.info.height })
+  const trimmed = background
+    ? await raw(full)
+        .trim({
+          background: background === 'white' ? '#ffffff' : { r: 0, g: 0, b: 0, alpha: 0 },
+          threshold: TRIM_THRESHOLD,
+        })
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+    : full
+  const source = await raw(trimmed).resize(inside).raw().toBuffer({ resolveWithObject: true })
+  const metrics = measureLogo({ data: source.data, width: source.info.width, height: source.info.height })
+  return { source, original, metrics: { v: LOGO_PIPELINE_VERSION, ...metrics } }
 }
 
 /** Anchos a generar: los fijos que no superan al original y, si queda espacio, el propio ancho original. */

@@ -70,6 +70,7 @@ detrás de Cloudflare.
 | `pnpm content:pending` | Regenera `docs/pendientes-contenido.md` |
 | `pnpm build:scripts` | Empaqueta `scripts/` con esbuild a `.mjs` autocontenidos |
 | `node scripts/run.mjs share-preview` | Dibuja «Próximo partido» y «Programación» con datos de ejemplo en `tmp/tarjetas/` (revisar un diseño sin la BD) |
+| `node scripts/run.mjs reprocess-logos [--limpiar]` | Reprocesa los escudos y logos subidos con un proceso anterior (recorte y medidas); `--limpiar` borra sus carpetas anteriores. En la VM: `docs/despliegue.md` |
 | `pnpm pwa:icons [archivo]` | Regenera los íconos de la PWA en `public/icons/` desde el escudo (por defecto `public/placeholder/escudo.svg`) |
 
 Arranque local desde un clon limpio:
@@ -163,7 +164,12 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   62,5 %; no uses anchos en `ch` (cambian al cargar la fuente): usa `rem` o las clases `max-w-*`.
 - Un contenedor `grid` con tablas o contenido ancho lleva `grid-cols-1` (`minmax(0, 1fr)`): así la tabla se
   desplaza dentro de su región (`role="region"` + `tabIndex={0}`) y no ensancha la página en el celular.
-- Los escudos van dentro de `.crest` (`TeamCrest`, `ClubCrest`): en secciones `.theme-dark` reciben un disco blanco.
+- Los escudos van dentro de `.crest` (`TeamCrest`, `ClubCrest`) con `CrestImage`: en secciones `.theme-dark`
+  reciben un disco blanco que los recorta. Cada escudo se escala con su medida óptica (`crestScale()`,
+  `src/lib/images/crest.ts`, la misma en el sitio y en las tarjetas): ninguno toca el borde del disco y todos se
+  perciben del mismo tamaño. Al subir un logo (`kind: 'logo'`) se recorta su margen transparente o blanco (nunca
+  un fondo de color ni una foto), se guarda el original y se miden su silueta y su alcance. Si cambia ese
+  proceso, sube `LOGO_PIPELINE_VERSION` y corre `reprocess-logos` en la VM.
 - Sobre fondo claro, el naranja `accent` no alcanza contraste: para texto, enlaces e indicadores usa
   `accent-strong` (o los tokens `--link` / `--focus`). Lo verifica `tests/unit/tokens-contrast.test.ts`.
 
