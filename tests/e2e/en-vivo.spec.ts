@@ -140,7 +140,7 @@ test('el admin juega el partido en vivo y el visitante lo ve sin recargar', asyn
   // La imagen para compartir del detalle es la tarjeta del resultado, en su versión vigente.
   await visitor.reload()
   const ogImage = await visitor.locator('meta[property="og:image"]').getAttribute('content')
-  expect(ogImage).toMatch(/\/api\/share\/resultado\/[0-9a-f-]{36}\/og\?v=\d+$/)
+  expect(ogImage).toMatch(/\/api\/share\/resultado\/[0-9a-f-]{36}\/og\?v=\d+e1$/)
   await visitorContext.close()
 
   // Al finalizar, la consola lleva a las tarjetas para redes: se descargan en los tres formatos.

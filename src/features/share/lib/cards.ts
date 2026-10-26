@@ -114,7 +114,15 @@ export function shareFilename({ template, format }: ShareRequest, slug: string):
  * Revisión del diseño de cada plantilla: se suma a su versión para que un rediseño cambie la URL (las
  * tarjetas se sirven como inmutables y Cloudflare las guarda) y la caché en disco se regenere sola.
  */
-const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = { proximo: 'd3', programacion: 'd3' }
+const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = {
+  // e1: escudos recortados por el disco y con tamaño óptico parejo.
+  resultado: 'e1',
+  gol: 'e1',
+  resultados: 'e1',
+  noticia: 'e1',
+  proximo: 'd4',
+  programacion: 'd4',
+}
 
 /** Versión pública de una tarjeta: la de sus datos más la revisión del diseño de la plantilla. */
 export function withDesignRevision(template: ShareTemplate, version: string | number): string {

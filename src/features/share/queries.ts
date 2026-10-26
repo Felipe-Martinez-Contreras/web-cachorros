@@ -12,8 +12,9 @@ import { isClubMatch, type MatchRow, selectMatches } from '@/features/matches/qu
 import { uploadsDir } from '@/features/media/files'
 import { isNewsVisible } from '@/features/news/queries'
 import { loadMinorIds } from '@/features/players/public'
+import { crestScale } from '@/lib/images/crest'
 import { logger } from '@/lib/logger'
-import type { CardMatch, ShareCardData } from './dto'
+import type { CardCrest, CardMatch, ShareCardData } from './dto'
 import {
   addDays,
   lastClubGoal,
@@ -183,10 +184,7 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
 }
 
 async function toCardMatch(row: MatchRow): Promise<CardMatch> {
-  const [homeCrest, awayCrest] = await Promise.all([
-    crestDataUri(row.homeCrest?.variants ?? null),
-    crestDataUri(row.awayCrest?.variants ?? null),
-  ])
+  const [homeCrest, awayCrest] = await Promise.all([cardCrest(row.homeCrest), cardCrest(row.awayCrest)])
   return {
     clubSide: row.clubSide === 'visita' ? 'visita' : 'local',
     home: { name: row.home.shortName, crest: homeCrest },
@@ -205,7 +203,7 @@ async function toCardMatch(row: MatchRow): Promise<CardMatch> {
   }
 }
 
-async function clubIdentity(): Promise<{ name: string; crest: string | null }> {
+async function clubIdentity(): Promise<{ name: string; crest: CardCrest | null }> {
   const [[settings], [crest]] = await Promise.all([
     db
       .select({ name: siteSettings.shortName, clubName: siteSettings.clubName })
@@ -213,7 +211,7 @@ async function clubIdentity(): Promise<{ name: string; crest: string | null }> {
       .where(eq(siteSettings.id, 1))
       .limit(1),
     db
-      .select({ variants: mediaAssets.variants })
+      .select({ variants: mediaAssets.variants, width: mediaAssets.width, height: mediaAssets.height })
       .from(teams)
       .innerJoin(mediaAssets, eq(mediaAssets.id, teams.crestMediaId))
       .where(eq(teams.isOwnClub, true))
@@ -221,16 +219,26 @@ async function clubIdentity(): Promise<{ name: string; crest: string | null }> {
   ])
   return {
     name: settings?.clubName ?? 'Club Deportivo Los Cachorros',
-    crest: await crestDataUri(crest?.variants ?? null),
+    crest: await cardCrest(crest),
   }
 }
 
-/** Escudo como *data URI* PNG desde su variante de 512 px (2.7). Sin archivo, la tarjeta usa un disco. */
-async function crestDataUri(variants: MediaVariants | null): Promise<string | null> {
+type CrestMedia = { variants: MediaVariants | null; width: number | null; height: number | null }
+
+/**
+ * Escudo como *data URI* PNG desde su variante de 512 px (2.7), con su escala óptica en el disco. Sin
+ * archivo, la tarjeta usa un disco con la inicial.
+ */
+async function cardCrest(media: CrestMedia | null | undefined): Promise<CardCrest | null> {
+  const variants = media?.variants
   const file = variants?.png512 ?? (variants?.master.endsWith('.png') ? variants.master : null)
-  if (!file) return null
+  if (!media || !file) return null
   const bytes = await readMediaFile(file)
-  return bytes ? `data:image/png;base64,${bytes.toString('base64')}` : null
+  if (!bytes) return null
+  return {
+    src: `data:image/png;base64,${bytes.toString('base64')}`,
+    scale: crestScale(media.width, media.height, variants?.logo).disc,
+  }
 }
 
 /** Foto de la noticia reducida a JPEG de 1200 px (Satori no lee WebP y así pesa poco en memoria). */

@@ -184,21 +184,24 @@ function Header({ title, subtitle, layout }: { title: string; subtitle: string; 
 function Crest({ team, size }: { team: CardTeam; size: number }) {
   if (team.crest) {
     // Disco blanco, como `.crest` en las secciones oscuras del sitio: los escudos con partes negras se leen.
-    const inner = Math.round(size * 0.8)
+    // El escudo se escala según lo visible (`crestScale`, la misma regla del sitio) y el disco lo recorta.
+    const inner = Math.round(size * team.crest.scale)
     return (
       <div
         style={{
           display: 'flex',
           width: size,
           height: size,
+          flexShrink: 0,
           borderRadius: size,
+          overflow: 'hidden',
           backgroundColor: PAPER,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
         {/* biome-ignore lint/performance/noImgElement: Satori dibuja <img>; no es una página. */}
-        <img src={team.crest} width={inner} height={inner} alt="" style={{ objectFit: 'contain' }} />
+        <img src={team.crest.src} width={inner} height={inner} alt="" style={{ objectFit: 'contain' }} />
       </div>
     )
   }

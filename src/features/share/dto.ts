@@ -4,7 +4,10 @@ import type { ShareTemplate } from './lib/cards'
 // Datos ya resueltos de una tarjeta para redes: textos públicos (menores con nombre e inicial) y escudos
 // como *data URI* PNG, que es lo que acepta Satori (trampa 8). Solo viven en el servidor.
 
-export type CardTeam = { name: string; crest: string | null }
+/** Escudo de 512 px (contenido en el cuadrado) y su escala óptica dentro del disco blanco (`crestScale`). */
+export type CardCrest = { src: string; scale: number }
+
+export type CardTeam = { name: string; crest: CardCrest | null }
 
 export type CardMatch = {
   /** Las tarjetas son solo de partidos del club: de qué lado juega. */
@@ -52,7 +55,7 @@ export type WeekendCardData = {
   kind: 'weekend'
   template: Extract<ShareTemplate, 'programacion' | 'resultados'>
   clubName: string
-  clubCrest: string | null
+  clubCrest: CardCrest | null
   /** Sábado `YYYY-MM-DD`. */
   saturday: string
   matches: CardMatch[]
@@ -64,7 +67,7 @@ export type NewsCardData = {
   kind: 'news'
   template: 'noticia'
   clubName: string
-  clubCrest: string | null
+  clubCrest: CardCrest | null
   title: string
   categoryName: string | null
   publishedAt: string

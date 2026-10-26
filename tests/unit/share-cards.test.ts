@@ -161,9 +161,10 @@ describe('fitDisplaySize', () => {
 
 describe('withDesignRevision', () => {
   it('suma la revisión del diseño a las plantillas rediseñadas', () => {
-    expect(withDesignRevision('proximo', 3)).toBe('3d3')
-    expect(withDesignRevision('programacion', 'abc')).toBe('abcd3')
-    expect(withDesignRevision('resultado', 3)).toBe('3')
+    expect(withDesignRevision('proximo', 3)).toBe('3d4')
+    expect(withDesignRevision('programacion', 'abc')).toBe('abcd4')
+    expect(withDesignRevision('resultado', 3)).toBe('3e1')
     expect(isValidVersion(withDesignRevision('proximo', 12))).toBe(true)
+    expect(isValidVersion(withDesignRevision('noticia', 'abc'))).toBe(true)
   })
 })

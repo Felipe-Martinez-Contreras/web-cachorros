@@ -64,7 +64,7 @@ describe('tarjetas para redes', () => {
       (${id}, 'gol_penal', 'segundo_tiempo', 67, ${f.ownTeamId}, ${scorer})`
     const request = { template: 'resultado', id, format: 'cuadrado' } as const
     const version = (await shareVersionOf(request))?.version ?? ''
-    expect(version).toBe('1')
+    expect(version).toBe('1e1')
 
     const started = performance.now()
     const first = await getShareImage(request, version)
@@ -86,22 +86,22 @@ describe('tarjetas para redes', () => {
   it('una versión nueva da otro archivo y borra la anterior', async () => {
     const id = await createMatch(admin, f, 'tarjeta-version')
     const request = { template: 'resultado', id, format: 'vertical' } as const
-    await getShareImage(request, '1')
+    await getShareImage(request, '1e1')
     await admin`update matches set home_score = 1, share_version = share_version + 1 where id = ${id}`
-    expect((await shareVersionOf(request))?.version).toBe('2')
-    const fresh = await getShareImage(request, '2')
+    expect((await shareVersionOf(request))?.version).toBe('2e1')
+    const fresh = await getShareImage(request, '2e1')
     expect(fresh?.fromCache).toBe(false)
     const files = (await readdir(path.join(shareCacheDir(), 'resultado'))).filter((name) =>
       name.startsWith(id),
     )
-    expect(files).toEqual([`${id}-v2-vertical.png`])
+    expect(files).toEqual([`${id}-v2e1-vertical.png`])
   })
 
   it('la imagen Open Graph es JPEG de 1200 × 630 y pesa 300 KB o menos', async () => {
     const id = await createMatch(admin, f, 'tarjeta-og', 'programado')
     // La versión de la previa: la del partido, la del matchday (fotos y auspiciador) y la del diseño.
     const version = (await shareVersionOf({ template: 'proximo', id, format: 'og' }))?.version
-    expect(version).toMatch(/^1[0-9a-z]+d3$/)
+    expect(version).toMatch(/^1[0-9a-z]+d4$/)
     const response = await getCard('proximo', id, 'og', `?v=${version}`)
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('image/jpeg')
@@ -116,17 +116,17 @@ describe('tarjetas para redes', () => {
     const id = await createMatch(admin, f, 'tarjeta-redirige')
     const missing = await getCard('resultado', id, 'historia', '?descargar=1')
     expect(missing.status).toBe(302)
-    expect(missing.headers.get('location')).toBe(`/api/share/resultado/${id}/historia?v=1&descargar=1`)
+    expect(missing.headers.get('location')).toBe(`/api/share/resultado/${id}/historia?v=1e1&descargar=1`)
     expect((await getCard('resultado', id, 'historia', '?v=0')).status).toBe(302)
 
-    const download = await getCard('resultado', id, 'historia', '?v=1&descargar=1')
+    const download = await getCard('resultado', id, 'historia', '?v=1e1&descargar=1')
     expect(download.headers.get('content-disposition')).toBe(
       'attachment; filename="resultado-tarjeta-redirige-historia.png"',
     )
 
     // Un partido finalizado no tiene «próximo»; uno sin goles del club no tiene «¡Gol!».
     expect((await getCard('proximo', id, 'cuadrado', '?v=1')).status).toBe(404)
-    expect((await getCard('gol', id, 'cuadrado', '?v=1')).status).toBe(404)
+    expect((await getCard('gol', id, 'cuadrado', '?v=1e1')).status).toBe(404)
     expect((await getCard('resultado', 'no-es-un-id', 'cuadrado')).status).toBe(404)
     expect((await getCard('resultado', id, 'gigante')).status).toBe(404)
     expect((await getCard('noticia', id, 'cuadrado')).status).toBe(404)
@@ -147,7 +147,7 @@ describe('tarjetas para redes', () => {
       values (${id}, 'gol', 'primer_tiempo', 45, 2, ${f.ownTeamId}, ${minor})`
     const card = await loadShareCard({ template: 'gol', id, format: 'historia' })
     expect(card?.kind === 'match' && card.goal).toEqual({ scorer: 'Benjamín Z.', minute: "45+2'" })
-    expect((await getCard('gol', id, 'historia', '?v=1')).status).toBe(200)
+    expect((await getCard('gol', id, 'historia', '?v=1e1')).status).toBe(200)
   })
 
   it('programación y resultados del fin de semana: solo partidos del club de sábado y domingo', async () => {
