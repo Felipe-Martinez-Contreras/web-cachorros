@@ -6,7 +6,7 @@ import { build } from 'esbuild'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 /** Scripts de consola que se empaquetan para la imagen (especificación 12.2). */
-export const SCRIPT_NAMES = ['migrate', 'create-admin', 'seed', 'content-pending']
+export const SCRIPT_NAMES = ['migrate', 'create-admin', 'seed', 'content-pending', 'reprocess-logos']
 /** Scripts que solo existen en desarrollo. */
 export const DEV_SCRIPT_NAMES = ['db-reset', 'e2e-clean', 'pwa-icons', 'share-preview']
 
