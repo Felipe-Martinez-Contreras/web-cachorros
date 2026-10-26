@@ -1,4 +1,5 @@
 import type { MediaVariants } from '@/db/schema/media'
+import { type CrestScale, crestScale } from './crest'
 
 /** Lo mínimo que necesita `<ClubImage>`: serializable y sin datos internos de la biblioteca. */
 export type ImageDTO = {
@@ -11,6 +12,8 @@ export type ImageDTO = {
   credit: string | null
   /** Punto focal como `object-position` («50% 30%»). */
   focalPoint: string
+  /** Solo escudos y logos: escala óptica dentro de su caja (`.crest`), con y sin disco. */
+  crestScale?: CrestScale
 }
 
 type MediaRow = {
@@ -42,6 +45,9 @@ export function toImageDTO(media: MediaRow | null | undefined): ImageDTO | null 
     lqip: media.lqip,
     credit: media.credit,
     focalPoint: `${Math.round(media.focalX * 100)}% ${Math.round(media.focalY * 100)}%`,
+    ...(media.variants.png512
+      ? { crestScale: crestScale(media.width, media.height, media.variants.logo) }
+      : null),
   }
 }
 
