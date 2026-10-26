@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ClubImage } from '@/components/site/club-image'
+import { CrestImage } from '@/components/site/crest-image'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/cn'
 import { formatTime } from '@/lib/format'
@@ -13,26 +13,9 @@ type CrestProps = { team: TeamDTO; size?: keyof typeof CREST_SIZES; className?: 
 /** Escudo en lienzo cuadrado. Es decorativo: el nombre del equipo siempre va escrito al lado. */
 export function TeamCrest({ team, size = 'md', className }: CrestProps) {
   return (
-    // `.crest` le pone un fondo blanco circular en las secciones oscuras (los escudos traen trazos negros).
+    // `.crest` le pone un disco blanco en las secciones oscuras (los escudos traen trazos negros).
     <span className={cn('crest block shrink-0', CREST_SIZES[size], className)}>
-      {team.crest ? (
-        <ClubImage
-          image={team.crest}
-          alt=""
-          sizes={size === 'lg' ? '96px' : '48px'}
-          className="size-full object-contain"
-          style={{ backgroundImage: 'none' }}
-        />
-      ) : (
-        // biome-ignore lint/performance/noImgElement: archivo estático pequeño, sin optimizador (2.7)
-        <img
-          src="/placeholder/escudo-generico.svg"
-          alt=""
-          width={96}
-          height={96}
-          className="size-full object-contain"
-        />
-      )}
+      <CrestImage image={team.crest} sizes={size === 'lg' ? '96px' : '48px'} />
     </span>
   )
 }

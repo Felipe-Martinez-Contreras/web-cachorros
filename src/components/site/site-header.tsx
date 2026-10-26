@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import type { SiteDTO } from '@/features/settings/dto'
 import { cn } from '@/lib/cn'
-import { ClubImage } from './club-image'
+import { CrestImage } from './crest-image'
 import { CLUB_NAV, MAIN_NAV, MEMBERSHIP_NAV, STORE_NAV } from './nav'
 import { NavLink } from './nav-link'
 
@@ -13,24 +13,7 @@ type Brand = Pick<SiteDTO, 'clubName' | 'shortName' | 'foundedYear' | 'crest'>
 export function ClubCrest({ site, className }: { site: Pick<SiteDTO, 'crest'>; className?: string }) {
   return (
     <span className={cn('crest block shrink-0', className)}>
-      {site.crest ? (
-        <ClubImage
-          image={site.crest}
-          alt=""
-          sizes="96px"
-          className="size-full object-contain"
-          style={{ backgroundImage: 'none' }}
-        />
-      ) : (
-        // biome-ignore lint/performance/noImgElement: archivo estático pequeño, sin optimizador (2.7)
-        <img
-          src="/placeholder/escudo-generico.svg"
-          alt=""
-          width={96}
-          height={96}
-          className="size-full object-contain"
-        />
-      )}
+      <CrestImage image={site.crest} sizes="96px" />
     </span>
   )
 }
