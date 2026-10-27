@@ -2,6 +2,7 @@
 
 import { EntityForm, type FieldDef } from '@/components/admin/entity-form'
 import type { MediaThumbDTO } from '@/features/media/dto'
+import { jornadaOptionsSchema } from '@/features/share/schemas'
 import type { ActionResult } from '@/lib/action-result'
 import { weekdayLabels } from '@/lib/labels'
 import { MAX_CAPTION } from '../lib/caption'
@@ -83,14 +84,17 @@ export function FacebookSettingsForm({
   )
 }
 
+/** Texto revisado y «Publicar en Facebook». `backHref`: adónde vuelve (la ficha del partido o la jornada). */
 export function ManualPublishForm({
   action,
   caption,
-  matchId,
+  backHref,
+  help = 'Se armó con los datos del partido. Puedes cambiarlo antes de publicar.',
 }: {
   action: Action
   caption: string
-  matchId: string
+  backHref: string
+  help?: string
 }) {
   return (
     <EntityForm
@@ -99,8 +103,8 @@ export function ManualPublishForm({
       defaultValues={{ message: caption }}
       submitLabel="Publicar en Facebook"
       successMessage="Publicado en Facebook."
-      redirectTo={`/admin/partidos/${matchId}`}
-      cancelHref={`/admin/partidos/${matchId}`}
+      redirectTo={backHref}
+      cancelHref={backHref}
       fields={[
         {
           name: 'message',
@@ -108,8 +112,48 @@ export function ManualPublishForm({
           type: 'textarea',
           rows: 12,
           maxLength: MAX_CAPTION,
-          help: 'Se armó con los datos del partido. Puedes cambiarlo antes de publicar.',
+          help,
         },
+      ]}
+    />
+  )
+}
+
+/**
+ * «Series y fotos» de la tarjeta de una jornada: las series que van (todas marcadas por defecto) y las 3
+ * fotos del matchday. Al guardar, la página se recarga con lo elegido en la dirección.
+ */
+export function JornadaOptionsForm({
+  action,
+  jornadaKey,
+  series,
+  defaults,
+  previews,
+}: {
+  action: (input: unknown) => Promise<ActionResult<{ id: string }>>
+  jornadaKey: string
+  series: { value: string; label: string }[]
+  defaults: { series: string[]; photo1: string; photo2: string; photo3: string }
+  previews: Record<string, MediaThumbDTO | null>
+}) {
+  return (
+    <EntityForm
+      schema={jornadaOptionsSchema}
+      action={action}
+      defaultValues={defaults}
+      mediaPreviews={previews}
+      submitLabel="Ver la tarjeta así"
+      successMessage="Tarjeta actualizada."
+      redirectTo={(search) => `/admin/partidos/jornadas/${jornadaKey}?${search}`}
+      fields={[
+        {
+          name: 'series',
+          label: 'Series que van en la tarjeta',
+          type: 'checkboxes',
+          options: series,
+          help: 'En orden de juego. La hora de inicio es la de la primera serie marcada.',
+        },
+        ...MATCHDAY_PHOTO_FIELDS,
       ]}
     />
   )

@@ -15,10 +15,12 @@ import { EmptyState } from '@/components/ui/feedback'
 import { Pagination } from '@/components/ui/pagination'
 import { listMatchesAdmin, type MatchListView } from '@/features/matches/admin-queries'
 import { sportOptions } from '@/features/series/queries'
+import { upcomingJornadas } from '@/features/share/admin-queries'
 import { requirePanelUser } from '@/lib/auth/session'
 import { isUuid } from '@/lib/form-schemas'
 import { formatMatchDate } from '@/lib/format'
 import { matchResolutionLabels, matchStatusLabels } from '@/lib/labels'
+import { can } from '@/lib/permissions'
 
 export const metadata: Metadata = { title: 'Partidos' }
 
@@ -42,9 +44,9 @@ const STATUS_VARIANT = {
 } as const
 
 export default async function MatchesListPage({ searchParams }: Props) {
-  await requirePanelUser('matches:write')
+  const user = await requirePanelUser('matches:write')
   const { vista, serie, temporada, pagina } = await searchParams
-  const options = await sportOptions()
+  const [options, jornadas] = await Promise.all([sportOptions(), upcomingJornadas(new Date())])
   const view = VIEWS.some((item) => item.value === vista) ? (vista as MatchListView) : 'proximos'
   const seasonId = isUuid(temporada) ? temporada : options.currentSeasonId
   const seriesId = isUuid(serie) ? serie : null
@@ -70,6 +72,46 @@ export default async function MatchesListPage({ searchParams }: Props) {
           </div>
         }
       />
+      {jornadas.length > 0 && (
+        <section aria-labelledby="jornadas-proximas" className="mb-8 grid gap-3">
+          <h2 id="jornadas-proximas" className="text-lg font-bold">
+            Jornadas próximas
+          </h2>
+          <p className="text-neutral-600">
+            Los partidos de un mismo día contra el mismo rival, en una sola tarjeta para redes.
+          </p>
+          <ResourceList label="Jornadas próximas">
+            {jornadas.map((jornada) => (
+              <ResourceRow
+                key={jornada.key}
+                title={`${jornada.day} vs ${jornada.rivalName}`}
+                href={`/admin/partidos/jornadas/${jornada.key}`}
+                subtitle={jornada.series.join(' · ')}
+                actions={
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/admin/partidos/jornadas/${jornada.key}#descargar`}
+                      className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                      aria-label={`Descargar tarjeta de la jornada del ${jornada.day.toLowerCase()} vs ${jornada.rivalName}`}
+                    >
+                      Descargar tarjeta
+                    </Link>
+                    {can(user, 'social:write') && (
+                      <Link
+                        href={`/admin/partidos/jornadas/${jornada.key}#facebook`}
+                        className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                        aria-label={`Publicar en Facebook la jornada del ${jornada.day.toLowerCase()} vs ${jornada.rivalName}`}
+                      >
+                        Publicar en Facebook
+                      </Link>
+                    )}
+                  </div>
+                }
+              />
+            ))}
+          </ResourceList>
+        </section>
+      )}
       <ListToolbar>
         <FilterSelect name="vista" label="Mostrar" value={view} options={VIEWS} />
         <FilterSelect

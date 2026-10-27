@@ -4,10 +4,11 @@ import type { ShareCardLink } from '../admin-queries'
 import { SHARE_FORMATS, type ShareFormat, SOCIAL_FORMATS, shareFilename, shareUrl } from '../lib/cards'
 import { ShareFileButton } from './share-file-button'
 
-const FORMAT_HINTS: Record<(typeof SOCIAL_FORMATS)[number], string> = {
+const FORMAT_HINTS: Record<ShareFormat, string> = {
   cuadrado: 'publicación',
-  vertical: 'Instagram',
+  vertical: 'Facebook e Instagram',
   historia: 'historias y estados de WhatsApp',
+  og: 'vista previa de enlaces',
 }
 
 /**
@@ -19,7 +20,8 @@ export function ShareCards({ cards }: { cards: ShareCardLink[] }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => {
-        const urlOf = (format: ShareFormat) => shareUrl(card.template, card.id, format, card.version)
+        const urlOf = (format: ShareFormat) =>
+          card.urls?.[format] ?? shareUrl(card.template, card.id, format, card.version)
         const request = { template: card.template, id: card.id }
         return (
           <li
@@ -41,7 +43,7 @@ export function ShareCards({ cards }: { cards: ShareCardLink[] }) {
               <p className="text-sm text-neutral-600">{card.title}</p>
             </div>
             <ul className="grid gap-2">
-              {SOCIAL_FORMATS.map((format) => {
+              {(card.formats ?? SOCIAL_FORMATS).map((format) => {
                 const { label } = SHARE_FORMATS[format]
                 const name = `${card.label} ${label}`
                 return (

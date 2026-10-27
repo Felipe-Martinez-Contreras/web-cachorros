@@ -63,7 +63,7 @@ export default async function PublishMatchPage({ params, searchParams }: Props) 
             <ManualPublishForm
               action={publicarEnFacebook.bind(null, id, chosen ? encodePhotos(chosen) : null)}
               caption={draft.caption}
-              matchId={id}
+              backHref={`/admin/partidos/${id}`}
             />
             {draft.kind === 'proximo' && (
               <section aria-labelledby="fotos-del-post" className="grid gap-3">

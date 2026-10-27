@@ -1,15 +1,17 @@
 'use client' // Cliente: formularios de programación de partidos (react-hook-form + Zod).
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { type Resolver, useFieldArray, useForm } from 'react-hook-form'
 import { EntityForm } from '@/components/admin/entity-form'
 import { FormBody } from '@/components/admin/form-body'
 import { useToast } from '@/components/admin/toast'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
 import { Field, SelectField } from '@/components/ui/field'
+import { jornadaKey } from '@/features/share/lib/jornada'
 import type { ActionResult } from '@/lib/action-result'
 import {
   type MatchdayFormValues,
@@ -135,6 +137,8 @@ export function MatchdayForm({ action, defaults, seriesNames, options }: Matchda
   const router = useRouter()
   const toast = useToast()
   const [formError, setFormError] = useState<string | null>(null)
+  // Al terminar: cuántos partidos se programaron y la clave de la jornada (para su tarjeta).
+  const [done, setDone] = useState<{ count: number; key: string } | null>(null)
   const form = useForm<MatchdayFormValues>({
     resolver: zodResolver(matchdaySchema as never) as unknown as Resolver<MatchdayFormValues>,
     defaultValues: defaults,
@@ -146,7 +150,8 @@ export function MatchdayForm({ action, defaults, seriesNames, options }: Matchda
 
   const onSubmit = form.handleSubmit(async () => {
     setFormError(null)
-    const result = await action(form.getValues())
+    const values = form.getValues()
+    const result = await action(values)
     if (!result.ok) {
       for (const [name, messages] of Object.entries(result.fieldErrors ?? {})) {
         form.setError(name as keyof MatchdayFormValues, { type: 'server', message: messages[0] })
@@ -155,11 +160,35 @@ export function MatchdayForm({ action, defaults, seriesNames, options }: Matchda
       return
     }
     toast({ message: included === 1 ? 'Se programó 1 partido.' : `Se programaron ${included} partidos.` })
-    router.push('/admin/partidos')
+    setDone({ count: included, key: jornadaKey(values.date, values.rivalId) })
     router.refresh()
   })
 
   const rowsError = errors.rows?.message ?? errors.rows?.root?.message
+
+  if (done) {
+    return (
+      <div className="grid max-w-2xl gap-4">
+        <Alert
+          variant="success"
+          title={done.count === 1 ? 'Se programó 1 partido' : `Se programaron ${done.count} partidos`}
+        >
+          Ya puedes descargar o publicar la tarjeta de la jornada, con todas sus series en una sola imagen.
+        </Alert>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/admin/partidos/jornadas/${done.key}`}
+            className={buttonVariants({ variant: 'dark', size: 'lg' })}
+          >
+            Ver tarjeta de la jornada
+          </Link>
+          <Link href="/admin/partidos" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+            Ir a Partidos
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-2xl">
