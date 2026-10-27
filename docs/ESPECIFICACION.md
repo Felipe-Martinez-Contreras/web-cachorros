@@ -216,7 +216,7 @@ AVIF queda fuera de v1 por su costo de CPU en e2-micro.
 
 - Generación con `next/og` **en el servidor** (no en el cliente: los rastreadores de WhatsApp/Facebook no ejecutan JS y la tipografía debe ser idéntica en todos los dispositivos).
 - Para no saturar la VM: se generan una vez por versión (`share_version` del partido), se guardan en `/data/cache/share/`, se sirven con URL versionada y `Cache-Control: immutable` (Cloudflare las cachea), y la generación es serializada (cola de 1).
-- Plantillas: **resultado final**, **próximo partido**, **programación del fin de semana** (varias series), **resultados del fin de semana**, **noticia** (OG) y, deseable, **«¡Gol!»**.
+- Plantillas: **resultado final**, **próximo partido**, **jornada** (varias series contra el mismo rival el mismo día, con el diseño matchday: las series en orden de juego, la hora de inicio de la primera, la cancha y la fecha; hasta 6 series), **programación del fin de semana** (varias series), **resultados del fin de semana**, **noticia** (OG) y, deseable, **«¡Gol!»**.
 - Formatos: 1080×1080, 1080×1350 (4:5), 1080×1920 (historias / estados de WhatsApp) y 1200×630 (Open Graph, JPEG ≤ 300 KB).
 - Identidad: fondo negro, marcador en display condensada, escudos enfrentados, serie, fecha, goleadores con minuto y franja de acento. Logo del auspiciador principal `[DECIDIR. Default: no]`.
 
@@ -761,7 +761,7 @@ En qué se usan los aportes `[COMPLETAR]`; datos de transferencia `[COMPLETAR]` 
 
 ### 7.4 Flujos clave
 
-- **Programar jornada:** asistente que crea en un paso los partidos de varias series contra el mismo rival (fecha, rival, cancha, local/visita, competencia → una fila por serie con hora y número de fecha). Al terminar ofrece la tarjeta «Programación del fin de semana».
+- **Programar jornada:** asistente que crea en un paso los partidos de varias series contra el mismo rival (fecha, rival, cancha, local/visita, competencia → una fila por serie con hora y número de fecha). Al terminar ofrece la tarjeta «Jornada» («Ver tarjeta de la jornada»), donde se eligen las series y las fotos, se descarga en los cuatro formatos y se publica en Facebook. Partidos muestra las «Jornadas próximas» (agrupadas por día y rival) con «Descargar tarjeta» y «Publicar en Facebook».
 - **Temporadas:** crear, marcar como actual y **duplicar plantel y cuerpo técnico desde la temporada anterior**.
 - **Rivales:** nombre, nombre corto, comuna y escudo.
 - **Postergar / suspender:** cambia estado y fecha conservando el historial.
