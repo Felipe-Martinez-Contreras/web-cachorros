@@ -137,8 +137,11 @@ test('programar una jornada crea un partido por serie con su hora', async ({ pag
     await page.getByRole('spinbutton', { name: new RegExp(`^Fecha n.º de ${serie}`) }).fill(String(round))
   }
   await page.getByRole('button', { name: 'Programar 2 partidos' }).click()
-  await expect(page).toHaveURL(/\/admin\/partidos$/)
   await expect(page.getByText('Se programaron 2 partidos.')).toBeVisible()
+  // Al terminar ofrece la tarjeta de la jornada; de ahí se vuelve a Partidos.
+  await expect(page.getByRole('link', { name: 'Ver tarjeta de la jornada' })).toBeVisible()
+  await page.getByRole('link', { name: 'Ir a Partidos' }).click()
+  await expect(page).toHaveURL(/\/admin\/partidos$/)
   // La lista viene paginada: se filtra por serie para encontrar cada partido creado.
   for (const [serie, time] of [
     ['Honor', '16:00'],

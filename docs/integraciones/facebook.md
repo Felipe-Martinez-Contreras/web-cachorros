@@ -3,10 +3,15 @@
 El sitio puede publicar solo en la página de Facebook del club:
 
 - **La programación del fin de semana:** el día y la hora que se elijan (por defecto, el viernes a las 12:00,
-  hora de Chile), con la tarjeta 4:5 y un texto armado con los partidos. Si ese fin de semana no hay partidos,
-  no publica nada.
+  hora de Chile), con la tarjeta 4:5 y un texto armado con los partidos. Siempre es un solo post: con un solo
+  partido sale su tarjeta «Próximo partido»; si todos los partidos son una sola jornada (contra el mismo rival
+  el mismo día), la tarjeta «Jornada»; con varios rivales o días, la grilla «Programación». Si ese fin de
+  semana no hay partidos, no publica nada.
 - **La previa o el resultado de un partido, a mano:** desde la ficha del partido, con «Publicar en Facebook»,
   viendo antes la imagen y pudiendo cambiar el texto.
+- **La tarjeta de una jornada, a mano:** desde Partidos → «Jornadas próximas» (o al terminar «Programar
+  jornada»), eligiendo las series y las fotos. Cada jornada se publica una sola vez, y no si ya salió como la
+  programación del fin de semana.
 - **El resultado al finalizar un partido** (opcional): unos 10 minutos después de finalizarlo.
 
 La decisión técnica está en el [ADR 0009](../adr/0009-publicacion-en-redes-graph-api.md). Esta guía explica cómo

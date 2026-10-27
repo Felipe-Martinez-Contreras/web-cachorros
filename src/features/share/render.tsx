@@ -5,15 +5,25 @@ import { ImageResponse } from 'next/og'
 import type { ReactNode } from 'react'
 import { formatDayMonth, formatLongDate, formatTime, toIsoDate } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
-import type { CardMatch, CardTeam, MatchCardData, NewsCardData, ShareCardData, WeekendCardData } from './dto'
+import type {
+  CardMatch,
+  CardTeam,
+  JornadaCardData,
+  MatchCardData,
+  NewsCardData,
+  ShareCardData,
+  WeekendCardData,
+} from './dto'
 import { BRAND } from './lib/brand'
 import {
   CHAR_EM,
   clampText,
   displayLines,
   fitDisplaySize,
+  SERIES_SEPARATOR,
   SHARE_FORMATS,
   type ShareFormat,
+  seriesBandLayout,
   weekendTitle,
 } from './lib/cards'
 
@@ -92,7 +102,8 @@ function Card({ data, layout }: { data: ShareCardData; layout: Layout }) {
   const { width, height, s } = layout
   const matchday =
     (data.kind === 'match' && data.template === 'proximo') ||
-    (data.kind === 'weekend' && data.template === 'programacion')
+    (data.kind === 'weekend' && data.template === 'programacion') ||
+    data.kind === 'jornada'
   return (
     <div
       style={{
@@ -118,6 +129,7 @@ function Card({ data, layout }: { data: ShareCardData; layout: Layout }) {
         ) : (
           <WeekendCard data={data} layout={layout} />
         ))}
+      {data.kind === 'jornada' && <JornadaCard data={data} layout={layout} />}
       {data.kind === 'news' && <NewsCard data={data} layout={layout} />}
       {/* Franja de acento al pie (la plantilla matchday no la lleva) */}
       {!matchday && (
@@ -685,21 +697,41 @@ function MatchdayCrest({ team, size }: { team: CardTeam; size: number }) {
   )
 }
 
-/** «15:30 H | 25.10 | LOCAL»: la hora (o «Postergado»), la fecha y de qué lado juega el club. */
-function MatchdayWhen({ match, size }: { match: CardMatch; size: number }) {
+/** Ancho medio de una mayúscula de Barlow Condensed Bold, en em, con el espaciado de la línea de cuándo. */
+const WHEN_CHAR_EM = 0.42
+
+/**
+ * «15:30 H | 25.10 | LOCAL»: la hora (o «Postergado»), la fecha y de qué lado juega el club. La jornada
+ * antepone «Inicio» y, si así no cabe en `width`, se achica la letra.
+ */
+function MatchdayWhen({
+  match,
+  size,
+  prefix,
+  width,
+}: {
+  match: CardMatch
+  size: number
+  prefix?: string
+  width?: number
+}) {
   const [, month, day] = toIsoDate(match.kickoffAt).split('-')
-  const when = match.status === 'postergado' ? 'Postergado' : `${formatTime(match.kickoffAt)} h`
+  const time = match.status === 'postergado' ? 'Postergado' : `${formatTime(match.kickoffAt)} h`
+  const when = prefix ? `${prefix} ${time}` : time
+  // Hora, fecha («31.10») y lado, más las dos barras con su separación (≈ 3 caracteres cada una).
+  const chars = when.length + 5 + SIDE_LABEL[match.clubSide].length + 6
+  const fontSize = prefix && width ? Math.min(size, width / (chars * WHEN_CHAR_EM)) : size
   const bar = <div style={{ display: 'flex', opacity: 0.5 }}>|</div>
   return (
     <div
       style={{
         display: 'flex',
         justifyContent: 'center',
-        gap: size * 0.4,
+        gap: fontSize * 0.4,
         fontFamily: MD_TEXT,
         fontWeight: 700,
-        fontSize: size,
-        letterSpacing: size * 0.04,
+        fontSize,
+        letterSpacing: fontSize * 0.04,
         textTransform: 'uppercase',
         lineHeight: 1.15,
       }}
@@ -765,7 +797,17 @@ function matchdayInfoHeight(match: CardMatch, width: number, sizes: InfoSizes): 
 }
 
 /** Textos del pie: serie y competencia, los dos equipos con «VS» en medio (sin cortar), la cancha y cuándo. */
-function MatchdayInfo({ match, width, sizes }: { match: CardMatch; width: number; sizes: InfoSizes }) {
+function MatchdayInfo({
+  match,
+  width,
+  sizes,
+  whenPrefix,
+}: {
+  match: CardMatch
+  width: number
+  sizes: InfoSizes
+  whenPrefix?: string
+}) {
   const home = clampText(match.home.name, 80)
   const away = clampText(match.away.name, 80)
   const names = matchdayNames(home, away, width, sizes.names)
@@ -841,7 +883,7 @@ function MatchdayInfo({ match, width, sizes }: { match: CardMatch; width: number
           {clampText(match.venueName, 44)}
         </div>
       )}
-      <MatchdayWhen match={match} size={sizes.when} />
+      <MatchdayWhen match={match} size={sizes.when} prefix={whenPrefix} width={width} />
     </div>
   )
 }
@@ -858,6 +900,7 @@ function matchdaySizes(layout: Layout) {
       gap: 48,
       bottom: 100,
       panelGap: 60,
+      band: { size: 104, min: 64 },
     }
   }
   if (layout.height > 1200) {
@@ -870,6 +913,7 @@ function matchdaySizes(layout: Layout) {
       gap: 30,
       bottom: 44,
       panelGap: 50,
+      band: { size: 86, min: 52 },
     }
   }
   return {
@@ -881,6 +925,7 @@ function matchdaySizes(layout: Layout) {
     gap: 22,
     bottom: 30,
     panelGap: 40,
+    band: { size: 66, min: 42 },
   }
 }
 
@@ -931,11 +976,77 @@ function Sponsor({ name, size }: { name: string; size: number }) {
 
 /** «Próximo partido» con la composición matchday del club: título, tres paneles de fotos y el pie. */
 function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout }) {
-  const { match } = data
   const sponsor = data.matchday?.sponsor ?? null
   const photos = data.matchday?.photos ?? [null, null, null]
-  if (layout.wide) return <MatchdayWide data={data} layout={layout} sponsor={sponsor} photos={photos} />
+  const props = { match: data.match, layout, sponsor, photos }
+  return layout.wide ? <MatchdayWide {...props} /> : <MatchdayFrame {...props} />
+}
 
+/**
+ * «Jornada»: el matchday con las series que juegan en una banda bajo los paneles y la hora de inicio de la
+ * jornada (la del primer partido) en vez de la de cada serie.
+ */
+function JornadaCard({ data, layout }: { data: JornadaCardData; layout: Layout }) {
+  const { sponsor, photos } = data.matchday
+  // La línea naranja lleva la competencia (si todas son de la misma) en lugar de la serie.
+  const match: CardMatch = {
+    ...data.match,
+    seriesName: '',
+    roundLabel: null,
+    competitionName: data.match.competitionName || 'Jornada',
+  }
+  const props = { match, layout, sponsor, photos, series: data.series, whenPrefix: 'Inicio' }
+  return layout.wide ? <MatchdayWide {...props} /> : <MatchdayFrame {...props} />
+}
+
+type MatchdayProps = {
+  match: CardMatch
+  layout: Layout
+  sponsor: string | null
+  photos: (string | null)[]
+  /** Solo la jornada: las series de la banda bajo los paneles y «Inicio» antes de la hora. */
+  series?: readonly string[]
+  whenPrefix?: string
+}
+
+/** Banda de series de la jornada: los nombres en blanco y los separadores en naranja, en 1 o 2 líneas. */
+function SeriesBand({ lines, size }: { lines: string[][]; size: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: size * 0.08 }}>
+      {lines.map((line) => (
+        <div
+          key={line.join('|')}
+          style={{
+            display: 'flex',
+            fontFamily: MD_DISPLAY,
+            fontSize: size,
+            lineHeight: 1,
+            letterSpacing: size * 0.015,
+            color: PAPER,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {line.map((name, index) => (
+            <div key={name} style={{ display: 'flex' }}>
+              {index > 0 && (
+                <div style={{ display: 'flex', color: ACCENT, whiteSpace: 'pre' }}>{SERIES_SEPARATOR}</div>
+              )}
+              {name}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const bandHeight = (lines: number, size: number) => (lines > 0 ? lines * size + (lines - 1) * size * 0.08 : 0)
+
+/** Nombres de serie para la banda (sin marcadores de contenido pendiente y con un largo razonable). */
+const clampSeries = (series: readonly string[]) => series.map((name) => clampText(name, 24))
+
+/** La composición matchday vertical o cuadrada: título, tres paneles de fotos, la banda de series y el pie. */
+function MatchdayFrame({ match, layout, sponsor, photos, series, whenPrefix }: MatchdayProps) {
   const { s, width, height } = layout
   const z = matchdaySizes(layout)
   const info = scaleInfo(z.info, s)
@@ -947,8 +1058,19 @@ function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout })
   const crest = z.crest * s
   const infoWidth = contentWidth - crest * 2 - 40 * s
   const bottomRow = Math.max(crest, matchdayInfoHeight(match, infoWidth, info))
+  const band = series
+    ? seriesBandLayout(clampSeries(series), contentWidth, z.band.size * s, z.band.min * s)
+    : null
+  const bandBlock = band ? bandHeight(band.lines.length, band.size) + z.gap * s : 0
   const panelHeight =
-    height - z.top * s - sponsorHeight - (titleBox - titleOverlap) - z.gap * s - bottomRow - z.bottom * s
+    height -
+    z.top * s -
+    sponsorHeight -
+    (titleBox - titleOverlap) -
+    z.gap * s -
+    bandBlock -
+    bottomRow -
+    z.bottom * s
   const panelWidth = (contentWidth - z.panelGap * s * 2) / 3
 
   return (
@@ -979,6 +1101,11 @@ function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout })
             <Panel key={index} index={index} photo={photo} width={panelWidth} height={panelHeight} />
           ))}
         </div>
+        {band && (
+          <div style={{ display: 'flex', marginTop: z.gap * s }}>
+            <SeriesBand lines={band.lines} size={band.size} />
+          </div>
+        )}
         <div
           style={{
             display: 'flex',
@@ -990,7 +1117,7 @@ function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout })
           }}
         >
           <MatchdayCrest team={match.home} size={crest} />
-          <MatchdayInfo match={match} width={infoWidth} sizes={info} />
+          <MatchdayInfo match={match} width={infoWidth} sizes={info} whenPrefix={whenPrefix} />
           <MatchdayCrest team={match.away} size={crest} />
         </div>
       </div>
@@ -1012,18 +1139,7 @@ function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout })
 }
 
 /** Open Graph (1200 × 630): título y datos a la izquierda, los tres paneles a la derecha. */
-function MatchdayWide({
-  data,
-  layout,
-  sponsor,
-  photos,
-}: {
-  data: MatchCardData
-  layout: Layout
-  sponsor: string | null
-  photos: (string | null)[]
-}) {
-  const { match } = data
+function MatchdayWide({ match, layout, sponsor, photos, series, whenPrefix }: MatchdayProps) {
   const { width, height } = layout
   const pad = 40
   const panelGap = 14
@@ -1031,6 +1147,7 @@ function MatchdayWide({
   const panelWidth = (panelsWidth - panelGap * 2) / 3
   const leftWidth = width - pad * 3 - panelsWidth
   const crest = 96
+  const band = series ? seriesBandLayout(clampSeries(series), leftWidth, 40, 24) : null
   return (
     <div style={{ display: 'flex', position: 'relative', width, height }}>
       <MatchdayBackground layout={layout} />
@@ -1064,10 +1181,16 @@ function MatchdayWide({
             <MatchdayInfo
               match={match}
               width={leftWidth - crest * 2 - 24}
-              sizes={{ names: 50, series: 16, venue: 19, when: 26 }}
+              sizes={
+                band
+                  ? { names: 44, series: 16, venue: 18, when: 24 }
+                  : { names: 50, series: 16, venue: 19, when: 26 }
+              }
+              whenPrefix={whenPrefix}
             />
             <MatchdayCrest team={match.away} size={crest} />
           </div>
+          {band && <SeriesBand lines={band.lines} size={band.size} />}
         </div>
         <div style={{ display: 'flex', gap: panelGap }}>
           {photos.map((photo, index) => (

@@ -1,11 +1,14 @@
 'use server'
 
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, ne } from 'drizzle-orm'
 import * as z from 'zod'
 import { db, type Tx } from '@/db/client'
 import { matches, siteSettings, socialPublications } from '@/db/schema'
 import { isClubMatch } from '@/features/matches/queries'
 import { assertPublishableMedia } from '@/features/media/guards'
+import { weekendOf } from '@/features/share/lib/cards'
+import { parseJornadaKey, parseSeries } from '@/features/share/lib/jornada'
+import { jornadaMatches, weekendCardOf } from '@/features/share/queries'
 import { type ActionResult, fail, ok } from '@/lib/action-result'
 import { audit } from '@/lib/audit'
 import { requirePermission } from '@/lib/auth/session'
@@ -184,6 +187,94 @@ export async function publicarEnFacebook(
   const channel = facebook()
   if (!channel) return fail('Falta cargar FACEBOOK_PAGE_ID y FACEBOOK_PAGE_TOKEN en el servidor.')
   return afterPublish(await processPublication(queued.data.id, channel), queued.data.id)
+}
+
+/**
+ * Publica a mano la tarjeta de una jornada (`clave` = día y rival) con las series y fotos elegidas y el texto
+ * revisado. Una jornada se publica una sola vez, y no si ya salió como la programación del fin de semana.
+ */
+export async function publicarJornadaEnFacebook(
+  key: string,
+  series: string | null,
+  photos: string | null,
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  const queued = await mutate({
+    action: 'social.publish.request',
+    permission: 'social:write',
+    entityType: 'social_publication',
+    schema: manualPublishSchema,
+    input,
+    tags: [],
+    write: async (tx, data, user) => {
+      await assertCanPublish()
+      const jornada = parseJornadaKey(key)
+      if (!jornada) throw new Rejection('Esta jornada no existe. Vuelve a Partidos.')
+      // Las series y las fotos llegan enlazadas desde la página: se vuelven a validar aquí.
+      const seriesIds = series ? parseSeries(series) : null
+      const photoIds = photos ? parsePhotos(photos) : null
+      if ((series && !seriesIds) || (photos && !photoIds)) {
+        throw new Rejection('Las series o las fotos elegidas ya no son válidas. Vuelve a elegirlas.')
+      }
+      const playing = await jornadaMatches(key, seriesIds)
+      const [first] = playing
+      if (!first) throw new Rejection('Esta jornada ya no tiene partidos programados.')
+      if (seriesIds && playing.length !== seriesIds.length) {
+        throw new Rejection('Una de las series elegidas ya no juega en esta jornada. Vuelve a elegirlas.')
+      }
+      if (photoIds) await assertPublishablePhotos(tx, photoIds)
+      await assertNotInWeekendPost(tx, key, jornada.date)
+      const [row] = await tx
+        .insert(socialPublications)
+        .values({
+          channel: 'facebook',
+          kind: 'jornada',
+          subjectKey: key,
+          // El primer partido: así el panel muestra los equipos de la publicación.
+          matchId: first.id,
+          trigger: 'manual',
+          message: data.message,
+          photoIds,
+          seriesIds,
+          requestedBy: user.id,
+        })
+        .onConflictDoNothing()
+        .returning({ id: socialPublications.id })
+      if (!row) throw new Rejection('Esta jornada ya se publicó en Facebook (o está en la cola).')
+      return {
+        id: row.id,
+        summary: 'Publicó en Facebook: jornada',
+        meta: { kind: 'jornada', date: jornada.date, series: playing.length, ownPhotos: photoIds !== null },
+      }
+    },
+  })
+  if (!queued.ok) return queued
+  const channel = facebook()
+  if (!channel) return fail('Falta cargar FACEBOOK_PAGE_ID y FACEBOOK_PAGE_TOKEN en el servidor.')
+  return afterPublish(await processPublication(queued.data.id, channel), queued.data.id)
+}
+
+/**
+ * Si el fin de semana es solo esta jornada, su programación automática ya publica esta misma tarjeta: si
+ * esa publicación salió (o está en la cola), publicar la jornada sería el mismo post dos veces.
+ */
+async function assertNotInWeekendPost(tx: Tx, key: string, date: string): Promise<void> {
+  const saturday = weekendOf(date)
+  const [weekendPost] = await tx
+    .select({ id: socialPublications.id })
+    .from(socialPublications)
+    .where(
+      and(
+        eq(socialPublications.channel, 'facebook'),
+        eq(socialPublications.kind, 'programacion'),
+        eq(socialPublications.subjectKey, saturday),
+        ne(socialPublications.status, 'descartado'),
+      ),
+    )
+    .limit(1)
+  if (weekendPost && (await weekendCardOf(saturday))?.jornadaKey === key) {
+    throw new Rejection('Esta jornada ya salió (o está por salir) en la programación del fin de semana.')
+  }
 }
 
 /** Vuelve a la cola una publicación con error, sin confirmar o descartada, y la intenta de inmediato. */

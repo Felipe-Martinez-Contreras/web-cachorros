@@ -197,18 +197,25 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   `newsOgImage`. Las fuentes TTF llegan al standalone por `outputFileTracingIncludes`. Al rediseñar una
   plantilla, sube su revisión en `DESIGN_REVISION` (`lib/cards.ts`): cambia la URL y la caché se regenera. Los
   colores salen de `lib/brand.ts` (copia de `tokens.css`, verificada por `tests/unit/share-brand.test.ts`).
-  «Próximo partido» y «Programación» siguen la plantilla matchday del club (`docs/diseno/`, fuentes Bebas Neue y
+  «Próximo partido», «Jornada» y «Programación» siguen la plantilla matchday del club (`docs/diseno/`, fuentes Bebas Neue y
   Barlow Condensed). Las fotos y el auspiciador del matchday salen de `src/features/share/matchday.ts`
   (`matchdayRevision()` entra en la versión: si cambian, o una foto pasa a «contiene menores», cambia la URL).
   Satori no tiene filtros: el blanco y negro de las fotos lo hace sharp en `images.ts`, dentro de la cola.
   Las fotos se guardan en `site_settings.social_publishing` (o en `social_publications.photo_ids` si se
   eligieron para un post) y siempre pasan por `assertPublishableMedia`. Con fotos elegidas, la vista previa
   sale de `GET /api/admin/tarjetas/[id]?fotos=` (con sesión), nunca de la ruta pública.
+  La **jornada** (partidos programados del club contra un mismo rival en un mismo día de Santiago, sin tabla
+  propia: `src/features/share/lib/jornada.ts`) se identifica con la clave `AAAA-MM-DD_<rivalId>`, que es el id
+  de la tarjeta «jornada» y el `subject_key` de su publicación. La ruta pública la dibuja con todas sus series;
+  con series o fotos elegidas sale de `GET /api/admin/tarjetas/jornada/[clave]/[formato]?series=&fotos=` (con
+  sesión), y la publicación guarda lo elegido en `series_ids` / `photo_ids`.
 - **Publicación en Facebook (ADR 0009):** `src/features/social-publishing/`. Toda publicación es una fila de
   `social_publications` (único `(channel, kind, subject_key)`): se encola con `ON CONFLICT DO NOTHING` y se
   publica con `processPublication()`, que la toma con `FOR UPDATE SKIP LOCKED`; nunca se llama a la Graph API
-  dentro de una transacción. `tick` encola y reintenta (`runSocialPublishing`). El texto sale de los mismos DTO
-  de las tarjetas. Secretos solo en `.env` (`FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`); fuera de producción no se
+  dentro de una transacción. `tick` encola y reintenta (`runSocialPublishing`). La programación automática es
+  un solo post por sábado: su tarjeta la decide `weekendCardFor()` (un partido → «Próximo partido», una sola
+  jornada → «Jornada», si no → la grilla) y no sale si ese partido o esa jornada ya se publicó a mano. El
+  texto sale de los mismos DTO de las tarjetas. Secretos solo en `.env` (`FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`); fuera de producción no se
   publica salvo `FACEBOOK_ALLOW_NON_PRODUCTION=true`. Las pruebas nunca llaman a Facebook: `fetch` simulado en
   integración y `tests/e2e/graph-mock.mjs` (puerto 3190) en las e2e.
 - **Feed de redes (2.9):** curado en el panel → Redes sociales; la portada lee `socialFeed().latest()`

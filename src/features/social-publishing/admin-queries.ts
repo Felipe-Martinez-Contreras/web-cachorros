@@ -6,7 +6,9 @@ import { matches, mediaAssets, series, socialPublications, teams } from '@/db/sc
 import { isClubMatch } from '@/features/matches/queries'
 import { type MediaThumbDTO, toMediaThumbDTO } from '@/features/media/dto'
 import { shareUrl, weekendTitle } from '@/features/share/lib/cards'
+import { encodeSeries, parseJornadaKey } from '@/features/share/lib/jornada'
 import { env } from '@/lib/env'
+import { formatLongDate, fromIsoDate } from '@/lib/format'
 import { facebookAvailability, loadFacebookSettings } from './config'
 import { encodePhotos } from './lib/photos'
 import { publicationKindFor } from './lib/rules'
@@ -20,7 +22,7 @@ export type PublicationDTO = {
   kind: (typeof socialPublications.$inferSelect)['kind']
   status: (typeof socialPublications.$inferSelect)['status']
   trigger: (typeof socialPublications.$inferSelect)['trigger']
-  /** De qué es: «Honor: Cachorros vs Rival» o el fin de semana. */
+  /** De qué es: «Honor: Cachorros vs Rival», el fin de semana o la jornada. */
   subject: string
   matchId: string | null
   attempts: number
@@ -60,13 +62,23 @@ function selectPublications() {
 
 type PublicationRow = Awaited<ReturnType<typeof selectPublications>>[number]
 
+/** «Sábado 31 de octubre: Cachorros vs Rival» (la jornada guarda su primer partido en `match_id`). */
+function jornadaSubject(row: PublicationRow): string {
+  const date = parseJornadaKey(row.subjectKey)?.date
+  const day = date ? formatLongDate(fromIsoDate(date)).replace(/ de \d{4}$/, '') : row.subjectKey
+  const title = day.replace(/^./, (letter) => letter.toUpperCase())
+  return row.homeName && row.awayName ? `${title}: ${row.homeName} vs ${row.awayName}` : title
+}
+
 function toPublicationDTO(row: PublicationRow): PublicationDTO {
   const subject =
     row.kind === 'programacion'
       ? weekendTitle(row.subjectKey)
-      : row.homeName && row.awayName
-        ? `${row.seriesName}: ${row.homeName} vs ${row.awayName}`
-        : 'Partido eliminado'
+      : row.kind === 'jornada'
+        ? jornadaSubject(row)
+        : row.homeName && row.awayName
+          ? `${row.seriesName}: ${row.homeName} vs ${row.awayName}`
+          : 'Partido eliminado'
   return {
     id: row.id,
     kind: row.kind,
@@ -204,4 +216,69 @@ export async function manualPublishDraft(
     photos: current,
     photoPreviews: await photoThumbs(current),
   }
+}
+
+export type JornadaFacebookState = {
+  /** La publicación ya hecha (o en la cola) de la jornada. */
+  publication: PublicationDTO | null
+  blockedReason: string | null
+}
+
+/** Sección «Publicar en Facebook» de la página de una jornada. */
+export async function jornadaFacebookState(key: string): Promise<JornadaFacebookState> {
+  const [row] = await selectPublications()
+    .where(
+      and(
+        eq(socialPublications.channel, 'facebook'),
+        eq(socialPublications.kind, 'jornada'),
+        eq(socialPublications.subjectKey, key),
+      ),
+    )
+    .limit(1)
+  const availability = facebookAvailability(await loadFacebookSettings())
+  return {
+    publication: row ? toPublicationDTO(row) : null,
+    blockedReason: availability.ok ? null : availability.message,
+  }
+}
+
+export type JornadaDraft = {
+  caption: string
+  version: string
+  /** Las fotos del matchday que lleva la tarjeta (las elegidas o las de Configuración). */
+  photos: (string | null)[]
+  photoPreviews: Record<string, MediaThumbDTO | null>
+}
+
+/** Texto sugerido y versión de la tarjeta de una jornada con las series y fotos elegidas (o las de siempre). */
+export async function jornadaDraft(
+  key: string,
+  series: string[] | null,
+  photos: (string | null)[] | null,
+): Promise<JornadaDraft | null> {
+  const content = await publicationContent('jornada', key, photos, series)
+  if (!content) return null
+  const current = photos ?? (await loadFacebookSettings()).photos ?? [null, null, null]
+  return {
+    caption: content.caption,
+    version: content.version,
+    photos: current,
+    photoPreviews: await photoThumbs(current),
+  }
+}
+
+/** Dirección de la tarjeta de una jornada en la ruta del panel (con las series y fotos elegidas). */
+export function jornadaCardUrl(
+  key: string,
+  format: string,
+  version: string,
+  series: readonly string[] | null,
+  photos: readonly (string | null)[] | null,
+): string {
+  const search = new URLSearchParams({
+    ...(series ? { series: encodeSeries(series) } : {}),
+    ...(photos ? { fotos: encodePhotos(photos) } : {}),
+    v: version,
+  })
+  return `/api/admin/tarjetas/jornada/${key}/${format}?${search}`
 }

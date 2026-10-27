@@ -5,6 +5,7 @@ import type {
   CardCrest,
   CardMatch,
   CardTeam,
+  JornadaCardData,
   MatchCardData,
   MatchdayData,
   ShareCardData,
@@ -16,7 +17,7 @@ import { renderShareCard } from '@/features/share/render'
 import { crestScale } from '@/lib/images/crest'
 import { processImage } from '@/lib/images/process'
 
-// Dibuja las plantillas «Próximo partido» y «Programación» con datos de ejemplo (rivales, canchas y
+// Dibuja las plantillas «Próximo partido», «Jornada» y «Programación» con datos de ejemplo (rivales, canchas y
 // auspiciador ficticios, nunca datos del club) en `tmp/tarjetas/`, para revisar un diseño sin la base de
 // datos. Incluye escudos de prueba (fondo de color, margen blanco, alto y ancho) procesados como una subida.
 // Solo desarrollo: `node scripts/run.mjs share-preview`.
@@ -183,6 +184,15 @@ async function main() {
     goal: null,
     matchday: null,
   })
+  const jornada = (data: CardMatch, series: string[], at0 = '10:00'): JornadaCardData => ({
+    kind: 'jornada',
+    template: 'jornada',
+    clubName,
+    match: { ...data, kickoffAt: at('2026-10-31', at0) },
+    series,
+    matchday: withPhotos,
+  })
+  const fiveSeries = ['Tercera', 'Segunda', 'Juvenil', 'Senior', 'Honor']
   const all: ShareFormat[] = ['vertical', 'cuadrado', 'historia', 'og']
   const cases: { name: string; formats: ShareFormat[]; data: ShareCardData }[] = [
     { name: 'matchday-con-fotos', formats: all, data: next(match({})) },
@@ -192,6 +202,23 @@ async function main() {
       name: 'matchday-nombre-muy-largo',
       formats: ['vertical', 'historia', 'og'],
       data: next(away(longestRival, { seriesName: 'Súper Senior' })),
+    },
+    { name: 'jornada-5-series-local', formats: all, data: jornada(match({}), fiveSeries) },
+    {
+      name: 'jornada-3-series-visita',
+      formats: all,
+      data: jornada(away(rival), ['Juvenil', 'Senior', 'Honor'], '12:00'),
+    },
+    { name: 'jornada-rival-sin-escudo', formats: all, data: jornada(away(longRival), fiveSeries) },
+    {
+      name: 'jornada-rival-nombre-largo',
+      formats: all,
+      data: jornada(away(longestRival), fiveSeries, '09:30'),
+    },
+    {
+      name: 'jornada-6-series',
+      formats: all,
+      data: jornada(match({}), ['Tercera', 'Segunda', 'Juvenil', 'Senior', 'Súper Senior', 'Honor']),
     },
     { name: 'programacion-varios-rivales', formats: all, data: weekend(mixed) },
     { name: 'programacion-mismo-rival', formats: ['vertical', 'historia'], data: weekend(sameRival) },

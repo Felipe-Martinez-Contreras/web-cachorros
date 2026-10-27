@@ -1,6 +1,7 @@
 import type { MatchEventDTO } from '@/features/matches/dto'
 import { formatMinute } from '@/features/matches/lib/match-clock'
 import { formatLongDate, fromIsoDate } from '@/lib/format'
+import { parseJornadaKey } from './jornada'
 
 // Tarjetas para redes (especificación 2.8): plantillas, formatos y piezas puras. El render y la caché en
 // disco viven en `../render.tsx` y `../cache.ts`.
@@ -18,13 +19,17 @@ export type ShareFormat = keyof typeof SHARE_FORMATS
 /** Los tres formatos para redes que se descargan y comparten desde el panel. */
 export const SOCIAL_FORMATS = ['cuadrado', 'vertical', 'historia'] as const satisfies readonly ShareFormat[]
 
-/** Plantillas y a qué se refiere su id: un partido, un fin de semana (su sábado) o una noticia. */
+/**
+ * Plantillas y a qué se refiere su id: un partido, un fin de semana (su sábado), una jornada (su clave
+ * `AAAA-MM-DD_<rivalId>`, `./jornada.ts`) o una noticia.
+ */
 export const SHARE_TEMPLATES = {
   resultado: 'match',
   proximo: 'match',
   gol: 'match',
   programacion: 'weekend',
   resultados: 'weekend',
+  jornada: 'jornada',
   noticia: 'news',
 } as const
 
@@ -36,6 +41,7 @@ export const SHARE_TEMPLATE_LABELS: Record<ShareTemplate, string> = {
   gol: '¡Gol!',
   programacion: 'Programación del fin de semana',
   resultados: 'Resultados del fin de semana',
+  jornada: 'Jornada',
   noticia: 'Noticia',
 }
 
@@ -70,10 +76,12 @@ export type ShareRequest = {
   id: string
   format: ShareFormat
   /**
-   * Solo «Próximo partido» desde el panel: fotos elegidas para una publicación en lugar de las de
-   * Configuración. Nunca llega desde la URL pública.
+   * Solo «Próximo partido» y «Jornada» desde el panel: fotos elegidas para una publicación en lugar de las
+   * de Configuración. Nunca llega desde la URL pública.
    */
   photos?: readonly (string | null)[]
+  /** Solo «Jornada» desde el panel: las series marcadas (sin esto, todas). Nunca llega desde la URL pública. */
+  series?: readonly string[]
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -83,7 +91,13 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 export function parseShareRequest(template: string, id: string, format: string): ShareRequest | null {
   if (!Object.hasOwn(SHARE_TEMPLATES, template) || !Object.hasOwn(SHARE_FORMATS, format)) return null
   const kind = SHARE_TEMPLATES[template as ShareTemplate]
-  if (kind === 'weekend' ? !isValidIsoDate(id) : !UUID.test(id)) return null
+  const valid =
+    kind === 'weekend'
+      ? isValidIsoDate(id)
+      : kind === 'jornada'
+        ? parseJornadaKey(id) !== null
+        : UUID.test(id)
+  if (!valid) return null
   // La noticia es solo la imagen Open Graph.
   if (kind === 'news' && format !== 'og') return null
   return { template: template as ShareTemplate, id: id.toLowerCase(), format: format as ShareFormat }
@@ -122,6 +136,7 @@ const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = {
   noticia: 'e1',
   proximo: 'd4',
   programacion: 'd4',
+  jornada: 'j1',
 }
 
 /** Versión pública de una tarjeta: la de sus datos más la revisión del diseño de la plantilla. */
@@ -141,6 +156,21 @@ export function matchCardVersion(
   return withDesignRevision(
     template,
     template === 'proximo' ? `${shareVersion}${matchdayRevision}` : shareVersion,
+  )
+}
+
+/**
+ * Versión de la tarjeta de una jornada: los partidos que van en ella (id y `share_version`, en orden), la
+ * revisión del matchday (fotos y auspiciador) y la del diseño. Cambia si cambia un partido, las series
+ * marcadas o las fotos.
+ */
+export function jornadaCardVersion(
+  matches: readonly { id: string; version: number }[],
+  matchdayRevision: string,
+): string {
+  return withDesignRevision(
+    'jornada',
+    shortHash([...matches.map((match) => `${match.id}.${match.version}`), matchdayRevision]),
   )
 }
 
@@ -282,6 +312,58 @@ export function fitDisplaySize(
 export function displayLines(text: string, width: number, size: number, charEm: number = CHAR_EM.archivo) {
   const words = text.toUpperCase().split(/\s+/).filter(Boolean)
   return Math.max(1, Math.min(lineCount(words, width / (size * charEm)), 3))
+}
+
+/** Separador entre las series de una jornada: «TERCERA · SEGUNDA». */
+export const SERIES_SEPARATOR = ' · '
+
+/**
+ * Las series de una jornada en display (mayúsculas), sin cortar ningún nombre: la letra más grande (desde
+ * `size` hasta `min`) con la que caben en `maxLines` líneas de `width` px, y cómo se reparten (líneas
+ * parejas, en orden). Prefiere una sola línea mientras la letra no baje del 75 %.
+ */
+export function seriesBandLayout(
+  names: readonly string[],
+  width: number,
+  size: number,
+  min: number,
+  maxLines = 2,
+  charEm: number = CHAR_EM.bebas,
+): { size: number; lines: string[][] } {
+  const upper = names.map((name) => name.toUpperCase())
+  if (upper.length === 0) return { size: Math.floor(size), lines: [] }
+  // En una sola línea se acepta achicar un poco más antes de partirla en dos.
+  const single = lineLength(upper)
+  const singleSize = Math.min(size, width / (single * charEm))
+  if (singleSize >= Math.max(min, size * 0.75)) return { size: Math.floor(singleSize), lines: [upper] }
+  let current = size
+  for (; current > min; current *= 0.94) {
+    const perLine = width / (current * charEm)
+    for (let count = 1; count <= Math.min(maxLines, upper.length); count++) {
+      const lines = balancedSplit(upper, count)
+      if (Math.max(...lines.map(lineLength)) <= perLine) return { size: Math.floor(current), lines }
+    }
+  }
+  return { size: Math.floor(min), lines: balancedSplit(upper, Math.min(maxLines, upper.length)) }
+}
+
+const lineLength = (line: readonly string[]) =>
+  line.reduce((total, name) => total + name.length, 0) + SERIES_SEPARATOR.length * (line.length - 1)
+
+/** Reparte los nombres, en orden, en `count` líneas con la más larga lo más corta posible. */
+function balancedSplit(names: readonly string[], count: number): string[][] {
+  if (count <= 1) return [[...names]]
+  let best: string[][] = [[...names]]
+  let bestLength = Number.POSITIVE_INFINITY
+  for (let cut = 1; cut <= names.length - count + 1; cut++) {
+    const lines = [names.slice(0, cut), ...balancedSplit(names.slice(cut), count - 1)]
+    const longest = Math.max(...lines.map(lineLength))
+    if (longest < bestLength) {
+      best = lines
+      bestLength = longest
+    }
+  }
+  return best
 }
 
 /** Líneas que ocupan las palabras con `perLine` caracteres por línea (`Infinity` si una no cabe). */

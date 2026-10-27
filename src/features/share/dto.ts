@@ -63,6 +63,21 @@ export type WeekendCardData = {
   sponsor: string | null
 }
 
+/**
+ * «Jornada»: varias series contra el mismo rival el mismo día, con la composición matchday. `match` es la
+ * jornada vista como un partido: equipos, cancha y lado del primero de los marcados, `kickoffAt` con la hora
+ * de inicio (la del primer partido) y `competitionName` solo si todos son de la misma (si no, vacío).
+ */
+export type JornadaCardData = {
+  kind: 'jornada'
+  template: 'jornada'
+  clubName: string
+  match: CardMatch
+  /** Nombres de las series marcadas, en orden de juego (hasta `MAX_JORNADA_SERIES`). */
+  series: string[]
+  matchday: MatchdayData
+}
+
 export type NewsCardData = {
   kind: 'news'
   template: 'noticia'
@@ -75,4 +90,4 @@ export type NewsCardData = {
   photo: string | null
 }
 
-export type ShareCardData = MatchCardData | WeekendCardData | NewsCardData
+export type ShareCardData = MatchCardData | WeekendCardData | JornadaCardData | NewsCardData

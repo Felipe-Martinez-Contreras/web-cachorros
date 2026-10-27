@@ -282,6 +282,7 @@ export const publicationKindLabels: Labels<typeof publicationKind> = {
   programacion: 'Programación del fin de semana',
   proximo: 'Próximo partido',
   resultado: 'Resultado final',
+  jornada: 'Jornada',
 }
 
 export const publicationStatusLabels: Labels<typeof publicationStatus> = {

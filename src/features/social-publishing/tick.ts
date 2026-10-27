@@ -5,7 +5,7 @@ import { matches, socialPublications } from '@/db/schema'
 import { santiagoWallTime } from '@/features/matches/lib/schedule'
 import { isClubMatch } from '@/features/matches/queries'
 import { addDays } from '@/features/share/lib/cards'
-import { weekendMatchIds } from '@/features/share/queries'
+import { weekendCardOf } from '@/features/share/queries'
 import { logger } from '@/lib/logger'
 import type { PublishChannel } from './channels/types'
 import { facebook, facebookAvailability, loadFacebookSettings } from './config'
@@ -58,7 +58,7 @@ export async function runSocialPublishing(
     enabledAt: settings.enabledAt,
     firstKickoff: await firstKickoff(saturday),
   })
-  if (decision.publish && !(await singleMatchAlreadyPublished(decision.saturday))) {
+  if (decision.publish && !(await weekendAlreadyPublished(decision.saturday))) {
     const inserted = await db
       .insert(socialPublications)
       .values({
@@ -138,21 +138,27 @@ export async function runSocialPublishing(
 }
 
 /**
- * Con un solo partido el fin de semana, la programación publica la tarjeta de ese partido: si su previa ya
- * se publicó (a mano), sería el mismo post dos veces.
+ * Con un solo partido (o una sola jornada) el fin de semana, la programación publica la tarjeta de ese
+ * partido (o de esa jornada): si ya se publicó a mano, sería el mismo post dos veces.
  */
-async function singleMatchAlreadyPublished(saturday: string): Promise<boolean> {
-  const ids = await weekendMatchIds(saturday)
-  const [only] = ids
-  if (ids.length !== 1 || !only) return false
+async function weekendAlreadyPublished(saturday: string): Promise<boolean> {
+  const weekend = await weekendCardOf(saturday)
+  const [only] = weekend?.matchIds ?? []
+  const subject =
+    weekend?.card === 'proximo' && only
+      ? { kind: 'proximo' as const, key: only }
+      : weekend?.card === 'jornada' && weekend.jornadaKey
+        ? { kind: 'jornada' as const, key: weekend.jornadaKey }
+        : null
+  if (!subject) return false
   const [row] = await db
     .select({ id: socialPublications.id })
     .from(socialPublications)
     .where(
       and(
         eq(socialPublications.channel, 'facebook'),
-        eq(socialPublications.kind, 'proximo'),
-        eq(socialPublications.subjectKey, only),
+        eq(socialPublications.kind, subject.kind),
+        eq(socialPublications.subjectKey, subject.key),
         ne(socialPublications.status, 'descartado'),
       ),
     )

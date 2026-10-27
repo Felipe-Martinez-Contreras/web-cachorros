@@ -118,7 +118,7 @@ export const opsRunKind = pgEnum('ops_run_kind', ['respaldo', 'prueba_restauraci
 export const opsRunStatus = pgEnum('ops_run_status', ['ok', 'error'])
 // Publicación en redes (Facebook; Instagram queda listo para sumarse, ADR 0009).
 export const socialChannel = pgEnum('social_channel', ['facebook', 'instagram'])
-export const publicationKind = pgEnum('publication_kind', ['programacion', 'proximo', 'resultado'])
+export const publicationKind = pgEnum('publication_kind', ['programacion', 'proximo', 'resultado', 'jornada'])
 export const publicationStatus = pgEnum('publication_status', [
   'pendiente',
   'publicando',

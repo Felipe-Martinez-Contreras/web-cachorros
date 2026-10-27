@@ -1,4 +1,4 @@
-import type { CardMatch, MatchCardData, WeekendCardData } from '@/features/share/dto'
+import type { CardMatch, JornadaCardData, MatchCardData, WeekendCardData } from '@/features/share/dto'
 import { clampText, weekendTitle } from '@/features/share/lib/cards'
 import { formatLongDate, formatTime, toIsoDate } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
@@ -52,6 +52,26 @@ export function nextMatchCaption(data: MatchCardData, link: string, heading = 'P
     competitionLine(match),
     '',
     `Más información: ${link}`,
+  ])
+}
+
+/**
+ * «⚽ Jornada · Cachorros vs Rival», el día con la hora de inicio (la del primer partido), la cancha, las
+ * series en orden de juego, la competencia si es una sola y el enlace a los partidos.
+ */
+export function jornadaCaption(data: JornadaCardData, link: string, heading = 'Jornada'): string {
+  const { match } = data
+  return finish([
+    `⚽ ${heading} · ${versus(match)}`,
+    '',
+    `📅 ${longDay(match.kickoffAt)}, desde las ${formatTime(match.kickoffAt)} h`,
+    match.venueName
+      ? `📍 ${clean(match.venueName)} (${SIDE[match.clubSide]})`
+      : `📍 De ${SIDE[match.clubSide]}`,
+    `Series: ${data.series.map(clean).join(' · ')}`,
+    match.competitionName ? clean(match.competitionName) : null,
+    '',
+    `Todos los partidos: ${link}`,
   ])
 }
 
