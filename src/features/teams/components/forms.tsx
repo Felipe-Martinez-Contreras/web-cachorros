@@ -3,6 +3,8 @@
 import { EntityForm } from '@/components/admin/entity-form'
 import type { MediaThumbDTO } from '@/features/media/dto'
 import type { ActionResult } from '@/lib/action-result'
+import { optionsFromLabels } from '@/lib/form-schemas'
+import { crestCardStyleLabels } from '@/lib/labels'
 import { type TeamFormValues, teamSchema, type VenueFormValues, venueSchema } from '../schemas'
 
 type Action = (input: unknown) => Promise<ActionResult<unknown>>
@@ -40,6 +42,13 @@ export function TeamForm({
           kind: 'logo',
           required: false,
           help: 'Cuadrado y con fondo transparente si es posible. Sin escudo se muestran las iniciales.',
+        },
+        {
+          name: 'cardCrestStyle',
+          label: 'Escudo monocromo en las tarjetas',
+          type: 'select',
+          options: optionsFromLabels(crestCardStyleLabels),
+          help: 'Solo para las tarjetas de Facebook e Instagram, que son negras: si los colores del escudo no combinan, usa blanco o grises. El sitio lo sigue mostrando a color.',
         },
       ]}
     />

@@ -1,4 +1,5 @@
-import { checkbox, optionalText, optionalUuid, requiredText } from '@/lib/form-schemas'
+import { checkbox, labeledEnum, optionalText, optionalUuid, requiredText } from '@/lib/form-schemas'
+import { crestCardStyleLabels } from '@/lib/labels'
 import { z } from '@/lib/zod'
 import { parseCoordinates } from './lib/parse-coordinates'
 
@@ -7,8 +8,16 @@ export const teamSchema = z.object({
   shortName: requiredText('Escribe el nombre corto.', 24),
   commune: optionalText(60),
   crestMediaId: optionalUuid(),
+  cardCrestStyle: labeledEnum(crestCardStyleLabels, 'Elige cómo va el escudo en las tarjetas.').default(
+    'color',
+  ),
 })
 export type TeamFormValues = z.input<typeof teamSchema>
+
+/** «Escudos en las tarjetas»: solo el estilo del escudo de un equipo. */
+export const crestStyleSchema = z.object({
+  cardCrestStyle: labeledEnum(crestCardStyleLabels, 'Elige cómo va el escudo en las tarjetas.'),
+})
 
 export const venueSchema = z.object({
   name: requiredText('Escribe el nombre de la cancha.', 80),

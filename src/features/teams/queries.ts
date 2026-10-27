@@ -12,6 +12,7 @@ export type TeamAdminRow = {
   shortName: string
   commune: string | null
   isOwnClub: boolean
+  cardCrestStyle: (typeof teams.$inferSelect)['cardCrestStyle']
   crest: MediaThumbDTO | null
 }
 
@@ -24,6 +25,7 @@ export async function listTeamsAdmin(q?: string): Promise<TeamAdminRow[]> {
       shortName: teams.shortName,
       commune: teams.commune,
       isOwnClub: teams.isOwnClub,
+      cardCrestStyle: teams.cardCrestStyle,
       crestId: mediaAssets.id,
       crestVariants: mediaAssets.variants,
       crestAlt: mediaAssets.altText,
@@ -40,6 +42,7 @@ export async function listTeamsAdmin(q?: string): Promise<TeamAdminRow[]> {
     shortName: row.shortName,
     commune: row.commune,
     isOwnClub: row.isOwnClub,
+    cardCrestStyle: row.cardCrestStyle,
     crest: row.crestId
       ? toMediaThumbDTO({
           id: row.crestId,

@@ -9,7 +9,7 @@ import { assertId, mutate, Rejection } from '@/lib/entity-action'
 import { recordSlugChange, resolveSlug } from '@/lib/slug-redirects'
 import { z } from '@/lib/zod'
 import { parseCoordinates } from './lib/parse-coordinates'
-import { teamSchema, venueSchema } from './schemas'
+import { crestStyleSchema, teamSchema, venueSchema } from './schemas'
 
 type Result = Promise<ActionResult<{ id: string }>>
 
@@ -68,6 +68,35 @@ export async function actualizarEquipo(id: string, input: unknown): Result {
         .where(eq(teams.id, teamId))
       await recordSlugChange(tx, 'team', teamId, current.slug, slug)
       return { id: teamId, summary: `Editó el club ${data.name}`, meta: data }
+    },
+  })
+}
+
+/**
+ * Cómo va el escudo de un equipo en las tarjetas (Rivales → Escudos en las tarjetas). No cambia nada del sitio:
+ * la versión de las tarjetas matchday lo incluye, así que su URL cambia sola.
+ */
+export async function cambiarEstiloEscudo(id: string, input: unknown): Result {
+  return mutate({
+    action: 'team.crest_style',
+    permission: 'sport:write',
+    entityType: 'team',
+    schema: crestStyleSchema,
+    input,
+    tags: [],
+    write: async (tx, data) => {
+      const teamId = assertId(id, 'No encontramos ese club.')
+      const [row] = await tx
+        .update(teams)
+        .set({ cardCrestStyle: data.cardCrestStyle })
+        .where(eq(teams.id, teamId))
+        .returning({ name: teams.name })
+      if (!row) throw new Rejection('No encontramos ese club. Puede que lo hayan eliminado.')
+      return {
+        id: teamId,
+        summary: `Cambió el escudo de ${row.name} en las tarjetas`,
+        meta: { cardCrestStyle: data.cardCrestStyle },
+      }
     },
   })
 }

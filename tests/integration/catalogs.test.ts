@@ -433,3 +433,43 @@ describe('rivales y canchas', () => {
     expect(cleared).toMatchObject({ geoLat: null, geoLng: null })
   })
 })
+
+describe('escudos en las tarjetas', () => {
+  it('guarda el estilo del escudo de un equipo, lo audita y pide permiso', async () => {
+    const created = await teamActions.crearRival({
+      name: 'Rival Monocromo',
+      shortName: 'RM',
+      commune: '',
+      crestMediaId: '',
+    })
+    if (!created.ok) throw new Error(created.message)
+    const id = created.data.id
+    const [before] = await db.select({ style: teams.cardCrestStyle }).from(teams).where(eq(teams.id, id))
+    expect(before?.style).toBe('color')
+
+    await actAs('nadie')
+    expect((await teamActions.cambiarEstiloEscudo(id, { cardCrestStyle: 'blanco' })).ok).toBe(false)
+    await actAs('admin')
+    expect(await teamActions.cambiarEstiloEscudo(id, { cardCrestStyle: 'otro' })).toMatchObject({
+      ok: false,
+      fieldErrors: { cardCrestStyle: [expect.any(String)] },
+    })
+    expect(await teamActions.cambiarEstiloEscudo(id, { cardCrestStyle: 'blanco' })).toEqual({
+      ok: true,
+      data: { id },
+    })
+    const [after] = await db.select({ style: teams.cardCrestStyle }).from(teams).where(eq(teams.id, id))
+    expect(after?.style).toBe('blanco')
+    const [entry] = await db
+      .select({ summary: auditLog.summary, meta: auditLog.meta })
+      .from(auditLog)
+      .where(and(eq(auditLog.action, 'team.crest_style'), eq(auditLog.entityId, id)))
+    expect(entry).toMatchObject({
+      summary: 'Cambió el escudo de Rival Monocromo en las tarjetas',
+      meta: { cardCrestStyle: 'blanco' },
+    })
+    expect(await teamActions.cambiarEstiloEscudo('no-es-un-id', { cardCrestStyle: 'grises' })).toMatchObject({
+      ok: false,
+    })
+  })
+})
