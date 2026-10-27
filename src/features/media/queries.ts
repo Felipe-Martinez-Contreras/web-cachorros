@@ -61,6 +61,7 @@ export async function getMediaById(id: string): Promise<MediaDetailDTO | null> {
       credit: mediaAssets.credit,
       focalX: mediaAssets.focalX,
       focalY: mediaAssets.focalY,
+      focalZoom: mediaAssets.focalZoom,
       minorsConsentConfirmedAt: mediaAssets.minorsConsentConfirmedAt,
       bytes: mediaAssets.bytes,
       originalFilename: mediaAssets.originalFilename,

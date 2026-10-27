@@ -14,7 +14,7 @@ export default async function NewTeamPage() {
       <TeamForm
         action={crearRival}
         crest={null}
-        defaults={{ name: '', shortName: '', commune: '', crestMediaId: '' }}
+        defaults={{ name: '', shortName: '', commune: '', crestMediaId: '', cardCrestStyle: 'color' }}
       />
     </>
   )

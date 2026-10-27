@@ -1,6 +1,7 @@
 import type {
   competitionKind,
   contactTopic,
+  crestCardStyle,
   documentCategory,
   eventStatus,
   eventType,
@@ -293,3 +294,18 @@ export const publicationStatusLabels: Labels<typeof publicationStatus> = {
   incierto: 'Sin confirmar',
   descartado: 'Descartado',
 }
+
+/** Escudo de un equipo en las tarjetas para redes (Panel → Rivales). */
+export const crestCardStyleLabels: Labels<typeof crestCardStyle> = {
+  color: 'A color',
+  blanco: 'Monocromo blanco',
+  grises: 'Monocromo en grises',
+}
+
+/** Línea pequeña sobre «MATCHDAY» en las tarjetas (Configuración → Facebook). */
+export const topLineModeLabels = {
+  ninguna: 'Sin línea',
+  auspiciador: 'Auspiciador de las tarjetas («POWERED BY …»)',
+  texto: 'Un texto',
+  logo: 'Un logo (se dibuja en blanco)',
+} as const

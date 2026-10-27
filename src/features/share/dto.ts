@@ -4,8 +4,11 @@ import type { ShareTemplate } from './lib/cards'
 // Datos ya resueltos de una tarjeta para redes: textos públicos (menores con nombre e inicial) y escudos
 // como *data URI* PNG, que es lo que acepta Satori (trampa 8). Solo viven en el servidor.
 
-/** Escudo de 512 px (contenido en el cuadrado) y su escala óptica dentro del disco blanco (`crestScale`). */
-export type CardCrest = { src: string; scale: number }
+/**
+ * Escudo de 512 px (contenido en el cuadrado) y su escala óptica dentro del disco blanco (`crestScale`).
+ * `bare`: el mismo tratado para el matchday, sin disco (`crest-card.ts`); solo en esas plantillas.
+ */
+export type CardCrest = { src: string; scale: number; bare?: { src: string; scale: number } | null }
 
 export type CardTeam = { name: string; crest: CardCrest | null }
 
@@ -39,12 +42,19 @@ export type MatchCardData = {
   matchday: MatchdayData | null
 }
 
-/** Archivo de una foto de la biblioteca (relativo a `UPLOADS_DIR`) y su punto focal. */
-export type MatchdayPhotoSource = { file: string; focalX: number; focalY: number }
+/** Archivo de una foto de la biblioteca (relativo a `UPLOADS_DIR`), su punto focal y su acercamiento. */
+export type MatchdayPhotoSource = { file: string; focalX: number; focalY: number; focalZoom: number }
+
+/**
+ * Línea pequeña sobre «MATCHDAY» (Configuración → Facebook): un texto («POWERED BY …» o el que se escriba) o
+ * un logo en blanco (`src` lo llena `images.ts`, dentro de la cola). `null`: no se dibuja.
+ */
+export type MatchdayTopLine =
+  | { kind: 'texto'; text: string }
+  | { kind: 'logo'; file: string; src: string | null }
 
 export type MatchdayData = {
-  /** «POWERED BY …»: el auspiciador de las tarjetas, si está vigente. */
-  sponsor: string | null
+  topLine: MatchdayTopLine | null
   /** Las 3 fotos (o `null`: el panel usa el fondo del club). Ninguna marcada «contiene menores». */
   photoSources: (MatchdayPhotoSource | null)[]
   /** Las mismas, ya recortadas y tratadas como *data URI* JPEG (las llena `images.ts`, dentro de la cola). */
@@ -59,8 +69,8 @@ export type WeekendCardData = {
   /** Sábado `YYYY-MM-DD`. */
   saturday: string
   matches: CardMatch[]
-  /** Solo en «Programación»: «POWERED BY …» con el auspiciador de las tarjetas, si está vigente. */
-  sponsor: string | null
+  /** Solo en «Programación»: la línea superior del matchday (la misma de Configuración → Facebook). */
+  topLine: MatchdayTopLine | null
 }
 
 /**

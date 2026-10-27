@@ -1,5 +1,6 @@
 import { ShieldHalf } from 'lucide-react'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { ListToolbar, NewLink, PageHeader, ResourceList, ResourceRow } from '@/components/admin/resource-list'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -20,6 +21,14 @@ export default async function TeamsListPage({ searchParams }: { searchParams: Pr
         description="Los clubes contra los que juega el club, con su escudo. El primero de la lista es el club propio."
         action={<NewLink href="/admin/rivales/nuevo">Nuevo rival</NewLink>}
       />
+      <p>
+        <Link
+          href="/admin/rivales/escudos"
+          className="inline-flex min-h-12 items-center font-medium underline"
+        >
+          Escudos en las tarjetas: cómo se ven y cuáles van monocromos
+        </Link>
+      </p>
       <ListToolbar search={q} placeholder="Buscar por nombre" />
       {rows.length === 0 ? (
         <EmptyState

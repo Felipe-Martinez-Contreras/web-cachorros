@@ -33,6 +33,7 @@ export default async function EditTeamPage({ params }: { params: Promise<{ id: s
           shortName: row.shortName,
           commune: row.commune ?? '',
           crestMediaId: row.crest?.id ?? '',
+          cardCrestStyle: row.cardCrestStyle,
         }}
       />
       {!row.isOwnClub && (

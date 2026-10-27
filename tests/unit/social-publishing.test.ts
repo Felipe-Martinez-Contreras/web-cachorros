@@ -24,7 +24,10 @@ import {
   facebookSettingsSchema,
   nextFacebookSettings,
   readFacebookSettings,
+  topLineModeOf,
 } from '@/features/social-publishing/lib/settings'
+
+const noTopLine = { topLineMode: 'ninguna', topLineText: null, topLineLogo: null } as const
 
 const at = (day: string, time: string) => santiagoWallTime(day, time).toISOString()
 
@@ -68,7 +71,7 @@ const weekend = (matches: CardMatch[]): WeekendCardData => ({
   clubCrest: null,
   saturday: '2026-10-31',
   matches,
-  sponsor: null,
+  topLine: null,
 })
 
 describe('texto de las publicaciones', () => {
@@ -319,7 +322,10 @@ describe('ajustes de Facebook', () => {
   })
 
   it('valida el formulario: de lunes a sábado y una hora válida', () => {
-    expect(facebookSettingsSchema.safeParse({ enabled: 'on', weekday: '5', time: '12:00' }).data).toEqual({
+    expect(
+      facebookSettingsSchema.safeParse({ enabled: 'on', weekday: '5', time: '12:00', topLineMode: 'ninguna' })
+        .data,
+    ).toEqual({
       enabled: true,
       weekday: 5,
       time: '12:00',
@@ -327,6 +333,7 @@ describe('ajustes de Facebook', () => {
       photo1: null,
       photo2: null,
       photo3: null,
+      ...noTopLine,
     })
     expect(facebookSettingsSchema.safeParse({ weekday: '7', time: '12:00' }).success).toBe(false)
     expect(facebookSettingsSchema.safeParse({ weekday: '5', time: '25:00' }).success).toBe(false)
@@ -345,6 +352,7 @@ describe('ajustes de Facebook', () => {
         photo1: null,
         photo2: null,
         photo3: null,
+        ...noTopLine,
       },
       t1,
     )
@@ -359,6 +367,7 @@ describe('ajustes de Facebook', () => {
         photo1: null,
         photo2: null,
         photo3: null,
+        ...noTopLine,
       },
       t2,
     )
@@ -377,11 +386,47 @@ describe('ajustes de Facebook', () => {
         photo1: null,
         photo2: null,
         photo3: null,
+        ...noTopLine,
       },
       t2,
     )
     expect(off.enabledAt).toBeUndefined()
     expect(off.resultsEnabledAt).toBeUndefined()
+  })
+})
+
+describe('línea sobre «MATCHDAY»', () => {
+  const logo = '0192f1d2-0000-7000-8000-00000000000a'
+  const base = { enabled: 'on', weekday: '5', time: '12:00' }
+
+  it('sin nada guardado, la del auspiciador si hay uno; si no, ninguna', () => {
+    expect(topLineModeOf(FACEBOOK_DEFAULTS, true)).toBe('auspiciador')
+    expect(topLineModeOf(FACEBOOK_DEFAULTS, false)).toBe('ninguna')
+    // Elegida a propósito, manda aunque haya auspiciador.
+    expect(topLineModeOf({ ...FACEBOOK_DEFAULTS, topLine: { mode: 'ninguna' } }, true)).toBe('ninguna')
+  })
+
+  it('el texto y el logo son obligatorios solo en su modo', () => {
+    const errors = (input: object) =>
+      facebookSettingsSchema.safeParse({ ...base, ...input }).error?.issues.map((issue) => issue.path[0])
+    expect(errors({ topLineMode: 'texto' })).toEqual(['topLineText'])
+    expect(errors({ topLineMode: 'logo' })).toEqual(['topLineLogo'])
+    expect(errors({ topLineMode: 'texto', topLineText: 'ANFA' })).toBeUndefined()
+    expect(errors({ topLineMode: 'logo', topLineLogo: logo })).toBeUndefined()
+    expect(errors({ topLineMode: 'otro' })).toEqual(['topLineMode'])
+    expect(errors({ topLineMode: 'texto', topLineText: 'x'.repeat(61) })).toEqual(['topLineText'])
+  })
+
+  it('guarda solo lo del modo elegido y se lee de vuelta', () => {
+    const input = facebookSettingsSchema.parse({
+      ...base,
+      topLineMode: 'logo',
+      topLineText: 'Texto de antes',
+      topLineLogo: logo,
+    })
+    const next = nextFacebookSettings(FACEBOOK_DEFAULTS, input, new Date('2026-10-01T00:00:00Z'))
+    expect(next.topLine).toEqual({ mode: 'logo', text: null, logoId: logo })
+    expect(readFacebookSettings({ facebook: next }).topLine).toEqual(next.topLine)
   })
 })
 

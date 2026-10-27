@@ -78,7 +78,11 @@ export async function actualizarMedio(id: string, input: unknown): Promise<Actio
         entityType: 'media_asset',
         entityId: parsedId.data,
         summary: `Editó la imagen «${data.altText.slice(0, 80)}»`,
-        meta: { containsMinors: data.containsMinors, consentConfirmed: data.containsMinors },
+        meta: {
+          containsMinors: data.containsMinors,
+          consentConfirmed: data.containsMinors,
+          focalZoom: data.focalZoom,
+        },
       })
       return true
     })

@@ -114,6 +114,8 @@ export const datePrecision = pgEnum('date_precision', ['dia', 'mes', 'anio'])
 export const socialPlatform = pgEnum('social_platform', ['instagram', 'facebook', 'tiktok', 'youtube', 'x'])
 export const videoProvider = pgEnum('video_provider', ['youtube', 'facebook'])
 export const mediaKind = pgEnum('media_kind', ['imagen', 'documento'])
+/** Cómo se dibuja el escudo de un equipo en las tarjetas para redes (el sitio no cambia). */
+export const crestCardStyle = pgEnum('crest_card_style', ['color', 'blanco', 'grises'])
 export const opsRunKind = pgEnum('ops_run_kind', ['respaldo', 'prueba_restauracion', 'limpieza', 'disco'])
 export const opsRunStatus = pgEnum('ops_run_status', ['ok', 'error'])
 // Publicación en redes (Facebook; Instagram queda listo para sumarse, ADR 0009).

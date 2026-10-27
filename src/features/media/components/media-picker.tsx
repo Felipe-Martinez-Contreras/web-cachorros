@@ -2,7 +2,7 @@
 
 import { ImagePlus, X } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import type { MediaListItemDTO, MediaThumbDTO } from '../dto'
 import { Uploader } from './uploader'
 
@@ -15,6 +15,8 @@ type MediaPickerProps = {
   /** `logo` conserva la transparencia al subir (escudos). */
   kind?: 'photo' | 'logo'
   required?: boolean
+  /** Muestra «Ajustar encuadre» (abre la imagen elegida en Medios, en otra pestaña). */
+  adjustLink?: boolean
 }
 
 type ListResponse =
@@ -36,6 +38,7 @@ export function MediaPicker({
   onChange,
   kind = 'photo',
   required,
+  adjustLink,
 }: MediaPickerProps) {
   const uid = useId()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -105,6 +108,19 @@ export function MediaPicker({
           <Button variant="ghost" size="lg" onClick={() => onChange(null)} aria-describedby={`${uid}-label`}>
             Quitar
           </Button>
+        )}
+        {value && adjustLink && (
+          // En otra pestaña: lo elegido en este formulario no se pierde mientras se ajusta.
+          <a
+            href={`/admin/medios/${value.id}`}
+            target="_blank"
+            rel="noopener"
+            aria-describedby={`${uid}-label`}
+            className={buttonVariants({ variant: 'ghost', size: 'lg' })}
+          >
+            Ajustar encuadre
+            <span className="sr-only"> (se abre en otra pestaña)</span>
+          </a>
         )}
       </div>
       {help && <p className="text-sm text-neutral-600">{help}</p>}

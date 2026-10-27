@@ -57,6 +57,13 @@
       "when": 1793124413576,
       "tag": "0007_jornada",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793133609490,
+      "tag": "0008_encuadre_y_escudos_tarjetas",
+      "breakpoints": true
     }
   ]
 }

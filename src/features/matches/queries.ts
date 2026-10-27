@@ -27,8 +27,18 @@ const homeCrest = alias(mediaAssets, 'home_crest')
 const awayCrest = alias(mediaAssets, 'away_crest')
 
 // Drizzle solo anida un nivel en `select`: equipo y escudo van como grupos separados.
-const homeSelect = { name: homeTeam.name, shortName: homeTeam.shortName, isOwnClub: homeTeam.isOwnClub }
-const awaySelect = { name: awayTeam.name, shortName: awayTeam.shortName, isOwnClub: awayTeam.isOwnClub }
+const homeSelect = {
+  name: homeTeam.name,
+  shortName: homeTeam.shortName,
+  isOwnClub: homeTeam.isOwnClub,
+  cardCrestStyle: homeTeam.cardCrestStyle,
+}
+const awaySelect = {
+  name: awayTeam.name,
+  shortName: awayTeam.shortName,
+  isOwnClub: awayTeam.isOwnClub,
+  cardCrestStyle: awayTeam.cardCrestStyle,
+}
 const homeCrestSelect = {
   variants: homeCrest.variants,
   width: homeCrest.width,
