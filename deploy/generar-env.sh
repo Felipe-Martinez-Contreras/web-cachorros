@@ -94,12 +94,13 @@ UPLOADS_DIR=/data/uploads
 SHARE_CACHE_DIR=/data/cache/share
 MAX_UPLOAD_MB=12
 
-# Recursos — perfil e2-micro (e2-small: 768m · 512 · 384m · 128MB · 512MB)
+# Recursos — perfil e2-micro (e2-small: 768m · 512 · 384m · 128MB · 512MB · 192m)
 APP_MEMORY_LIMIT=512m
 APP_NODE_HEAP_MB=320
 DB_MEMORY_LIMIT=256m
 PG_SHARED_BUFFERS=64MB
 PG_EFFECTIVE_CACHE_SIZE=256MB
+OPS_MEMORY_LIMIT=192m
 
 # Respaldos
 BACKUP_GCS_BUCKET=${bucket}

@@ -17,9 +17,20 @@ RUN apk add --no-cache rclone age curl tzdata supercronic  && rm -f /usr/local/b
 
 # rclone sin archivo de configuración ni llaves: usa la cuenta de servicio de la VM (servidor de metadatos).
 # El CI reemplaza el remoto por una carpeta local con RCLONE_CONFIG_GCS_TYPE=local.
+# Bajo consumo de memoria (el contenedor tiene OPS_MEMORY_LIMIT, 192m): una transferencia y dos chequeos a la
+# vez, sin búfer de lectura adelantada, una cola de pendientes corta y el recolector de Go más frecuente. Así el
+# uso no crece con la cantidad de fotos. Sin --fast-list (lista carpeta por carpeta, con menos memoria) y sin
+# revisar el bucket (ya existe y la cuenta de servicio no necesita permisos sobre él).
 ENV RCLONE_CONFIG_GCS_TYPE="google cloud storage" \
     RCLONE_CONFIG_GCS_ENV_AUTH=true \
     RCLONE_CONFIG_GCS_BUCKET_POLICY_ONLY=true \
+    RCLONE_CONFIG_GCS_NO_CHECK_BUCKET=true \
+    RCLONE_TRANSFERS=1 \
+    RCLONE_CHECKERS=2 \
+    RCLONE_BUFFER_SIZE=0 \
+    RCLONE_USE_MMAP=true \
+    RCLONE_MAX_BACKLOG=1000 \
+    GOGC=50 \
     APP_URL=http://app:3000 \
     OPS_DIR=/srv/ops \
     UPLOADS_SOURCE=/srv/app-data/uploads \

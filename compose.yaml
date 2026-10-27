@@ -92,7 +92,7 @@ services:
       - ops_data:/srv/ops
     depends_on:
       db: { condition: service_healthy }
-    deploy: { resources: { limits: { memory: "${OPS_MEMORY_LIMIT:-96m}" } } }
+    deploy: { resources: { limits: { memory: "${OPS_MEMORY_LIMIT:-192m}" } } }
     logging: *logging
 
   restore:
