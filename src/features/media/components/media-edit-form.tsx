@@ -10,14 +10,17 @@ import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/feedback'
 import { CheckboxField, Field } from '@/components/ui/field'
 import type { ActionResult } from '@/lib/action-result'
+import { FOCAL_ZOOM_MAX, FOCAL_ZOOM_MIN } from '@/lib/images/focal-crop'
 import type { MediaDetailDTO } from '../dto'
 import { updateMediaSchema } from '../schemas'
+import { FocalPreview, matchdayPanelCrop } from './focal-preview'
 
 type FormValues = {
   altText: string
   credit: string
   focalX: number
   focalY: number
+  focalZoom: number
   containsMinors: boolean
   minorsConsent: boolean
 }
@@ -38,6 +41,7 @@ export function MediaEditForm({ media, action }: Props) {
       credit: media.credit ?? '',
       focalX: media.focalX,
       focalY: media.focalY,
+      focalZoom: media.focalZoom,
       containsMinors: media.containsMinors,
       minorsConsent: media.minorsConsentConfirmedAt !== null,
     },
@@ -45,6 +49,19 @@ export function MediaEditForm({ media, action }: Props) {
   const { errors, isSubmitting } = form.formState
   const focalX = Number(form.watch('focalX'))
   const focalY = Number(form.watch('focalY'))
+  const focalZoom = Number(form.watch('focalZoom'))
+  const bar = media.image
+    ? matchdayPanelCrop(media.image.width, media.image.height, { focalX, focalY, focalZoom })
+    : null
+  const barStyle =
+    bar && media.image
+      ? {
+          left: `${(bar.left / media.image.width) * 100}%`,
+          top: `${(bar.top / media.image.height) * 100}%`,
+          width: `${(bar.width / media.image.width) * 100}%`,
+          height: `${(bar.height / media.image.height) * 100}%`,
+        }
+      : undefined
   const containsMinors = form.watch('containsMinors')
 
   function onImageClick(event: MouseEvent<HTMLButtonElement>) {
@@ -73,34 +90,53 @@ export function MediaEditForm({ media, action }: Props) {
       <FormBody className="grid gap-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
+        {/* Los sliders llevan su valor desde el servidor: sin él, el navegador los pone al medio y el
+            formulario tomaría ese valor al hidratarse. */}
         {media.image && (
-          <div className="grid gap-1">
-            <p className="font-medium">Punto focal</p>
-            <button
-              type="button"
-              onClick={onImageClick}
-              aria-label="Toca la parte de la imagen que siempre debe verse"
-              className="relative block w-full max-w-md overflow-hidden rounded-md border border-neutral-300 bg-neutral-100"
-            >
-              {/* biome-ignore lint/performance/noImgElement: sin optimizador de imágenes en runtime (2.7) */}
-              <img
+          <div className="grid gap-2">
+            <p className="font-medium">Encuadre</p>
+            <div className="grid gap-4 md:grid-cols-[minmax(0,28rem)_auto] md:items-start">
+              <button
+                type="button"
+                onClick={onImageClick}
+                aria-label="Toca la parte de la imagen que siempre debe verse"
+                className="relative block w-full overflow-hidden rounded-md border border-neutral-300 bg-neutral-100"
+              >
+                {/* biome-ignore lint/performance/noImgElement: sin optimizador de imágenes en runtime (2.7) */}
+                <img
+                  src={media.image.src}
+                  alt={media.alt}
+                  width={media.image.width}
+                  height={media.image.height}
+                  className="block h-auto w-full"
+                />
+                {/* Lo que entra en una barra del matchday: con zoom es una franja angosta de la foto. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute border-2 border-paper shadow-[0_0_0_9999px_rgb(0_0_0/0.35)]"
+                  style={barStyle}
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute size-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-paper bg-accent shadow-lg"
+                  style={{ left: `${focalX * 100}%`, top: `${focalY * 100}%` }}
+                />
+              </button>
+              <FocalPreview
                 src={media.image.src}
-                alt={media.alt}
                 width={media.image.width}
                 height={media.image.height}
-                className="block h-auto w-full"
+                focalX={focalX}
+                focalY={focalY}
+                focalZoom={focalZoom}
               />
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute size-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-paper bg-accent shadow-lg"
-                style={{ left: `${focalX * 100}%`, top: `${focalY * 100}%` }}
-              />
-            </button>
+            </div>
             <p className="text-sm text-neutral-600">
               Toca la parte que siempre debe verse cuando la foto se recorta (por ejemplo, las caras). También
-              puedes moverlo con los controles.
+              puedes moverlo con los controles. El recuadro es lo que entra en una barra del matchday; al lado
+              ves cómo queda antes de guardar.
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm font-medium">
                 Horizontal
                 <input
@@ -109,6 +145,7 @@ export function MediaEditForm({ media, action }: Props) {
                   max={1}
                   step={0.01}
                   className="min-h-12 accent-ink"
+                  defaultValue={media.focalX}
                   {...form.register('focalX', { valueAsNumber: true })}
                 />
               </label>
@@ -120,10 +157,31 @@ export function MediaEditForm({ media, action }: Props) {
                   max={1}
                   step={0.01}
                   className="min-h-12 accent-ink"
+                  defaultValue={media.focalY}
                   {...form.register('focalY', { valueAsNumber: true })}
                 />
               </label>
+              <label className="grid gap-1 text-sm font-medium">
+                <span>Acercar en las tarjetas: {Math.round(focalZoom * 100)} %</span>
+                <input
+                  type="range"
+                  min={FOCAL_ZOOM_MIN}
+                  max={FOCAL_ZOOM_MAX}
+                  step={0.05}
+                  aria-valuetext={`${Math.round(focalZoom * 100)} %`}
+                  className="min-h-12 accent-ink"
+                  defaultValue={media.focalZoom}
+                  {...form.register('focalZoom', { valueAsNumber: true })}
+                />
+              </label>
             </div>
+            <p className="text-sm text-neutral-600">
+              «Acercar» sirve para destacar un rostro o un número en las tarjetas para redes, alrededor del
+              punto focal. El sitio muestra la foto completa.
+            </p>
+            {errors.focalZoom?.message && (
+              <p className="text-sm font-medium text-danger">{errors.focalZoom.message}</p>
+            )}
           </div>
         )}
 

@@ -21,6 +21,8 @@ export type MediaDetailDTO = MediaListItemDTO & {
   credit: string | null
   focalX: number
   focalY: number
+  /** Acercamiento para las tarjetas (1 = sin zoom); el sitio lo ignora. */
+  focalZoom: number
   minorsConsentConfirmedAt: string | null
   bytes: number
   originalFilename: string | null
@@ -61,6 +63,7 @@ type DetailRow = ListRow & {
   credit: string | null
   focalX: number
   focalY: number
+  focalZoom: number
   minorsConsentConfirmedAt: Date | null
   bytes: number
   originalFilename: string | null
@@ -73,6 +76,7 @@ export function toMediaDetailDTO(row: DetailRow): MediaDetailDTO {
     credit: row.credit,
     focalX: row.focalX,
     focalY: row.focalY,
+    focalZoom: row.focalZoom,
     minorsConsentConfirmedAt: row.minorsConsentConfirmedAt?.toISOString() ?? null,
     bytes: row.bytes,
     originalFilename: row.originalFilename,

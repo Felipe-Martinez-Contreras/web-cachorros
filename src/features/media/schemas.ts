@@ -1,4 +1,5 @@
 import { checkbox, optionalText, requiredText } from '@/lib/form-schemas'
+import { FOCAL_ZOOM_MAX, FOCAL_ZOOM_MIN } from '@/lib/images/focal-crop'
 import { z } from '@/lib/zod'
 
 const altText = requiredText('Describe la imagen: es el texto que escuchan quienes no pueden verla.', 300)
@@ -16,6 +17,11 @@ export const uploadDocumentSchema = z.object({
 })
 
 const focal = z.coerce.number({ error: 'Elige el punto focal.' }).min(0).max(1)
+/** Acercamiento de las tarjetas: de 100 % a 250 %. */
+const focalZoom = z.coerce
+  .number({ error: 'Elige cuánto acercar.' })
+  .min(FOCAL_ZOOM_MIN, 'El acercamiento va de 100 % a 250 %.')
+  .max(FOCAL_ZOOM_MAX, 'El acercamiento va de 100 % a 250 %.')
 
 export const updateMediaSchema = z
   .object({
@@ -23,6 +29,7 @@ export const updateMediaSchema = z
     credit: optionalText(120),
     focalX: focal,
     focalY: focal,
+    focalZoom,
     containsMinors: checkbox(),
     minorsConsent: checkbox(),
   })

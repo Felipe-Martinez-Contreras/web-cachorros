@@ -45,7 +45,7 @@ export type FieldDef =
     })
   | (Base & { type: 'checkbox' })
   | (Base & { type: 'checkboxes'; options: { value: string; label: string }[] })
-  | (Base & { type: 'media'; kind?: 'photo' | 'logo' })
+  | (Base & { type: 'media'; kind?: 'photo' | 'logo'; adjustLink?: boolean })
   /** PDF de un documento: se sube al elegirlo (el servidor valida que sea un PDF). */
   | (Base & { type: 'document' })
   | (Base & { type: 'richtext' })
@@ -191,6 +191,7 @@ export function EntityForm<T extends FieldValues>({
                     help={field.help}
                     required={field.required}
                     kind={field.kind}
+                    adjustLink={field.adjustLink}
                     error={typeof error === 'string' ? error : undefined}
                     value={previews[field.name] ?? null}
                     onChange={(media) => {

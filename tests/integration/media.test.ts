@@ -191,7 +191,7 @@ describe('acciones de la biblioteca', () => {
     return media.id
   }
 
-  const valid = { altText: 'Nueva descripción', credit: '', focalX: 0.25, focalY: 0.75 }
+  const valid = { altText: 'Nueva descripción', credit: '', focalX: 0.25, focalY: 0.75, focalZoom: 1.5 }
 
   it('rechazan la llamada sin sesión', async () => {
     const id = await upload('Sin sesión')
@@ -208,7 +208,18 @@ describe('acciones de la biblioteca', () => {
     await actAs('admin')
     expect(await actualizarMedio(id, valid)).toEqual({ ok: true, data: { id } })
     const [row] = await db.select().from(mediaAssets).where(eq(mediaAssets.id, id))
-    expect(row).toMatchObject({ altText: 'Nueva descripción', credit: null, focalX: 0.25, focalY: 0.75 })
+    expect(row).toMatchObject({
+      altText: 'Nueva descripción',
+      credit: null,
+      focalX: 0.25,
+      focalY: 0.75,
+      focalZoom: 1.5,
+    })
+    // El acercamiento va de 100 % a 250 %.
+    expect(await actualizarMedio(id, { ...valid, focalZoom: 3 })).toMatchObject({
+      ok: false,
+      fieldErrors: { focalZoom: [expect.any(String)] },
+    })
     expect(invalidatedTags()).toContain('media')
   })
 
