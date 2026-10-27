@@ -31,6 +31,12 @@
       "enabled": false
     },
     {
+      "description": "fast-uri se queda en 3.x: llega por ajv (vía @hookform/resolvers), que depende de ^3, y el override de pnpm-workspace.yaml solo fija el parche de seguridad. Quitar cuando ajv pase a fast-uri 4 (PR #18 cerrado)",
+      "matchPackageNames": ["fast-uri"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "Mayores pospuestas hasta después de la Fase 4 (decisión del 21 de octubre de 2026): quitar esta regla al cerrarla",
       "matchPackageNames": ["@hookform/resolvers"],
       "allowedVersions": "<6"
