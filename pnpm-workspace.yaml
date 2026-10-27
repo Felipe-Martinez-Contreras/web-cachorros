@@ -2,14 +2,8 @@
 # Renovate aplica la misma regla (renovate.json).
 minimumReleaseAge: 10080
 
-# Excepción por seguridad (AGENTS.md): parches de dependencias con avisos de `pnpm audit --prod` que aún no
-# cumplen los 7 días. nodemailer 10.1.7 (avisos moderados, < 10.1.4) y fast-uri 3.1.9 (vía
-# @hookform/resolvers > ajv; GHSA-xhq7-xmqj-769h y GHSA-333x-w4r6-6crp). Acotada a estas versiones exactas;
-# se quita cuando cumplan los 7 días (26 de octubre de 2026).
-minimumReleaseAgeExclude:
-  - nodemailer@10.1.7
-  - fast-uri@3.1.9
-
+# fast-uri llega vía @hookform/resolvers > ajv. El mínimo ^3.1.9 cierra GHSA-xhq7-xmqj-769h y
+# GHSA-333x-w4r6-6crp; se queda en la 3.x mientras ajv la use (renovate.json ignora la mayor).
 overrides:
   fast-uri: '^3.1.9'
 

@@ -59,7 +59,7 @@ export default async function UsersPage() {
                       <ActionButton
                         action={reenviarInvitacion.bind(null, row.id)}
                         successMessage="Enlace enviado. Vale por 1 hora."
-                        aria-label={`Enviar a ${row.name} el enlace para crear su contraseña`}
+                        aria-label={`Enviar enlace a ${row.name} para crear su contraseña`}
                       >
                         Enviar enlace
                       </ActionButton>
@@ -68,7 +68,7 @@ export default async function UsersPage() {
                       <ActionButton
                         action={cerrarSesionesDeUsuario.bind(null, row.id)}
                         successMessage="Sesiones cerradas."
-                        aria-label={`Cerrar las sesiones de ${row.name}`}
+                        aria-label={`Cerrar sesiones de ${row.name}`}
                         confirm={{
                           title: `¿Cerrar las sesiones de ${row.name}?`,
                           description: 'Tendrá que volver a entrar en todos sus dispositivos.',

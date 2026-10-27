@@ -24,7 +24,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
@@ -40,7 +40,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Sin servicio de PostgreSQL ni variables de entorno: si el build toca la BD, este job falla.
@@ -82,7 +82,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
@@ -133,7 +133,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate
