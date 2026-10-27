@@ -1,5 +1,3 @@
-# Antigüedad mínima de publicación, en minutos (7 días): pnpm no instala versiones más nuevas.
-# Renovate aplica la misma regla (renovate.json).
 minimumReleaseAge: 10080
 
 # Excepción por seguridad (AGENTS.md): parches de dependencias con avisos de `pnpm audit --prod` que aún no
@@ -11,7 +9,7 @@ minimumReleaseAgeExclude:
   - fast-uri@3.1.9
 
 overrides:
-  fast-uri: '^3.1.9'
+  fast-uri: '^4.2.3'
 
 # Únicos paquetes autorizados a ejecutar scripts de instalación.
 allowBuilds:
