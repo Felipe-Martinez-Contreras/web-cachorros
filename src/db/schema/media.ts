@@ -48,6 +48,8 @@ export const mediaAssets = pgTable(
     credit: text('credit'),
     focalX: real('focal_x').notNull().default(0.5),
     focalY: real('focal_y').notNull().default(0.5),
+    /** Acercamiento alrededor del punto focal (1 = sin zoom). Lo aplican las tarjetas; el sitio lo ignora. */
+    focalZoom: real('focal_zoom').notNull().default(1),
     containsMinors: boolean('contains_minors').notNull().default(false),
     minorsConsentConfirmedAt: timestamp('minors_consent_confirmed_at', { withTimezone: true }),
     uploadedBy: text('uploaded_by').references(() => user.id, { onDelete: 'set null' }),
@@ -65,5 +67,6 @@ export const mediaAssets = pgTable(
       'media_assets_focal_check',
       sql`${table.focalX} BETWEEN 0 AND 1 AND ${table.focalY} BETWEEN 0 AND 1`,
     ),
+    check('media_assets_focal_zoom_check', sql`${table.focalZoom} BETWEEN 1 AND 2.5`),
   ],
 )

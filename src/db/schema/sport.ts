@@ -23,6 +23,7 @@ import { albums } from './content'
 import {
   clubSide,
   competitionKind,
+  crestCardStyle,
   lineupRole,
   matchEventType,
   matchPeriod,
@@ -106,6 +107,8 @@ export const teams = pgTable(
     shortName: text('short_name').notNull(),
     slug: text('slug').notNull(),
     crestMediaId: uuid('crest_media_id').references(() => mediaAssets.id, { onDelete: 'restrict' }),
+    /** Escudo en las tarjetas para redes: a color o monocromo (para colores que rompen la paleta). */
+    cardCrestStyle: crestCardStyle('card_crest_style').notNull().default('color'),
     commune: text('commune'),
     isOwnClub: boolean('is_own_club').notNull().default(false),
     ...timestamps(),

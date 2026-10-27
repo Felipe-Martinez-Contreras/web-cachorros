@@ -74,6 +74,13 @@ export type SocialPublishingSettings = {
     resultsEnabledAt?: string
     /** Fotos de los 3 paneles de «Próximo partido» (ids de la biblioteca; `null` = fondo del club). */
     photos?: (string | null)[]
+    /** Línea sobre «MATCHDAY»; sin ella, la del auspiciador de las tarjetas (si hay). */
+    topLine?: {
+      mode: 'ninguna' | 'auspiciador' | 'texto' | 'logo'
+      text?: string | null
+      /** Logo de la biblioteca (se dibuja en blanco). */
+      logoId?: string | null
+    }
   }
 }
 
