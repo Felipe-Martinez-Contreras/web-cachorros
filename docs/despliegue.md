@@ -258,6 +258,36 @@ apunta a los archivos viejos), borra las carpetas anteriores:
 docker compose run --rm app node scripts/reprocess-logos.mjs --limpiar
 ```
 
+#### Memoria del contenedor `ops` (respaldos)
+
+El límite de `ops` (`OPS_MEMORY_LIMIT`) es **192m** desde octubre de 2026; antes era 96m. Con más fotos en
+`uploads`, la copia de las imágenes del respaldo (`rclone sync`) pasó de 96 MB y el kernel la cortó: el
+respaldo falló en el paso «copia de las imágenes» con «Killed». Hay dos cambios:
+
+- **rclone en modo de bajo consumo** (variables `RCLONE_*` del Dockerfile de `ops`, valen para el respaldo y la
+  restauración): una transferencia y dos chequeos a la vez, sin búfer de lectura adelantada
+  (`--buffer-size 0`), una cola corta de archivos pendientes y el recolector de Go más frecuente (`GOGC=50`).
+  En Cloud Storage lista carpeta por carpeta (sin `--fast-list`) y no revisa el bucket. Así la memoria no
+  crece con la cantidad de fotos; el respaldo tarda un poco más, de noche y sin apuro.
+- **192m por defecto** en `compose.yaml`, `.env.example` y `generar-env.sh`. Cabe en el presupuesto de la
+  e2-micro: los límites son topes, no reservas, y `ops` casi no usa memoria salvo durante el respaldo
+  nocturno, cuando el sitio tiene poco tráfico. Si los cuatro topes (64 + 512 + 256 + 192 MB) coincidieran,
+  el swap de 2 GB los absorbe.
+
+En una VM con un `.env` anterior, no hace falta tocar nada si ya tiene `OPS_MEMORY_LIMIT=192m`. Si no la
+tiene, toma el nuevo default de `compose.yaml` al actualizar. Para revisarlo y aplicarlo:
+
+```bash
+cd /opt/cachorros
+grep OPS_MEMORY_LIMIT .env                                       # vacío o 192m
+docker compose up -d ops                                         # aplica el límite nuevo
+docker compose exec ops backup.sh                                # respaldo de prueba
+docker stats --no-stream "$(docker compose ps -q ops)"           # memoria en uso
+```
+
+El CI lo comprueba en cada cambio (`probar-ops.sh`): un respaldo con 4.030 imágenes y el límite de
+`compose.yaml` aplicado sin swap. Si rclone no cupiera, la prueba falla igual que en la VM.
+
 ## 6. Verificar
 
 Desde tu PC:
