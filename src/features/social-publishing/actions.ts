@@ -43,6 +43,9 @@ export async function guardarFacebook(input: unknown): Promise<ActionResult<{ id
         .for('update')
       if (!row) throw new Rejection('No encontramos la configuración del club. Avisa a soporte.')
       await assertPublishablePhotos(tx, [data.photo1, data.photo2, data.photo3])
+      if (data.topLineMode === 'logo') {
+        await assertPublishableMedia(tx, data.topLineLogo ?? null, 'topLineLogo')
+      }
       const next = nextFacebookSettings(readFacebookSettings(row.socialPublishing), data, new Date())
       await tx
         .update(siteSettings)
@@ -56,6 +59,7 @@ export async function guardarFacebook(input: unknown): Promise<ActionResult<{ id
           enabled: data.enabled,
           publishResults: data.publishResults,
           photos: next.photos?.filter(Boolean).length ?? 0,
+          topLine: data.topLineMode,
         },
       }
     },

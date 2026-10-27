@@ -2,7 +2,7 @@ import 'server-only'
 import { and, desc, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { db } from '@/db/client'
-import { matches, mediaAssets, series, socialPublications, teams } from '@/db/schema'
+import { matches, mediaAssets, series, siteSettings, socialPublications, teams } from '@/db/schema'
 import { isClubMatch } from '@/features/matches/queries'
 import { type MediaThumbDTO, toMediaThumbDTO } from '@/features/media/dto'
 import { shareUrl, weekendTitle } from '@/features/share/lib/cards'
@@ -12,7 +12,7 @@ import { formatLongDate, fromIsoDate } from '@/lib/format'
 import { facebookAvailability, loadFacebookSettings } from './config'
 import { encodePhotos } from './lib/photos'
 import { publicationKindFor } from './lib/rules'
-import type { FacebookSettings } from './lib/settings'
+import { type FacebookSettings, type TopLineMode, topLineModeOf } from './lib/settings'
 import { publicationContent } from './publish'
 
 // Lo que muestra el panel de la publicación en Facebook. Solo DTOs: nunca el token.
@@ -103,8 +103,10 @@ export type FacebookPanelState = {
   /** Solo para avisar que es staging con publicación permitida a propósito. */
   nonProductionAllowed: boolean
   publications: PublicationDTO[]
-  /** Miniaturas de las 3 fotos del matchday (por campo del formulario). */
+  /** Miniaturas de las 3 fotos del matchday y del logo de la línea superior (por campo del formulario). */
   photoPreviews: Record<string, MediaThumbDTO | null>
+  /** La línea sobre «MATCHDAY» que se usa hoy (sin elegirla aún, la del auspiciador si hay uno). */
+  topLineMode: TopLineMode
 }
 
 /** Miniaturas de las fotos, por nombre de campo (`photo1`…`photo3`), para los formularios del panel. */
@@ -136,14 +138,36 @@ async function photoThumbs(
 export async function facebookPanelState(limit = 20): Promise<FacebookPanelState> {
   const settings = await loadFacebookSettings()
   const availability = facebookAvailability(settings)
-  const rows = await selectPublications().orderBy(desc(socialPublications.createdAt)).limit(limit)
+  const [rows, [club], [logo]] = await Promise.all([
+    selectPublications().orderBy(desc(socialPublications.createdAt)).limit(limit),
+    db
+      .select({ sponsorId: siteSettings.shareCardSponsorId })
+      .from(siteSettings)
+      .where(eq(siteSettings.id, 1))
+      .limit(1),
+    settings.topLine?.logoId
+      ? db
+          .select({
+            id: mediaAssets.id,
+            variants: mediaAssets.variants,
+            altText: mediaAssets.altText,
+            containsMinors: mediaAssets.containsMinors,
+          })
+          .from(mediaAssets)
+          .where(eq(mediaAssets.id, settings.topLine.logoId))
+      : [],
+  ])
   return {
     settings,
     configured: Boolean(env.FACEBOOK_PAGE_ID && env.FACEBOOK_PAGE_TOKEN),
     blockedReason: availability.ok ? null : availability.message,
     nonProductionAllowed: env.SITE_ENV !== 'production' && env.FACEBOOK_ALLOW_NON_PRODUCTION,
     publications: rows.map(toPublicationDTO),
-    photoPreviews: await photoThumbs(settings.photos ?? []),
+    photoPreviews: {
+      ...(await photoThumbs(settings.photos ?? [])),
+      topLineLogo: logo ? toMediaThumbDTO(logo) : null,
+    },
+    topLineMode: topLineModeOf(settings, Boolean(club?.sponsorId)),
   }
 }
 

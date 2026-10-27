@@ -401,7 +401,13 @@ describe('acciones del panel', () => {
     await setFacebook(null)
     await actAs('admin')
     expect(
-      await actions.guardarFacebook({ enabled: true, weekday: '4', time: '18:30', publishResults: false }),
+      await actions.guardarFacebook({
+        enabled: true,
+        weekday: '4',
+        time: '18:30',
+        publishResults: false,
+        topLineMode: 'ninguna',
+      }),
     ).toEqual({ ok: true, data: { id: '1' } })
     const [row] = await admin<{ social_publishing: { facebook: Record<string, unknown> } }[]>`
       select social_publishing from site_settings where id = 1`
@@ -435,7 +441,14 @@ describe('fotos del matchday', () => {
     const ok = await photo('ok', false)
     const minors = await photo('menores', true)
     await actAs('admin')
-    const base = { enabled: true, weekday: '5', time: '12:00', publishResults: false, photo3: '' }
+    const base = {
+      enabled: true,
+      weekday: '5',
+      time: '12:00',
+      publishResults: false,
+      photo3: '',
+      topLineMode: 'ninguna',
+    }
     expect(await actions.guardarFacebook({ ...base, photo1: ok, photo2: minors })).toMatchObject({
       ok: false,
       fieldErrors: { photo2: [expect.stringContaining('menores')] },
@@ -447,6 +460,29 @@ describe('fotos del matchday', () => {
     const [row] = await admin<{ social_publishing: { facebook: { photos: (string | null)[] } } }[]>`
       select social_publishing from site_settings where id = 1`
     expect(row?.social_publishing.facebook.photos).toEqual([ok, null, null])
+  })
+
+  it('la línea superior con logo no acepta una imagen con menores y guarda el texto', async () => {
+    const logo = await photo('linea-logo', false)
+    const minors = await photo('linea-menores', true)
+    await actAs('admin')
+    const base = { enabled: false, weekday: '5', time: '12:00', publishResults: false }
+    expect(
+      await actions.guardarFacebook({ ...base, topLineMode: 'logo', topLineLogo: minors }),
+    ).toMatchObject({ ok: false, fieldErrors: { topLineLogo: [expect.stringContaining('menores')] } })
+    expect(await actions.guardarFacebook({ ...base, topLineMode: 'logo', topLineLogo: logo })).toMatchObject({
+      ok: true,
+    })
+    expect(
+      await actions.guardarFacebook({ ...base, topLineMode: 'texto', topLineText: 'Asociación de prueba' }),
+    ).toMatchObject({ ok: true })
+    const [row] = await admin<{ social_publishing: { facebook: { topLine: unknown } } }[]>`
+      select social_publishing from site_settings where id = 1`
+    expect(row?.social_publishing.facebook.topLine).toEqual({
+      mode: 'texto',
+      text: 'Asociación de prueba',
+      logoId: null,
+    })
   })
 
   it('elegir las fotos de un post las valida y no guarda nada', async () => {

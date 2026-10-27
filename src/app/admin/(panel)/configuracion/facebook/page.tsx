@@ -50,6 +50,9 @@ export default async function FacebookSettingsPage() {
             photo1: settings.photos?.[0] ?? '',
             photo2: settings.photos?.[1] ?? '',
             photo3: settings.photos?.[2] ?? '',
+            topLineMode: state.topLineMode,
+            topLineText: settings.topLine?.text ?? '',
+            topLineLogo: settings.topLine?.logoId ?? '',
           }}
         />
 

@@ -4,21 +4,29 @@ import { EntityForm, type FieldDef } from '@/components/admin/entity-form'
 import type { MediaThumbDTO } from '@/features/media/dto'
 import { jornadaOptionsSchema } from '@/features/share/schemas'
 import type { ActionResult } from '@/lib/action-result'
-import { weekdayLabels } from '@/lib/labels'
+import { topLineModeLabels, weekdayLabels } from '@/lib/labels'
 import { MAX_CAPTION } from '../lib/caption'
 import { manualPhotosSchema } from '../lib/photos'
-import { facebookSettingsSchema, MATCHDAY_PHOTO_LABELS, PUBLISH_WEEKDAYS } from '../lib/settings'
+import {
+  facebookSettingsSchema,
+  MATCHDAY_PHOTO_LABELS,
+  PUBLISH_WEEKDAYS,
+  TOP_LINE_MAX,
+  TOP_LINE_MODES,
+  type TopLineMode,
+} from '../lib/settings'
 import { manualPublishSchema } from '../schemas'
 
 type Action = (input: unknown) => Promise<ActionResult<unknown>>
 
+/** El encuadre que mejor funciona en cada barra (las tres van en blanco y negro). */
 const PHOTO_HELP = [
-  'Primer plano: se publica en blanco y negro. Las fotos con menores no se pueden usar.',
-  'Jugada o balón: se publica a color.',
-  'Un detalle (camiseta, estadio): se publica con un velo naranjo.',
+  'Un primer plano o un rostro. Se respetan el punto focal y el acercamiento de la foto. Las fotos con menores no se pueden usar.',
+  'Un jugador en acción. Se respetan el punto focal y el acercamiento de la foto.',
+  'Un detalle de la camiseta o una espalda con su número. Se respetan el punto focal y el acercamiento de la foto.',
 ] as const
 
-/** Las 3 fotos de «Próximo partido». Sin foto, el panel usa el fondo del club. */
+/** Las 3 fotos del matchday. Sin foto, la barra usa un fondo gris. */
 const MATCHDAY_PHOTO_FIELDS: FieldDef[] = MATCHDAY_PHOTO_LABELS.map((label, index) => ({
   name: `photo${index + 1}`,
   label,
@@ -26,6 +34,7 @@ const MATCHDAY_PHOTO_FIELDS: FieldDef[] = MATCHDAY_PHOTO_LABELS.map((label, inde
   kind: 'photo',
   required: false,
   help: PHOTO_HELP[index],
+  adjustLink: true,
 }))
 
 export function FacebookSettingsForm({
@@ -43,6 +52,9 @@ export function FacebookSettingsForm({
     photo1: string
     photo2: string
     photo3: string
+    topLineMode: TopLineMode
+    topLineText: string
+    topLineLogo: string
   }
 }) {
   return (
@@ -79,6 +91,29 @@ export function FacebookSettingsForm({
           help: 'Sale unos 10 minutos después de finalizarlo, por si hay que corregir el marcador.',
         },
         ...MATCHDAY_PHOTO_FIELDS,
+        {
+          name: 'topLineMode',
+          label: 'Línea sobre «MATCHDAY»',
+          type: 'select',
+          options: TOP_LINE_MODES.map((mode) => ({ value: mode, label: topLineModeLabels[mode] })),
+          help: 'La línea pequeña, en blanco, sobre el título de las tarjetas matchday y la programación. El auspiciador es el de Configuración → Destacados.',
+        },
+        {
+          name: 'topLineText',
+          label: 'Texto de la línea',
+          type: 'text',
+          required: false,
+          placeholder: 'ANFA · Asociación de fútbol',
+          help: `Solo si elegiste «Un texto». Hasta ${TOP_LINE_MAX} caracteres; se escribe en mayúsculas.`,
+        },
+        {
+          name: 'topLineLogo',
+          label: 'Logo de la línea',
+          type: 'media',
+          kind: 'logo',
+          required: false,
+          help: 'Solo si elegiste «Un logo». Mejor con fondo transparente: se dibuja todo en blanco.',
+        },
       ]}
     />
   )
