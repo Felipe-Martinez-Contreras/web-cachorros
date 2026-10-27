@@ -2,6 +2,7 @@ import 'server-only'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { and, asc, eq, gte, inArray, lt, ne, or } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { db } from '@/db/client'
 import { matches, mediaAssets, news, newsCategories, series, siteSettings, teams } from '@/db/schema'
 import type { MediaVariants } from '@/db/schema/media'
@@ -14,6 +15,7 @@ import { isNewsVisible } from '@/features/news/queries'
 import { loadMinorIds } from '@/features/players/public'
 import { crestScale } from '@/lib/images/crest'
 import { logger } from '@/lib/logger'
+import { type CrestCardStyle, cardCrestImage } from './crest-card'
 import type { CardCrest, CardMatch, ShareCardData } from './dto'
 import {
   addDays,
@@ -28,7 +30,7 @@ import {
   withDesignRevision,
 } from './lib/cards'
 import { jornadaStart, parseJornadaKey, selectJornadaMatches, weekendCardFor } from './lib/jornada'
-import { loadCardSponsor, loadMatchday, matchdayRevision } from './matchday'
+import { loadMatchday, loadTopLine, matchdayRevision, topLineRevision } from './matchday'
 
 export type ShareVersion = { version: string; slug: string }
 
@@ -47,22 +49,31 @@ export async function shareVersionOf(request: ShareRequest): Promise<ShareVersio
         .where(and(eq(matches.id, request.id), isClubMatch))
         .limit(1)
       if (!row || !templateFitsStatus(request.template, row.status)) return null
-      const matchday = request.template === 'proximo' ? await matchdayRevision(request.photos) : ''
+      const matchday =
+        request.template === 'proximo'
+          ? shortHash([await matchdayRevision(request.photos), await crestStylesOf([request.id])])
+          : ''
       return { version: matchCardVersion(request.template, row.version, matchday), slug: row.slug }
     }
     case 'programacion':
     case 'resultados': {
       const rows = await weekendRows(request.id, request.template)
       if (rows.length === 0) return null
-      // La programación lleva el auspiciador: si cambia, cambia la versión.
-      const sponsor = request.template === 'programacion' ? ((await loadCardSponsor()) ?? '') : ''
-      const hash = shortHash([...rows.map((row) => `${row.id}.${row.version}`), sponsor])
+      // La programación lleva la línea superior y los escudos del matchday: si cambian, cambia la versión.
+      const extra =
+        request.template === 'programacion'
+          ? [await topLineRevision(), await crestStylesOf(rows.map((row) => row.id))]
+          : []
+      const hash = shortHash([...rows.map((row) => `${row.id}.${row.version}`), ...extra])
       return { version: withDesignRevision(request.template, hash), slug: request.id }
     }
     case 'jornada': {
       const rows = await jornadaMatches(request.id, request.series)
       if (rows.length === 0) return null
-      const matchday = await matchdayRevision(request.photos)
+      const matchday = shortHash([
+        await matchdayRevision(request.photos),
+        await crestStylesOf(rows.map((row) => row.id)),
+      ])
       return { version: jornadaCardVersion(rows, matchday), slug: request.id.slice(0, 10) }
     }
     case 'noticia': {
@@ -74,6 +85,25 @@ export async function shareVersionOf(request: ShareRequest): Promise<ShareVersio
       return row ? { version: shortHash([row.updatedAt.getTime()]), slug: row.slug } : null
     }
   }
+}
+
+const homeTeams = alias(teams, 'home_team')
+const awayTeams = alias(teams, 'away_team')
+
+/**
+ * Estilo del escudo en las tarjetas (Panel → Rivales) de los equipos de esos partidos: entra en la versión
+ * de las plantillas matchday, que no cambia con `share_version` al editar un equipo.
+ */
+async function crestStylesOf(matchIds: readonly string[]): Promise<string> {
+  if (matchIds.length === 0) return ''
+  const rows = await db
+    .select({ id: matches.id, home: homeTeams.cardCrestStyle, away: awayTeams.cardCrestStyle })
+    .from(matches)
+    .innerJoin(homeTeams, eq(homeTeams.id, matches.homeTeamId))
+    .innerJoin(awayTeams, eq(awayTeams.id, matches.awayTeamId))
+    .where(inArray(matches.id, [...matchIds]))
+    .orderBy(asc(matches.id))
+  return rows.map((row) => `${row.home}.${row.away}`).join(',')
 }
 
 /** Partidos del club de un fin de semana (sábado y domingo en Santiago), con su versión. */
@@ -175,7 +205,10 @@ export const MAX_WEEKEND_MATCHES = 8
 
 /** Datos completos de una tarjeta, ya públicos y con los escudos como *data URI*. */
 export async function loadShareCard(request: ShareRequest): Promise<ShareCardData | null> {
-  const club = await clubIdentity()
+  // Las plantillas matchday dibujan los escudos sin disco: se tratan aparte (`crest-card.ts`).
+  const bare = MATCHDAY_TEMPLATES.has(request.template)
+  const club = await clubIdentity(bare)
+  const toCard = (row: MatchRow) => toCardMatch(row, bare)
   switch (request.template) {
     case 'resultado':
     case 'proximo':
@@ -198,7 +231,7 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
         kind: 'match',
         template: request.template,
         clubName: club.name,
-        match: await toCardMatch(row),
+        match: await toCard(row),
         scorers: { home: scorerLines(events, 'home'), away: scorerLines(events, 'away') },
         matchday: request.template === 'proximo' ? await loadMatchday(request.photos) : null,
         goal: goal
@@ -220,8 +253,8 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
         clubName: club.name,
         clubCrest: club.crest,
         saturday: weekendOf(request.id),
-        matches: await Promise.all(rows.map(toCardMatch)),
-        sponsor: request.template === 'programacion' ? await loadCardSponsor() : null,
+        matches: await Promise.all(rows.map(toCard)),
+        topLine: request.template === 'programacion' ? ((await loadTopLine())?.line ?? null) : null,
       }
     }
     case 'jornada': {
@@ -234,7 +267,7 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
       const start = jornadaStart(ordered)
       if (!first || !start) return null
       const competitions = new Set(ordered.map((row) => row.competitionName))
-      const [matchday, card] = await Promise.all([loadMatchday(request.photos), toCardMatch(first)])
+      const [matchday, card] = await Promise.all([loadMatchday(request.photos), toCard(first)])
       return {
         kind: 'jornada',
         template: 'jornada',
@@ -284,8 +317,13 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
   }
 }
 
-async function toCardMatch(row: MatchRow): Promise<CardMatch> {
-  const [homeCrest, awayCrest] = await Promise.all([cardCrest(row.homeCrest), cardCrest(row.awayCrest)])
+const MATCHDAY_TEMPLATES = new Set<ShareRequest['template']>(['proximo', 'jornada', 'programacion'])
+
+async function toCardMatch(row: MatchRow, bare: boolean): Promise<CardMatch> {
+  const [homeCrest, awayCrest] = await Promise.all([
+    cardCrest(row.homeCrest, bare ? row.home.cardCrestStyle : null),
+    cardCrest(row.awayCrest, bare ? row.away.cardCrestStyle : null),
+  ])
   return {
     clubSide: row.clubSide === 'visita' ? 'visita' : 'local',
     home: { name: row.home.shortName, crest: homeCrest },
@@ -304,7 +342,7 @@ async function toCardMatch(row: MatchRow): Promise<CardMatch> {
   }
 }
 
-async function clubIdentity(): Promise<{ name: string; crest: CardCrest | null }> {
+async function clubIdentity(bare: boolean): Promise<{ name: string; crest: CardCrest | null }> {
   const [[settings], [crest]] = await Promise.all([
     db
       .select({ name: siteSettings.shortName, clubName: siteSettings.clubName })
@@ -312,7 +350,12 @@ async function clubIdentity(): Promise<{ name: string; crest: CardCrest | null }
       .where(eq(siteSettings.id, 1))
       .limit(1),
     db
-      .select({ variants: mediaAssets.variants, width: mediaAssets.width, height: mediaAssets.height })
+      .select({
+        variants: mediaAssets.variants,
+        width: mediaAssets.width,
+        height: mediaAssets.height,
+        style: teams.cardCrestStyle,
+      })
       .from(teams)
       .innerJoin(mediaAssets, eq(mediaAssets.id, teams.crestMediaId))
       .where(eq(teams.isOwnClub, true))
@@ -320,25 +363,36 @@ async function clubIdentity(): Promise<{ name: string; crest: CardCrest | null }
   ])
   return {
     name: settings?.clubName ?? 'Club Deportivo Los Cachorros',
-    crest: await cardCrest(crest),
+    crest: await cardCrest(crest, bare ? (crest?.style ?? 'color') : null),
   }
 }
 
 type CrestMedia = { variants: MediaVariants | null; width: number | null; height: number | null }
 
 /**
- * Escudo como *data URI* PNG desde su variante de 512 px (2.7), con su escala óptica en el disco. Sin
+ * Escudo como *data URI* PNG desde su variante de 512 px (2.7), con su escala óptica en el disco. Con
+ * `bareStyle` (plantillas matchday) suma la versión sin disco, tratada con ese estilo (`crest-card.ts`). Sin
  * archivo, la tarjeta usa un disco con la inicial.
  */
-async function cardCrest(media: CrestMedia | null | undefined): Promise<CardCrest | null> {
+async function cardCrest(
+  media: CrestMedia | null | undefined,
+  bareStyle: CrestCardStyle | null,
+): Promise<CardCrest | null> {
   const variants = media?.variants
   const file = variants?.png512 ?? (variants?.master.endsWith('.png') ? variants.master : null)
   if (!media || !file) return null
   const bytes = await readMediaFile(file)
   if (!bytes) return null
+  const bare = bareStyle
+    ? await cardCrestImage(bytes, { style: bareStyle }).catch((error: unknown) => {
+        logger.warn({ err: error, file }, 'no se pudo tratar un escudo para la tarjeta')
+        return null
+      })
+    : null
   return {
     src: `data:image/png;base64,${bytes.toString('base64')}`,
     scale: crestScale(media.width, media.height, variants?.logo).disc,
+    bare,
   }
 }
 

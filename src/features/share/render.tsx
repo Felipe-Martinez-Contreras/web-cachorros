@@ -10,6 +10,7 @@ import type {
   CardTeam,
   JornadaCardData,
   MatchCardData,
+  MatchdayTopLine,
   NewsCardData,
   ShareCardData,
   WeekendCardData,
@@ -26,6 +27,7 @@ import {
   seriesBandLayout,
   weekendTitle,
 } from './lib/cards'
+import { type ScheduleLayout, scheduleTileLayout, TILE_LINE } from './lib/schedule-layout'
 
 // Plantillas de las tarjetas (especificación 2.8) con Satori (`next/og`): solo flexbox, fuentes TTF
 // estáticas y escudos como *data URI* PNG (trampa 8). Fondo negro, marcador en display condensada,
@@ -547,62 +549,101 @@ const MD_TEXT = 'Barlow Condensed'
 const accentAlpha = (alpha: number) => `rgba(242, 116, 5, ${alpha})`
 const whiteAlpha = (alpha: number) => `rgba(255, 255, 255, ${alpha})`
 
-/** Fondo de la plantilla: degradado negro, líneas diagonales, resplandores naranja y blanco y viñeta. */
-function MatchdayBackground({ layout }: { layout: Layout }) {
-  const { width, height } = layout
+/** Negro de los bordes del fondo y el del pie de los paneles (los paneles se desvanecen hacia él). */
+const MD_BLACK = 'rgb(7, 7, 7)'
+/** Gris del centro del fondo, detrás de la barra central. */
+const MD_CENTER = 'rgb(26, 26, 26)'
+/** Opacidad de la textura de cancha (franjas de corte y líneas). */
+const TEXTURE = 0.06
+
+/**
+ * Fondo del matchday: degradado radial (gris detrás de la barra central, casi negro en los bordes), textura
+ * de cancha muy tenue (franjas de corte, línea media y círculo central), destello naranjo arriba y viñeta.
+ * `center`: dónde va la luz, en % del ancho y el alto (en la OG, detrás de los paneles); `pitch`: el centro
+ * de la cancha dibujada (la línea media y el círculo), detrás del pie.
+ */
+function MatchdayBackground({
+  layout,
+  center = [50, 42],
+  pitch = [50, 80],
+}: {
+  layout: Layout
+  center?: [number, number]
+  pitch?: [number, number]
+}) {
+  const { width, height, s } = layout
   const layer = { display: 'flex', position: 'absolute', left: 0, top: 0, width, height } as const
+  const [cx, cy] = center
+  const [px, py] = pitch
+  const stripe = Math.round(110 * s)
+  const line = Math.max(2, Math.round(3 * s))
+  const circle = Math.round((layout.wide ? 120 : 200) * s)
   return (
     <>
       <div
         style={{
           ...layer,
-          backgroundImage: 'linear-gradient(180deg, rgb(14, 14, 14) 0%, rgb(8, 8, 8) 60%, rgb(3, 3, 3) 100%)',
+          backgroundColor: MD_BLACK,
+          backgroundImage: `radial-gradient(circle at ${cx}% ${cy}%, ${MD_CENTER} 0%, rgb(17, 17, 17) 32%, ${MD_BLACK} 72%)`,
         }}
       />
       <div
         style={{
           ...layer,
-          height: height * 0.57,
-          backgroundImage: `repeating-linear-gradient(115deg, ${whiteAlpha(0.06)} 0px, ${whiteAlpha(0.06)} 2px, transparent 2px, transparent 54px)`,
-        }}
-      />
-      {/* Las líneas se desvanecen hacia abajo (la plantilla usa una máscara, que Satori no tiene). */}
-      <div
-        style={{
-          ...layer,
-          height: height * 0.57,
-          backgroundImage: 'linear-gradient(180deg, rgba(10, 10, 10, 0) 0%, rgb(8, 8, 8) 100%)',
+          // Franjas de corte del pasto, horizontales: no compiten con las barras verticales.
+          backgroundImage: `repeating-linear-gradient(180deg, ${whiteAlpha(TEXTURE * 0.4)} 0px, ${whiteAlpha(TEXTURE * 0.4)} ${stripe}px, transparent ${stripe}px, transparent ${stripe * 2}px)`,
         }}
       />
       <div
         style={{
-          ...layer,
-          backgroundImage: `radial-gradient(circle at 0% 38%, ${accentAlpha(0.55)} 0%, ${accentAlpha(0.18)} 30%, transparent 55%)`,
+          display: 'flex',
+          position: 'absolute',
+          left: 0,
+          top: (height * py) / 100 - line / 2,
+          width,
+          height: line,
+          backgroundColor: whiteAlpha(TEXTURE),
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          left: (width * px) / 100 - circle,
+          top: (height * py) / 100 - circle,
+          width: circle * 2,
+          height: circle * 2,
+          borderRadius: circle * 2,
+          border: `${line}px solid ${whiteAlpha(TEXTURE)}`,
         }}
       />
       <div
         style={{
           ...layer,
-          backgroundImage: `radial-gradient(circle at 100% 72%, ${whiteAlpha(0.14)} 0%, transparent 45%)`,
+          backgroundImage: `radial-gradient(circle at ${cx}% 0%, ${accentAlpha(0.13)} 0%, ${accentAlpha(0.05)} 22%, transparent 45%)`,
         }}
       />
       <div
         style={{
           ...layer,
-          backgroundImage: 'radial-gradient(circle at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.6) 100%)',
+          backgroundImage: 'radial-gradient(circle at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.65) 100%)',
         }}
       />
     </>
   )
 }
 
-/** Fondo de cada panel sin foto: los degradados de la plantilla (gris, naranja con luz, naranja). */
+/** Fondo de un panel sin foto: grises con una luz arriba (el naranjo queda para los acentos). */
 const PANEL_FALLBACK = [
-  'radial-gradient(circle at 30% 25%, rgb(138, 138, 138) 0%, transparent 55%), linear-gradient(165deg, rgb(92, 92, 92) 0%, rgb(28, 28, 28) 65%, rgb(10, 10, 10) 100%)',
-  'radial-gradient(circle at 50% 30%, rgb(248, 179, 118) 0%, transparent 60%), linear-gradient(170deg, rgb(190, 96, 12) 0%, rgb(16, 16, 16) 85%)',
-  'linear-gradient(170deg, rgb(242, 116, 5) 0%, rgb(133, 64, 3) 100%)',
+  'radial-gradient(circle at 30% 22%, rgb(96, 96, 96) 0%, transparent 55%), linear-gradient(170deg, rgb(58, 58, 58) 0%, rgb(22, 22, 22) 70%)',
+  'radial-gradient(circle at 50% 22%, rgb(110, 110, 110) 0%, transparent 58%), linear-gradient(170deg, rgb(66, 66, 66) 0%, rgb(24, 24, 24) 70%)',
+  'radial-gradient(circle at 70% 22%, rgb(96, 96, 96) 0%, transparent 55%), linear-gradient(170deg, rgb(58, 58, 58) 0%, rgb(22, 22, 22) 70%)',
 ] as const
 
+/**
+ * Una barra: la foto (ya en blanco y negro), el acento naranjo (el mismo destello en la esquina superior
+ * derecha de las tres) y el desvanecido a negro del tercio inferior, sin corte seco.
+ */
 function Panel({
   index,
   photo,
@@ -614,6 +655,7 @@ function Panel({
   width: number
   height: number
 }) {
+  const layer = { display: 'flex', position: 'absolute', left: 0, top: 0, width, height } as const
   return (
     <div
       style={{
@@ -627,37 +669,20 @@ function Panel({
     >
       {photo && (
         // biome-ignore lint/performance/noImgElement: Satori dibuja <img>; no es una página.
-        <img
-          src={photo}
-          width={width}
-          height={height}
-          alt=""
-          style={{ position: 'absolute', left: 0, top: 0, objectFit: 'cover' }}
-        />
-      )}
-      {photo && index === 2 && (
-        // Velo naranja de la tercera foto, como en la plantilla.
-        <div
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width,
-            height,
-            backgroundImage: `linear-gradient(170deg, ${accentAlpha(0.62)} 0%, rgba(133, 64, 3, 0.78) 100%)`,
-          }}
-        />
+        <img src={photo} width={width} height={height} alt="" style={{ ...layer, objectFit: 'cover' }} />
       )}
       <div
         style={{
-          display: 'flex',
-          position: 'absolute',
-          left: 0,
-          bottom: 0,
-          width,
-          height: Math.min(height * 0.35, 320 * (width / 270)),
-          backgroundImage: 'linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 100%)',
+          ...layer,
+          backgroundImage: `radial-gradient(circle at 100% 0%, ${accentAlpha(0.35)} 0%, ${accentAlpha(0.12)} 28%, transparent 52%)`,
+        }}
+      />
+      <div
+        style={{
+          ...layer,
+          top: height * 0.62,
+          height: height * 0.38 + 1,
+          backgroundImage: `linear-gradient(180deg, rgba(7, 7, 7, 0) 0%, rgba(7, 7, 7, 0.55) 45%, ${MD_BLACK} 100%)`,
         }}
       />
     </div>
@@ -673,9 +698,31 @@ function initials(name: string): string {
     .join('')
 }
 
-/** Escudo en un disco blanco (como `.crest` en las secciones oscuras) o, sin escudo, sus iniciales. */
+/**
+ * Escudo del matchday, sin disco: la versión tratada para el fondo negro (`crest-card.ts`: sin fondo blanco,
+ * con contorno claro si tiene partes oscuras, en círculo si su fondo es de color, o monocromo) con su tamaño
+ * óptico. Sin escudo, sus iniciales en un anillo blanco.
+ */
 function MatchdayCrest({ team, size }: { team: CardTeam; size: number }) {
-  if (team.crest) return <Crest team={team} size={size} />
+  if (team.crest) {
+    const image = team.crest.bare ?? { src: team.crest.src, scale: team.crest.scale }
+    const inner = Math.round(size * Math.min(image.scale, 1.15))
+    return (
+      <div
+        style={{
+          display: 'flex',
+          width: size,
+          height: size,
+          flexShrink: 0,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {/* biome-ignore lint/performance/noImgElement: Satori dibuja <img>; no es una página. */}
+        <img src={image.src} width={inner} height={inner} alt="" style={{ objectFit: 'contain' }} />
+      </div>
+    )
+  }
   return (
     <div
       style={{
@@ -740,7 +787,10 @@ function MatchdayWhen({
       {bar}
       <div style={{ display: 'flex' }}>{`${day}.${month}`}</div>
       {bar}
-      <div style={{ display: 'flex', color: ACCENT }}>{SIDE_LABEL[match.clubSide]}</div>
+      {/* Naranjo solo para «VISITA» (regla de color del matchday); «LOCAL» va en blanco. */}
+      <div style={{ display: 'flex', color: match.clubSide === 'visita' ? ACCENT : PAPER }}>
+        {SIDE_LABEL[match.clubSide]}
+      </div>
     </div>
   )
 }
@@ -777,8 +827,11 @@ function seriesFontSize(text: string, width: number, size: number): number {
   return Math.min(size, width / (text.length * SERIES_CHAR_EM))
 }
 
-/** Alto que ocupa el pie (para dar a los paneles justo el resto). */
-function matchdayInfoHeight(match: CardMatch, width: number, sizes: InfoSizes): number {
+/**
+ * Alto que ocupa el pie (para dar a los paneles justo el resto) y dónde queda el centro del bloque de los
+ * nombres medido desde arriba (ahí se alinean los escudos).
+ */
+function matchdayInfoMetrics(match: CardMatch, width: number, sizes: InfoSizes) {
   const names = matchdayNames(
     clampText(match.home.name, 80),
     clampText(match.away.name, 80),
@@ -786,33 +839,121 @@ function matchdayInfoHeight(match: CardMatch, width: number, sizes: InfoSizes): 
     sizes.names,
   )
   const gap = sizes.series * 0.3
-  return (
-    sizes.series * 1.25 +
-    names.size * names.lines * 1.02 +
-    sizes.names * 0.45 +
-    (match.venueName ? sizes.venue * 1.2 + gap : 0) +
-    sizes.when * 1.15 +
-    gap * 4
+  const series = sizes.series * 1.25
+  const namesBlock = names.size * names.lines * 1.02 + sizes.names * 0.45 + gap * 2
+  return {
+    height:
+      series + namesBlock + (match.venueName ? sizes.venue * 1.2 + gap : 0) + sizes.when * 1.15 + gap * 2,
+    namesCenter: series + gap + namesBlock / 2,
+  }
+}
+
+/**
+ * Ancho que ocupa de verdad el texto del pie (el más ancho de los nombres, la línea naranja, la cancha y
+ * cuándo), con un poco de holgura; nunca más que `width`.
+ */
+function matchdayInfoTextWidth(match: CardMatch, width: number, sizes: InfoSizes, whenPrefix?: string) {
+  const names = matchdayNames(
+    clampText(match.home.name, 80),
+    clampText(match.away.name, 80),
+    width,
+    sizes.names,
   )
+  // Un nombre en dos líneas ya usa todo el ancho.
+  const nameWidth = (name: string) =>
+    displayLines(name, width, names.size, CHAR_EM.bebas) > 1
+      ? width
+      : clampText(name, 80).length * names.size * CHAR_EM.bebas
+  const series = seriesLine(match)
+  const when = `${whenPrefix ? `${whenPrefix} ` : ''}00:00 h | 00.00 | ${SIDE_LABEL[match.clubSide]}`
+  const widest = Math.max(
+    nameWidth(match.home.name),
+    nameWidth(match.away.name),
+    series.length * seriesFontSize(series, width, sizes.series) * SERIES_CHAR_EM,
+    (match.venueName ? clampText(match.venueName, 44).length : 0) * sizes.venue * 0.5,
+    when.length * sizes.when * WHEN_CHAR_EM,
+  )
+  return Math.min(width, widest * 1.06)
+}
+
+/**
+ * Los dos escudos (del mismo tamaño) a los lados del pie, centrados en el bloque de los nombres. Con `hug`
+ * (la OG, donde sobra ancho) van pegados al texto, a la misma distancia de los dos lados, y el conjunto se
+ * centra; si no, en los extremos.
+ */
+function MatchdayTeamsRow({
+  match,
+  width,
+  crest,
+  sizes,
+  whenPrefix,
+  hug = false,
+}: {
+  match: CardMatch
+  width: number
+  crest: number
+  sizes: InfoSizes
+  whenPrefix?: string
+  hug?: boolean
+}) {
+  const gap = 20 * (crest / 140)
+  const maxInfo = width - crest * 2 - gap * 2
+  const infoWidth = hug ? matchdayInfoTextWidth(match, maxInfo, sizes, whenPrefix) : maxInfo
+  const info = matchdayInfoMetrics(match, maxInfo, sizes)
+  const height = Math.max(crest, info.height)
+  const infoTop = (height - info.height) / 2
+  const crestTop = Math.min(Math.max(infoTop + info.namesCenter - crest / 2, 0), height - crest)
+  const side = (team: CardTeam) => (
+    <div style={{ display: 'flex', marginTop: crestTop }}>
+      <MatchdayCrest team={team} size={crest} />
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', width, height }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap, height }}>
+        {side(match.home)}
+        <div style={{ display: 'flex', marginTop: infoTop }}>
+          {/* Los tamaños se calculan con el ancho completo; la caja es la del texto. */}
+          <MatchdayInfo
+            match={match}
+            width={infoWidth}
+            fitWidth={maxInfo}
+            sizes={sizes}
+            whenPrefix={whenPrefix}
+          />
+        </div>
+        {side(match.away)}
+      </div>
+    </div>
+  )
+}
+
+/** Alto de la fila de equipos (lo mismo que calcula `MatchdayTeamsRow`). */
+function teamsRowHeight(match: CardMatch, width: number, crest: number, sizes: InfoSizes): number {
+  const infoWidth = width - crest * 2 - 40 * (crest / 140)
+  return Math.max(crest, matchdayInfoMetrics(match, infoWidth, sizes).height)
 }
 
 /** Textos del pie: serie y competencia, los dos equipos con «VS» en medio (sin cortar), la cancha y cuándo. */
 function MatchdayInfo({
   match,
   width,
+  fitWidth = width,
   sizes,
   whenPrefix,
 }: {
   match: CardMatch
   width: number
+  /** Ancho con que se calculan los tamaños de letra (la OG los calcula con el ancho completo). */
+  fitWidth?: number
   sizes: InfoSizes
   whenPrefix?: string
 }) {
   const home = clampText(match.home.name, 80)
   const away = clampText(match.away.name, 80)
-  const names = matchdayNames(home, away, width, sizes.names)
+  const names = matchdayNames(home, away, fitWidth, sizes.names)
   const series = seriesLine(match)
-  const seriesSize = seriesFontSize(series, width, sizes.series)
+  const seriesSize = seriesFontSize(series, fitWidth, sizes.series)
   const name = (text: string) => (
     <div
       style={{
@@ -883,7 +1024,7 @@ function MatchdayInfo({
           {clampText(match.venueName, 44)}
         </div>
       )}
-      <MatchdayWhen match={match} size={sizes.when} prefix={whenPrefix} width={width} />
+      <MatchdayWhen match={match} size={sizes.when} prefix={whenPrefix} width={fitWidth} />
     </div>
   )
 }
@@ -936,6 +1077,9 @@ const scaleInfo = (info: InfoSizes, s: number): InfoSizes => ({
   when: info.when * s,
 })
 
+/** Fracción del alto de «MATCHDAY» que pisa el borde superior de los paneles. */
+const TITLE_OVERLAP = 0.22
+
 /** «MATCHDAY» en Bebas Neue, con la sombra de la plantilla. */
 function MatchdayTitle({ size }: { size: number }) {
   return (
@@ -955,30 +1099,50 @@ function MatchdayTitle({ size }: { size: number }) {
   )
 }
 
-/** «POWERED BY …» con el auspiciador de las tarjetas (si no hay, no se dibuja). */
-function Sponsor({ name, size }: { name: string; size: number }) {
+/** Alto de la línea superior (sin ella, 0): el logo es algo más alto que el texto. */
+const topLineHeight = (line: MatchdayTopLine | null, size: number) =>
+  !line ? 0 : line.kind === 'logo' ? (line.src ? size * 1.8 : 0) : size * 1.2
+
+/**
+ * Línea pequeña sobre «MATCHDAY», centrada y en blanco: «POWERED BY …», un texto (por ejemplo la
+ * asociación) o un logo en blanco. Sin línea configurada, no se dibuja.
+ */
+function TopLine({ line, size }: { line: MatchdayTopLine; size: number }) {
+  if (line.kind === 'logo') {
+    if (!line.src) return null
+    return (
+      // biome-ignore lint/performance/noImgElement: Satori dibuja <img>; no es una página.
+      <img src={line.src} height={size * 1.8} alt="" style={{ objectFit: 'contain', maxWidth: size * 14 }} />
+    )
+  }
   return (
     <div
       style={{
         display: 'flex',
+        justifyContent: 'center',
         fontFamily: MD_TEXT,
         fontWeight: 600,
         fontSize: size,
         letterSpacing: size * 0.15,
         textTransform: 'uppercase',
         lineHeight: 1.2,
+        color: PAPER,
+        whiteSpace: 'nowrap',
       }}
     >
-      {clampText(`Powered by ${name}`, 44)}
+      {clampText(line.text, TOP_LINE_CHARS)}
     </div>
   )
 }
 
+/** Largo máximo de la línea superior en la tarjeta (el panel acepta hasta 60). */
+const TOP_LINE_CHARS = 60
+
 /** «Próximo partido» con la composición matchday del club: título, tres paneles de fotos y el pie. */
 function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout }) {
-  const sponsor = data.matchday?.sponsor ?? null
+  const topLine = data.matchday?.topLine ?? null
   const photos = data.matchday?.photos ?? [null, null, null]
-  const props = { match: data.match, layout, sponsor, photos }
+  const props = { match: data.match, layout, topLine, photos }
   return layout.wide ? <MatchdayWide {...props} /> : <MatchdayFrame {...props} />
 }
 
@@ -987,7 +1151,7 @@ function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout })
  * jornada (la del primer partido) en vez de la de cada serie.
  */
 function JornadaCard({ data, layout }: { data: JornadaCardData; layout: Layout }) {
-  const { sponsor, photos } = data.matchday
+  const { topLine, photos } = data.matchday
   // La línea naranja lleva la competencia (si todas son de la misma) en lugar de la serie.
   const match: CardMatch = {
     ...data.match,
@@ -995,21 +1159,21 @@ function JornadaCard({ data, layout }: { data: JornadaCardData; layout: Layout }
     roundLabel: null,
     competitionName: data.match.competitionName || 'Jornada',
   }
-  const props = { match, layout, sponsor, photos, series: data.series, whenPrefix: 'Inicio' }
+  const props = { match, layout, topLine, photos, series: data.series, whenPrefix: 'Inicio' }
   return layout.wide ? <MatchdayWide {...props} /> : <MatchdayFrame {...props} />
 }
 
 type MatchdayProps = {
   match: CardMatch
   layout: Layout
-  sponsor: string | null
+  topLine: MatchdayTopLine | null
   photos: (string | null)[]
   /** Solo la jornada: las series de la banda bajo los paneles y «Inicio» antes de la hora. */
   series?: readonly string[]
   whenPrefix?: string
 }
 
-/** Banda de series de la jornada: los nombres en blanco y los separadores en naranja, en 1 o 2 líneas. */
+/** Banda de series de la jornada: los nombres en blanco y los separadores en blanco tenue, en 1 o 2 líneas. */
 function SeriesBand({ lines, size }: { lines: string[][]; size: number }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: size * 0.08 }}>
@@ -1029,7 +1193,9 @@ function SeriesBand({ lines, size }: { lines: string[][]; size: number }) {
           {line.map((name, index) => (
             <div key={name} style={{ display: 'flex' }}>
               {index > 0 && (
-                <div style={{ display: 'flex', color: ACCENT, whiteSpace: 'pre' }}>{SERIES_SEPARATOR}</div>
+                <div style={{ display: 'flex', color: whiteAlpha(0.45), whiteSpace: 'pre' }}>
+                  {SERIES_SEPARATOR}
+                </div>
               )}
               {name}
             </div>
@@ -1046,36 +1212,75 @@ const bandHeight = (lines: number, size: number) => (lines > 0 ? lines * size + 
 const clampSeries = (series: readonly string[]) => series.map((name) => clampText(name, 24))
 
 /** La composición matchday vertical o cuadrada: título, tres paneles de fotos, la banda de series y el pie. */
-function MatchdayFrame({ match, layout, sponsor, photos, series, whenPrefix }: MatchdayProps) {
+/**
+ * Medidas de la composición vertical o cuadrada: alto del título, de la línea superior, del pie y de los
+ * paneles. Exportada para comparar el recorte de las fotos con la vista previa del panel → Medios.
+ */
+export function matchdayFrameBox(
+  match: CardMatch,
+  format: Exclude<ShareFormat, 'og'>,
+  topLine: MatchdayTopLine | null,
+  series?: readonly string[],
+) {
+  const { width, height } = SHARE_FORMATS[format]
+  const layout: Layout = { width, height, s: width / 1080, wide: false, tall: height > 1500 }
+  return frameBox(match, layout, topLine, series)
+}
+
+function frameBox(
+  match: CardMatch,
+  layout: Layout,
+  topLine: MatchdayTopLine | null,
+  series?: readonly string[],
+) {
   const { s, width, height } = layout
   const z = matchdaySizes(layout)
   const info = scaleInfo(z.info, s)
   const contentWidth = 930 * s
-  const sponsorHeight = sponsor ? (z.sponsor * 1.2 + 14) * s : 0
+  const lineHeight = topLineHeight(topLine, z.sponsor * s)
+  const sponsorHeight = lineHeight > 0 ? lineHeight + 14 * s : 0
   const titleBox = z.title * 0.78 * s
-  // El título monta la mitad de su alto sobre los paneles (en la plantilla, margin-bottom negativo).
-  const titleOverlap = titleBox * 0.5
+  // El título queda sobre los paneles y pisa levemente su borde superior.
+  const titleOverlap = titleBox * TITLE_OVERLAP
   const crest = z.crest * s
-  const infoWidth = contentWidth - crest * 2 - 40 * s
-  const bottomRow = Math.max(crest, matchdayInfoHeight(match, infoWidth, info))
+  const bottomRow = teamsRowHeight(match, contentWidth, crest, info)
   const band = series
     ? seriesBandLayout(clampSeries(series), contentWidth, z.band.size * s, z.band.min * s)
     : null
   const bandBlock = band ? bandHeight(band.lines.length, band.size) + z.gap * s : 0
-  const panelHeight =
-    height -
-    z.top * s -
-    sponsorHeight -
-    (titleBox - titleOverlap) -
-    z.gap * s -
-    bandBlock -
-    bottomRow -
-    z.bottom * s
+  const panelTop = z.top * s + sponsorHeight + (titleBox - titleOverlap)
+  const panelHeight = height - panelTop - z.gap * s - bandBlock - bottomRow - z.bottom * s
   const panelWidth = (contentWidth - z.panelGap * s * 2) / 3
+  return {
+    z,
+    info,
+    contentWidth,
+    lineHeight,
+    sponsorHeight,
+    titleBox,
+    titleOverlap,
+    crest,
+    bottomRow,
+    band,
+    panelTop,
+    panelLeft: (width - contentWidth) / 2,
+    panelWidth,
+    panelHeight,
+  }
+}
+
+function MatchdayFrame({ match, layout, topLine, photos, series, whenPrefix }: MatchdayProps) {
+  const { s, width, height } = layout
+  const box = frameBox(match, layout, topLine, series)
+  const { z, info, contentWidth, lineHeight, sponsorHeight, titleBox, crest, bottomRow, band } = box
+  const { titleOverlap, panelWidth, panelHeight } = box
 
   return (
     <div style={{ display: 'flex', position: 'relative', width, height }}>
-      <MatchdayBackground layout={layout} />
+      <MatchdayBackground
+        layout={layout}
+        pitch={[50, ((height - z.bottom * s - bottomRow / 2) / height) * 100]}
+      />
       <div
         style={{
           display: 'flex',
@@ -1089,9 +1294,9 @@ function MatchdayFrame({ match, layout, sponsor, photos, series, whenPrefix }: M
           paddingTop: z.top * s,
         }}
       >
-        {sponsor && (
-          <div style={{ display: 'flex', marginBottom: 14 * s }}>
-            <Sponsor name={sponsor} size={z.sponsor * s} />
+        {topLine && sponsorHeight > 0 && (
+          <div style={{ display: 'flex', height: lineHeight, marginBottom: 14 * s, alignItems: 'center' }}>
+            <TopLine line={topLine} size={z.sponsor * s} />
           </div>
         )}
         <div style={{ display: 'flex', height: titleBox - titleOverlap }} />
@@ -1106,19 +1311,14 @@ function MatchdayFrame({ match, layout, sponsor, photos, series, whenPrefix }: M
             <SeriesBand lines={band.lines} size={band.size} />
           </div>
         )}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: contentWidth,
-            height: bottomRow,
-            marginTop: z.gap * s,
-          }}
-        >
-          <MatchdayCrest team={match.home} size={crest} />
-          <MatchdayInfo match={match} width={infoWidth} sizes={info} whenPrefix={whenPrefix} />
-          <MatchdayCrest team={match.away} size={crest} />
+        <div style={{ display: 'flex', marginTop: z.gap * s }}>
+          <MatchdayTeamsRow
+            match={match}
+            width={contentWidth}
+            crest={crest}
+            sizes={info}
+            whenPrefix={whenPrefix}
+          />
         </div>
       </div>
       {/* El título va al final: Satori pinta en orden y no tiene z-index, así queda sobre los paneles. */}
@@ -1139,7 +1339,7 @@ function MatchdayFrame({ match, layout, sponsor, photos, series, whenPrefix }: M
 }
 
 /** Open Graph (1200 × 630): título y datos a la izquierda, los tres paneles a la derecha. */
-function MatchdayWide({ match, layout, sponsor, photos, series, whenPrefix }: MatchdayProps) {
+function MatchdayWide({ match, layout, topLine, photos, series, whenPrefix }: MatchdayProps) {
   const { width, height } = layout
   const pad = 40
   const panelGap = 14
@@ -1148,9 +1348,15 @@ function MatchdayWide({ match, layout, sponsor, photos, series, whenPrefix }: Ma
   const leftWidth = width - pad * 3 - panelsWidth
   const crest = 96
   const band = series ? seriesBandLayout(clampSeries(series), leftWidth, 40, 24) : null
+  // La luz del fondo va detrás de la barra central.
+  const center: [number, number] = [((width - pad - panelsWidth / 2) / width) * 100, 45]
   return (
     <div style={{ display: 'flex', position: 'relative', width, height }}>
-      <MatchdayBackground layout={layout} />
+      <MatchdayBackground
+        layout={layout}
+        center={center}
+        pitch={[((pad + leftWidth / 2) / width) * 100, 66]}
+      />
       <div
         style={{
           display: 'flex',
@@ -1173,23 +1379,21 @@ function MatchdayWide({ match, layout, sponsor, photos, series, whenPrefix }: Ma
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            {sponsor && <Sponsor name={sponsor} size={19} />}
+            {topLine && <TopLine line={topLine} size={19} />}
             <MatchdayTitle size={140} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <MatchdayCrest team={match.home} size={crest} />
-            <MatchdayInfo
-              match={match}
-              width={leftWidth - crest * 2 - 24}
-              sizes={
-                band
-                  ? { names: 44, series: 16, venue: 18, when: 24 }
-                  : { names: 50, series: 16, venue: 19, when: 26 }
-              }
-              whenPrefix={whenPrefix}
-            />
-            <MatchdayCrest team={match.away} size={crest} />
-          </div>
+          <MatchdayTeamsRow
+            match={match}
+            width={leftWidth}
+            crest={crest}
+            hug
+            sizes={
+              band
+                ? { names: 44, series: 16, venue: 18, when: 24 }
+                : { names: 50, series: 16, venue: 19, when: 26 }
+            }
+            whenPrefix={whenPrefix}
+          />
           {band && <SeriesBand lines={band.lines} size={band.size} />}
         </div>
         <div style={{ display: 'flex', gap: panelGap }}>
@@ -1243,16 +1447,35 @@ function ScheduleCard({ data, layout }: { data: WeekendCardData; layout: Layout 
   const sharedName = shared ? clampText(shared.name, 80) : ''
   const tileWidth = (width - pad * 2 - gap * (columns - 1)) / columns
   // Alto disponible por fila, para escalar la hora: las filas llenan el alto de la tarjeta.
-  const sponsorHeight = data.sponsor ? (wide ? 34 : 50) * s : 0
+  const lineSize = (wide ? 18 : 26) * s
+  const sponsorHeight =
+    topLineHeight(data.topLine, lineSize) > 0 ? topLineHeight(data.topLine, lineSize) + gap * 1.5 : 0
   const headerHeight =
     (wide ? 110 : 190) * s + sponsorHeight + (shared ? (wide ? 70 : 120) * s : 0) + (rest > 0 ? 50 * s : 0)
   const rowHeight = (height - pad * 2 - headerHeight - gap * rows.length) / rows.length
   // Con filas altas (pocos partidos) todo crece, para no dejar la tarjeta vacía.
   const grow = wide ? 1 : Math.min(Math.max(rowHeight / (300 * s), 1), 1.6)
-  const timeCap = Math.min(rowHeight * (shared ? 0.48 : 0.38), (wide ? 80 : columns === 1 ? 320 : 230) * s)
-  const crestCap = (wide ? 48 : 110) * s * grow
-  const label = (wide ? 28 : 38) * s * grow
-  const detail = (wide ? 20 : 27) * s * grow
+  const horizontal = columns === 1 && !wide
+  // Un solo juego de tamaños para todos los tiles (el que cabe en el más exigente).
+  const tile = scheduleTileLayout({
+    tiles: shown.map((match) => ({
+      time: matchTime(match),
+      versus: shared ? null : `vs ${clampText(rivalOf(match).name, 80)}`,
+      detail: `${formatDayMonth(match.kickoffAt)} · ${SIDE_LABEL[match.clubSide]}`,
+      venue: match.venueName ? clampText(match.venueName, 34) : null,
+    })),
+    tileWidth,
+    rowHeight,
+    s,
+    wide,
+    horizontal,
+    base: {
+      label: (wide ? 28 : 38) * s * grow,
+      detail: (wide ? 20 : 27) * s * grow,
+      time: (wide ? 80 : horizontal ? 320 : 230) * s,
+      crest: (wide ? 48 : 110) * s * grow,
+    },
+  })
 
   return (
     <div style={{ display: 'flex', position: 'relative', width, height }}>
@@ -1271,7 +1494,11 @@ function ScheduleCard({ data, layout }: { data: WeekendCardData; layout: Layout 
           fontFamily: MD_TEXT,
         }}
       >
-        {data.sponsor && <Sponsor name={data.sponsor} size={(wide ? 18 : 26) * s} />}
+        {data.topLine && sponsorHeight > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <TopLine line={data.topLine} size={lineSize} />
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 * s }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
@@ -1298,7 +1525,7 @@ function ScheduleCard({ data, layout }: { data: WeekendCardData; layout: Layout 
               {weekendTitle(data.saturday)}
             </div>
           </div>
-          <Crest team={{ name: data.clubName, crest: data.clubCrest }} size={(wide ? 80 : 130) * s} />
+          <MatchdayCrest team={{ name: data.clubName, crest: data.clubCrest }} size={(wide ? 80 : 130) * s} />
         </div>
         {shared && (
           <div
@@ -1350,108 +1577,15 @@ function ScheduleCard({ data, layout }: { data: WeekendCardData; layout: Layout 
               key={row.map((match) => match.kickoffAt + match.seriesName).join()}
               style={{ display: 'flex', flex: 1, gap }}
             >
-              {row.map((match) => {
-                const rival = rivalOf(match)
-                const versus = `vs ${clampText(rival.name, 80)}`
-                const time = matchTime(match)
-                const inner = tileWidth - (wide ? 28 : 44) * s
-                const versusSize = fitDisplaySize(versus, inner, label * 1.05, 2, label * 0.5, CHAR_EM.bebas)
-                // Un rival en dos líneas le quita alto a la hora: así la tarjeta conserva su margen interno.
-                const versusExtra = shared
-                  ? 0
-                  : (displayLines(versus, inner, versusSize, CHAR_EM.bebas) - 1) * versusSize
-                const crestSize = Math.min(timeCap - versusExtra, crestCap)
-                // La hora también debe caber a lo ancho, junto al escudo del rival.
-                const free = inner - (shared ? 0 : crestSize + 12 * s)
-                const timeSize = Math.min(timeCap - versusExtra, free / (time.length * CHAR_EM.bebas))
-                return (
-                  <div
-                    key={`${match.kickoffAt}-${match.seriesName}`}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      width: tileWidth,
-                      backgroundColor: 'rgba(20, 20, 20, 0.82)',
-                      borderTop: `${8 * s}px solid ${ACCENT}`,
-                      padding: `${(wide ? 10 : 18) * s}px ${(wide ? 14 : 22) * s}px`,
-                      gap: 2 * s,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        fontFamily: MD_DISPLAY,
-                        fontSize: label,
-                        letterSpacing: label * 0.03,
-                        color: ACCENT,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {clampText(match.seriesName, 24)}
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 12 * s,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          fontFamily: MD_DISPLAY,
-                          fontSize: timeSize,
-                          lineHeight: 0.95,
-                        }}
-                      >
-                        {time}
-                      </div>
-                      {!shared && <MatchdayCrest team={rival} size={crestSize} />}
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        fontWeight: 600,
-                        fontSize: detail,
-                        letterSpacing: detail * 0.04,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {[formatDayMonth(match.kickoffAt), SIDE_LABEL[match.clubSide]].join(' · ')}
-                    </div>
-                    {match.venueName && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          fontWeight: 500,
-                          fontSize: detail,
-                          letterSpacing: detail * 0.04,
-                          textTransform: 'uppercase',
-                          color: whiteAlpha(0.7),
-                        }}
-                      >
-                        {clampText(match.venueName, columns > 2 ? 22 : 34)}
-                      </div>
-                    )}
-                    {!shared && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          fontFamily: MD_DISPLAY,
-                          fontSize: versusSize,
-                          lineHeight: 1,
-                          textTransform: 'uppercase',
-                          marginTop: 4 * s,
-                        }}
-                      >
-                        {versus}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              {row.map((match) => (
+                <ScheduleTile
+                  key={`${match.kickoffAt}-${match.seriesName}`}
+                  match={match}
+                  rival={shared ? null : rivalOf(match)}
+                  width={tileWidth}
+                  tile={tile}
+                />
+              ))}
             </div>
           ))}
         </div>
@@ -1461,6 +1595,131 @@ function ScheduleCard({ data, layout }: { data: WeekendCardData; layout: Layout 
           >{`y ${rest} partidos más en el sitio`}</div>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Un tile de la programación con los tamaños comunes de la imagen (`scheduleTileLayout`). */
+function ScheduleTile({
+  match,
+  rival,
+  width,
+  tile,
+}: {
+  match: CardMatch
+  rival: CardTeam | null
+  width: number
+  tile: ScheduleLayout
+}) {
+  const text = (size: number, weight: 500 | 600) =>
+    ({
+      display: 'flex',
+      fontWeight: weight,
+      fontSize: size,
+      lineHeight: TILE_LINE.detail,
+      letterSpacing: size * 0.04,
+      textTransform: 'uppercase',
+      whiteSpace: 'nowrap',
+    }) as const
+  const label = (
+    <div
+      style={{
+        display: 'flex',
+        fontFamily: MD_DISPLAY,
+        fontSize: tile.label,
+        lineHeight: TILE_LINE.label,
+        letterSpacing: tile.label * 0.03,
+        textTransform: 'uppercase',
+      }}
+    >
+      {clampText(match.seriesName, 24)}
+    </div>
+  )
+  const time = (
+    <div style={{ display: 'flex', fontFamily: MD_DISPLAY, fontSize: tile.time, lineHeight: TILE_LINE.time }}>
+      {matchTime(match)}
+    </div>
+  )
+  // Satori no admite fragmentos anidados (los dibuja como una fila sin ancho): todo va en divs.
+  const details = (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        ...(tile.horizontal ? { flex: 1 } : {}),
+        gap: tile.gap,
+      }}
+    >
+      <div style={{ ...text(tile.detail, 600), whiteSpace: 'pre' }}>
+        {`${formatDayMonth(match.kickoffAt)} · `}
+        <div style={{ display: 'flex', color: match.clubSide === 'visita' ? ACCENT : PAPER }}>
+          {SIDE_LABEL[match.clubSide]}
+        </div>
+      </div>
+      {tile.showVenue && match.venueName && (
+        <div style={{ ...text(tile.venue, 500), color: whiteAlpha(0.7) }}>
+          {clampText(match.venueName, 34)}
+        </div>
+      )}
+      {rival && (
+        <div
+          style={{
+            display: 'flex',
+            fontFamily: MD_DISPLAY,
+            fontSize: tile.versus,
+            lineHeight: TILE_LINE.versus,
+            textTransform: 'uppercase',
+          }}
+        >
+          {`vs ${clampText(rival.name, 80)}`}
+        </div>
+      )}
+    </div>
+  )
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: tile.horizontal ? 'row' : 'column',
+        alignItems: tile.horizontal ? 'center' : 'stretch',
+        justifyContent: 'center',
+        width,
+        backgroundColor: 'rgba(20, 20, 20, 0.82)',
+        // Blanco: en el matchday el naranjo queda para los acentos (regla de color).
+        borderTop: `${tile.border}px solid ${whiteAlpha(0.85)}`,
+        padding: `${tile.padY}px ${tile.padX}px`,
+        gap: tile.horizontal ? tile.gap * 7 : tile.gap,
+      }}
+    >
+      {tile.horizontal
+        ? [
+            <div
+              key="hora"
+              style={{ display: 'flex', flexDirection: 'column', width: tile.leftWidth, gap: tile.gap }}
+            >
+              {label}
+              {time}
+            </div>,
+            <div key="datos" style={{ display: 'flex', flex: 1 }}>
+              {details}
+            </div>,
+            rival ? <MatchdayCrest key="escudo" team={rival} size={tile.crest} /> : null,
+          ]
+        : [
+            <div key="serie" style={{ display: 'flex' }}>
+              {label}
+            </div>,
+            <div
+              key="hora"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+            >
+              {time}
+              {rival && <MatchdayCrest team={rival} size={tile.crest} />}
+            </div>,
+            <div key="datos" style={{ display: 'flex' }}>
+              {details}
+            </div>,
+          ]}
     </div>
   )
 }

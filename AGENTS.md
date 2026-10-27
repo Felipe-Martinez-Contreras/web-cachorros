@@ -198,9 +198,19 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   plantilla, sube su revisión en `DESIGN_REVISION` (`lib/cards.ts`): cambia la URL y la caché se regenera. Los
   colores salen de `lib/brand.ts` (copia de `tokens.css`, verificada por `tests/unit/share-brand.test.ts`).
   «Próximo partido», «Jornada» y «Programación» siguen la plantilla matchday del club (`docs/diseno/`, fuentes Bebas Neue y
-  Barlow Condensed). Las fotos y el auspiciador del matchday salen de `src/features/share/matchday.ts`
-  (`matchdayRevision()` entra en la versión: si cambian, o una foto pasa a «contiene menores», cambia la URL).
-  Satori no tiene filtros: el blanco y negro de las fotos lo hace sharp en `images.ts`, dentro de la cola.
+  Barlow Condensed). Las fotos y la línea sobre «MATCHDAY» salen de `src/features/share/matchday.ts`
+  (`matchdayRevision()` entra en la versión: si cambian las fotos, su punto focal o su zoom, la línea, o una foto
+  pasa a «contiene menores», cambia la URL). La línea (`social_publishing.facebook.topLine`: auspiciador, texto
+  o logo en blanco) sin guardar usa el auspiciador de las tarjetas si hay uno. En el matchday el naranjo va solo
+  en los acentos (torneo, «VS», «VISITA», destellos); todo lo demás en blanco.
+  Satori no tiene filtros: el blanco y negro de las fotos (con `focalCrop()`, `src/lib/images/focal-crop.ts`, la
+  misma regla que la vista previa de Medios) lo hace sharp en `images.ts`, dentro de la cola. Satori tampoco
+  admite fragmentos `<>` anidados (los dibuja como una fila sin ancho): dentro de una plantilla, usa `div`.
+  Los escudos del matchday van **sin disco** (`crest-card.ts`: quita el fondo blanco, recorta en círculo el de
+  color, agrega contorno claro a lo oscuro, o monocromo según `teams.card_crest_style`, que se elige en Rivales →
+  Escudos en las tarjetas); el estilo de los equipos entra en la versión. Las demás plantillas y el sitio
+  conservan el disco. Los tiles de «Programación» usan un solo juego de tamaños por imagen
+  (`lib/schedule-layout.ts`).
   Las fotos se guardan en `site_settings.social_publishing` (o en `social_publications.photo_ids` si se
   eligieron para un post) y siempre pasan por `assertPublishableMedia`. Con fotos elegidas, la vista previa
   sale de `GET /api/admin/tarjetas/[id]?fotos=` (con sesión), nunca de la ruta pública.

@@ -3,9 +3,10 @@ import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promise
 import path from 'node:path'
 import { env } from '@/lib/env'
 import { runHeavy } from '@/lib/heavy-queue'
+import { type FocalPoint, focalCrop } from '@/lib/images/focal-crop'
 import { logger } from '@/lib/logger'
-import type { MatchdayPhotoSource } from './dto'
-import { type ShareRequest, shareCachePath } from './lib/cards'
+import type { MatchdayPhotoSource, MatchdayTopLine } from './dto'
+import { MATCHDAY_CROP_RATIO, type ShareRequest, shareCachePath } from './lib/cards'
 import { loadShareCard, readMediaFile } from './queries'
 
 // Tarjetas generadas una vez por versión (especificación 2.8): se guardan en `SHARE_CACHE_DIR` y se
@@ -35,8 +36,12 @@ export async function getShareImage(request: ShareRequest, version: string): Pro
     const data = await loadShareCard(request)
     if (!data) return null
     if ((data.kind === 'match' || data.kind === 'jornada') && data.matchday) {
-      data.matchday.photos = await Promise.all(data.matchday.photoSources.map(matchdayPhoto))
+      data.matchday.photos = await Promise.all(
+        data.matchday.photoSources.map((source) => matchdayPhoto(source)),
+      )
+      await fillTopLineLogo(data.matchday.topLine)
     }
+    if (data.kind === 'weekend') await fillTopLineLogo(data.topLine)
     const started = performance.now()
     const { renderShareCard } = await import('./render')
     const bytes = await renderShareCard(data, request.format)
@@ -83,31 +88,24 @@ async function removeOldVersions(request: ShareRequest, current: string): Promis
   }
 }
 
-/** Tratamiento de cada panel del matchday, como la plantilla: blanco y negro, color y color (velo en el render). */
-const PANEL_TREATMENT = ['gris', 'color', 'color'] as const
-/** Proporción de los paneles (ancho / alto) y su tamaño: alcanza para el más alto (9:16) sin pesar de más. */
-const PANEL_RATIO = 0.4
+/** Proporción del recorte (ancho / alto) y su alto: alcanza para el panel más alto (9:16) sin pesar de más. */
+const PANEL_RATIO = MATCHDAY_CROP_RATIO
 const PANEL_HEIGHT = 1200
+/** Contraste del blanco y negro (alrededor del gris medio): los grises bajos pasan a negro profundo. */
+const PANEL_CONTRAST = 1.25
 
 /**
- * Foto de un panel como *data URI* JPEG: recortada a la proporción del panel alrededor de su punto focal y,
- * en el primero, en escala de grises (Satori no aplica filtros). `null` si el archivo no está.
+ * Foto de un panel como *data URI* JPEG: recortada a la proporción del panel alrededor de su punto focal
+ * (con su zoom) y en blanco y negro con contraste (Satori no aplica filtros). `null` si el archivo no está.
  */
-export async function matchdayPhoto(
-  source: MatchdayPhotoSource | null,
-  index: number,
-): Promise<string | null> {
+export async function matchdayPhoto(source: MatchdayPhotoSource | null): Promise<string | null> {
   if (!source) return null
   const bytes = await readMediaFile(source.file)
-  return bytes ? treatMatchdayPhoto(bytes, source, index) : null
+  return bytes ? treatMatchdayPhoto(bytes, source) : null
 }
 
 /** El recorte y el tratamiento de un panel a partir de los bytes de la foto (también lo usa `share-preview`). */
-export async function treatMatchdayPhoto(
-  bytes: Buffer,
-  focal: { focalX: number; focalY: number },
-  index: number,
-): Promise<string | null> {
+export async function treatMatchdayPhoto(bytes: Buffer, focal: FocalPoint): Promise<string | null> {
   const { default: sharp } = await import('sharp')
   // Primero se endereza según su EXIF, para que el recorte use las medidas reales.
   const { data, info } = await sharp(bytes, { limitInputPixels: 50_000_000 })
@@ -115,15 +113,60 @@ export async function treatMatchdayPhoto(
     .toBuffer({ resolveWithObject: true })
   const { width, height } = info
   if (width === 0 || height === 0) return null
-  // Recorte de la proporción del panel, centrado en el punto focal y sin salirse de la foto.
-  const cropWidth = Math.min(width, Math.round(height * PANEL_RATIO))
-  const cropHeight = Math.min(height, Math.round(cropWidth / PANEL_RATIO))
-  const left = Math.round(Math.min(Math.max(focal.focalX * width - cropWidth / 2, 0), width - cropWidth))
-  const top = Math.round(Math.min(Math.max(focal.focalY * height - cropHeight / 2, 0), height - cropHeight))
-  let pipeline = sharp(data)
-    .extract({ left, top, width: cropWidth, height: cropHeight })
+  const jpeg = await sharp(data)
+    .extract(focalCrop(width, height, PANEL_RATIO, focal))
     .resize({ height: PANEL_HEIGHT, withoutEnlargement: true })
-  if (PANEL_TREATMENT[index] === 'gris') pipeline = pipeline.grayscale()
-  const jpeg = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
+    .grayscale()
+    // Estira el rango (sin los extremos sueltos) y sube el contraste: negros profundos, blancos limpios.
+    .normalise({ lower: 1, upper: 99 })
+    .linear(PANEL_CONTRAST, -128 * (PANEL_CONTRAST - 1))
+    .jpeg({ quality: 82, mozjpeg: true })
+    .toBuffer()
   return `data:image/jpeg;base64,${jpeg.toString('base64')}`
+}
+
+async function fillTopLineLogo(line: MatchdayTopLine | null): Promise<void> {
+  if (line?.kind !== 'logo') return
+  const bytes = await readMediaFile(line.file)
+  line.src = bytes ? await whiteLogo(bytes) : null
+}
+
+/** Alto del logo de la línea superior: el doble de lo que ocupa en la historia (la más alta). */
+const LOGO_HEIGHT = 160
+
+/**
+ * Logo de la línea superior en blanco, como *data URI* PNG: su silueta (lo opaco). Si no tiene transparencia
+ * (un logo sobre fondo blanco), lo oscuro pasa a blanco y lo claro desaparece.
+ */
+export async function whiteLogo(bytes: Buffer): Promise<string | null> {
+  const { default: sharp } = await import('sharp')
+  const { data, info } = await sharp(bytes, { limitInputPixels: 50_000_000 })
+    .rotate()
+    .trim()
+    .resize({ height: LOGO_HEIGHT, withoutEnlargement: true })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const { width, height } = info
+  if (width === 0 || height === 0) return null
+  const alphaAt = (x: number, y: number) => data[(y * width + x) * 4 + 3] ?? 0
+  const opaque = [
+    alphaAt(0, 0),
+    alphaAt(width - 1, 0),
+    alphaAt(0, height - 1),
+    alphaAt(width - 1, height - 1),
+  ].every((alpha) => alpha >= 240)
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3] ?? 0
+    const light = (0.299 * (data[i] ?? 0) + 0.587 * (data[i + 1] ?? 0) + 0.114 * (data[i + 2] ?? 0)) / 255
+    // Sin transparencia: lo que no es casi blanco pasa a blanco pleno (con el borde suavizado).
+    data[i + 3] = opaque ? Math.round(alpha * Math.min(1, Math.max(0, (0.92 - light) / 0.25))) : alpha
+    data[i] = 255
+    data[i + 1] = 255
+    data[i + 2] = 255
+  }
+  const png = await sharp(data, { raw: { width, height, channels: 4 } })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+  return `data:image/png;base64,${png.toString('base64')}`
 }

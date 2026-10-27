@@ -134,10 +134,19 @@ const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = {
   gol: 'e1',
   resultados: 'e1',
   noticia: 'e1',
-  proximo: 'd4',
-  programacion: 'd4',
-  jornada: 'j1',
+  // m2 / p2 / j2: matchday v2 (fotos en blanco y negro, escudos sin disco, fondo con profundidad).
+  proximo: 'm2',
+  programacion: 'p2',
+  jornada: 'j2',
 }
+
+/**
+ * Proporción (ancho / alto) del recorte de las fotos del matchday: la del panel más angosto (la historia,
+ * 0,346). En los demás formatos Satori lo recorta al centro (arriba y abajo), que es el punto focal.
+ */
+export const MATCHDAY_CROP_RATIO = 0.34
+/** Proporción de un panel en el formato vertical (4:5), la que muestra la vista previa del panel → Medios. */
+export const MATCHDAY_PANEL_RATIO = 0.437
 
 /** Versión pública de una tarjeta: la de sus datos más la revisión del diseño de la plantilla. */
 export function withDesignRevision(template: ShareTemplate, version: string | number): string {
@@ -146,7 +155,7 @@ export function withDesignRevision(template: ShareTemplate, version: string | nu
 
 /**
  * Versión de la tarjeta de un partido: la del partido (`share_version`) y la revisión del diseño. «Próximo
- * partido» suma la del matchday (fotos y auspiciador de Configuración, o las elegidas para una publicación).
+ * partido» suma la del matchday (fotos, línea superior y estilo de los escudos de los dos equipos).
  */
 export function matchCardVersion(
   template: MatchTemplate,

@@ -5,6 +5,7 @@ import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { testDb } from './db-urls'
 import { cleanSport, createMatch, createPlayer, createSportFixture, type SportFixture } from './fixtures'
+import { actAs, ensureTestUsers } from './session'
 
 const { sql } = await import('@/db/client')
 const { uploadsDir } = await import('@/features/media/files')
@@ -12,6 +13,7 @@ const { processImage } = await import('@/lib/images/process')
 const { getShareImage, shareCacheDir } = await import('@/features/share/images')
 const { loadShareCard, shareVersionOf } = await import('@/features/share/queries')
 const route = await import('@/app/api/share/[plantilla]/[id]/[formato]/route')
+const crestRoute = await import('@/app/api/admin/escudos/[id]/[estilo]/route')
 
 const admin = postgres(testDb.adminUrl, { max: 1, onnotice: () => {} })
 let f: SportFixture
@@ -52,6 +54,26 @@ afterAll(async () => {
   await admin`delete from media_assets where alt_text = 'Escudo de tarjeta'`
   await admin.end()
   await sql.end()
+})
+
+describe('vista previa de los escudos en el panel', () => {
+  const get = (id: string, estilo: string) =>
+    crestRoute.GET(new Request(`http://localhost:3000/api/admin/escudos/${id}/${estilo}`), {
+      params: Promise.resolve({ id, estilo }),
+    })
+
+  it('pide sesión, valida el estilo y dibuja el escudo tratado en PNG', async () => {
+    await ensureTestUsers()
+    await actAs('nadie')
+    expect((await get(f.rivalTeamId, 'blanco')).status).toBe(401)
+    await actAs('admin')
+    expect((await get(f.rivalTeamId, 'dorado')).status).toBe(404)
+    const response = await get(f.rivalTeamId, 'grises')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('image/png')
+    const meta = await sharp(Buffer.from(await response.arrayBuffer())).metadata()
+    expect([meta.width, meta.height]).toEqual([240, 240])
+  })
 })
 
 describe('tarjetas para redes', () => {
@@ -97,11 +119,57 @@ describe('tarjetas para redes', () => {
     expect(files).toEqual([`${id}-v2e1-vertical.png`])
   })
 
+  it('matchday: la versión cambia con el estilo del escudo, el zoom de una foto y la línea superior', async () => {
+    const id = await createMatch(admin, f, 'tarjeta-matchday', 'programado')
+    const request = { template: 'proximo', id, format: 'vertical' } as const
+    const [photo] = await admin<{ id: string }[]>`
+      insert into media_assets (kind, storage_key, mime, bytes, alt_text, variants)
+      values ('imagen', 'tarjeta-matchday-foto', 'image/jpeg', 10, 'Escudo de tarjeta',
+        ${admin.json({ master: 'tarjeta-matchday-foto/master.jpg', webp: [] })}) returning id`
+    const withPhoto = { ...request, photos: [photo?.id ?? null, null, null] }
+    const version = async () => (await shareVersionOf(withPhoto))?.version
+    const initial = await version()
+    expect(initial).toMatch(/m2$/)
+
+    await admin`update teams set card_crest_style = 'blanco' where id = ${f.rivalTeamId}`
+    const monochrome = await version()
+    expect(monochrome).not.toBe(initial)
+
+    await admin`update media_assets set focal_zoom = 2 where id = ${photo?.id ?? null}`
+    const zoomed = await version()
+    expect(zoomed).not.toBe(monochrome)
+
+    const [settings] = await admin<{ value: unknown }[]>`
+      select social_publishing as value from site_settings where id = 1`
+    await admin`update site_settings set social_publishing = ${admin.json({
+      facebook: {
+        enabled: false,
+        weekday: 5,
+        time: '12:00',
+        publishResults: false,
+        topLine: { mode: 'texto', text: 'Asociación de prueba' },
+      },
+    })} where id = 1`
+    expect(await version()).not.toBe(zoomed)
+    const card = await loadShareCard(request)
+    expect(card?.kind === 'match' && card.matchday?.topLine).toEqual({
+      kind: 'texto',
+      text: 'Asociación de prueba',
+    })
+    // El escudo del matchday va sin disco, tratado aparte; los demás conservan el disco.
+    expect(card?.kind === 'match' && card.match.away.crest?.bare?.src).toMatch(/^data:image\/png;base64,/)
+    const result = await loadShareCard({ template: 'resultado', id, format: 'vertical' })
+    expect(result?.kind === 'match' && result.match.away.crest?.bare).toBeNull()
+
+    await admin`update site_settings set social_publishing = ${admin.json((settings?.value ?? null) as postgres.JSONValue)} where id = 1`
+    await admin`update teams set card_crest_style = 'color' where id = ${f.rivalTeamId}`
+  })
+
   it('la imagen Open Graph es JPEG de 1200 × 630 y pesa 300 KB o menos', async () => {
     const id = await createMatch(admin, f, 'tarjeta-og', 'programado')
     // La versión de la previa: la del partido, la del matchday (fotos y auspiciador) y la del diseño.
     const version = (await shareVersionOf({ template: 'proximo', id, format: 'og' }))?.version
-    expect(version).toMatch(/^1[0-9a-z]+d4$/)
+    expect(version).toMatch(/^1[0-9a-z]+m2$/)
     const response = await getCard('proximo', id, 'og', `?v=${version}`)
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('image/jpeg')
