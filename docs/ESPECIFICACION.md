@@ -1103,10 +1103,10 @@ base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-re
 | `app` | `ghcr.io/<org>/cachorros-web:<versión>` | Next.js standalone (sitio + panel + API) | 512 MB / 768 MB |
 | `db` | `postgres:18-alpine` | Base de datos | 256 MB / 384 MB |
 | `migrate` | Misma imagen que `app` | Aplica migraciones y termina | — |
-| `ops` | `ghcr.io/<org>/cachorros-ops:<versión>` | Tareas programadas, respaldos y pruebas de restauración | 96 MB |
+| `ops` | `ghcr.io/<org>/cachorros-ops:<versión>` | Tareas programadas, respaldos y pruebas de restauración | 192 MB |
 | `restore` | Misma imagen que `ops` (perfil `manual`) | Restauración bajo demanda | — |
 
-Los límites son topes, no reservas. Uso esperado en reposo: ≈ 450–550 MB en total, con 2 GB de swap como red de seguridad.
+Los límites son topes, no reservas. Uso esperado en reposo: ≈ 450–550 MB en total, con 2 GB de swap como red de seguridad. `ops` pasa la mayor parte del día casi sin memoria: su pico es el respaldo nocturno (rclone, en modo de bajo consumo), cuando el sitio tiene poco tráfico.
 
 ### 12.2 Dockerfile (multi-stage; referencia a ajustar)
 
@@ -1238,7 +1238,7 @@ services:
       - ops_data:/srv/ops            # último volcado local (restauración rápida y prueba semanal)
     depends_on:
       db: { condition: service_healthy }
-    deploy: { resources: { limits: { memory: 96m } } }
+    deploy: { resources: { limits: { memory: 192m } } }
     logging: *logging
 
   restore:                           # solo bajo demanda (12.8)
@@ -1488,12 +1488,13 @@ UPLOADS_DIR=/data/uploads
 SHARE_CACHE_DIR=/data/cache/share
 MAX_UPLOAD_MB=12
 
-# Recursos — perfil e2-micro (e2-small: 768m · 512 · 384m · 128MB · 512MB)
+# Recursos — perfil e2-micro (e2-small: 768m · 512 · 384m · 128MB · 512MB · 192m)
 APP_MEMORY_LIMIT=512m
 APP_NODE_HEAP_MB=320
 DB_MEMORY_LIMIT=256m
 PG_SHARED_BUFFERS=64MB
 PG_EFFECTIVE_CACHE_SIZE=256MB
+OPS_MEMORY_LIMIT=192m
 
 # Respaldos
 BACKUP_GCS_BUCKET=[COMPLETAR]
