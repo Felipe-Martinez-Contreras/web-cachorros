@@ -99,7 +99,7 @@ test('videos: nada de YouTube se carga antes del clic', async ({ page, baseURL }
     route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Video</title>' }),
   )
   await page.goto('/videos')
-  const facade = page.getByRole('link', { name: `Ver el video: ${title}` })
+  const facade = page.getByRole('link', { name: `Ver el video (${title})` })
   await expect(facade).toBeVisible()
   await expectAccessible(page)
   expect(outside).toEqual([])

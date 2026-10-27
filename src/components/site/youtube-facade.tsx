@@ -41,7 +41,6 @@ export function YoutubeFacade({
         event.preventDefault()
         setActive(true)
       }}
-      aria-label={`Ver el video: ${title}`}
       className="theme-dark relative grid aspect-video w-full place-content-center justify-items-center gap-2 overflow-hidden rounded-lg text-center no-underline"
     >
       {poster && (
@@ -55,7 +54,10 @@ export function YoutubeFacade({
       <span className="relative grid size-16 place-items-center rounded-full bg-accent text-ink">
         <Play aria-hidden="true" className="size-8" />
       </span>
-      <span className="relative text-lg font-bold text-(--fg)">Ver el video</span>
+      {/* El nombre accesible es el texto visible más el título (WCAG 2.5.3: incluye lo que se ve). */}
+      <span className="relative text-lg font-bold text-(--fg)">
+        Ver el video <span className="sr-only">({title})</span>
+      </span>
       <span className="relative text-meta text-(--muted)">Se carga desde YouTube al tocar</span>
     </a>
   )
