@@ -3,7 +3,8 @@
 # `db`, la app `app`, el volumen `uploads` con las imágenes del seed y `ci.env`. Cloud Storage se reemplaza por
 # una carpeta local (remoto rclone `local`) y la clave age es una de prueba generada aquí.
 # Verifica: tarea tick, respaldo cifrado (y que se descifra), copia de imágenes, prueba de restauración,
-# chequeo de disco, registro de un respaldo fallido y una restauración real con imágenes.
+# chequeo de disco, registro de un respaldo fallido, una restauración real con imágenes y un respaldo con
+# miles de imágenes dentro del límite de memoria de ops (el de compose.yaml, sin swap).
 set -euo pipefail
 
 BUCKET_DIR="$PWD/bucket-ci"
@@ -77,6 +78,33 @@ docker run --rm -v uploads:/u alpine test -f "$first_image" || fail 'la imagen b
 [[ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" == 200 ]] \
   || fail 'la portada no responde después de restaurar'
 
+# 6. Respaldo con muchas imágenes y el límite de memoria de ops (el default de compose.yaml) sin swap: si rclone
+#    no cabe, el kernel lo mata («Killed») y el respaldo falla, como pasó en la VM. 4.000 fotos chicas en 40
+#    carpetas y 30 grandes (8 MB): ejercitan la lista de archivos y los búferes de las transferencias.
+ops_limit=$(sed -n 's/.*OPS_MEMORY_LIMIT:-\([0-9]*[mg]\).*/\1/p' compose.yaml)
+[[ -n "$ops_limit" ]] || fail 'no se encontró el límite de memoria de ops en compose.yaml'
+many_files=4030
+# shellcheck disable=SC2016
+docker run --rm -v uploads_muchas:/u alpine sh -c '
+  for d in $(seq 1 40); do
+    mkdir -p "/u/$d"
+    for f in $(seq 1 100); do head -c 30000 /dev/urandom >"/u/$d/$f.webp"; done
+  done
+  mkdir -p /u/grandes
+  for f in $(seq 1 30); do head -c 8000000 /dev/urandom >"/u/grandes/$f.jpg"; done
+  chown -R 1001:1001 /u' || fail 'no se pudieron generar las imágenes de prueba'
+# Al terminar, el pico de memoria del contenedor (cgroup v2; incluye la caché de archivos, que se libera sola).
+# Las comillas simples son a propósito (aquí y arriba): lo expande el shell del contenedor.
+# shellcheck disable=SC2016
+peak=$(ops --memory "$ops_limit" --memory-swap "$ops_limit" -e BACKUP_GCS_BUCKET=/bucket/muchas \
+  -v uploads_muchas:/srv/app-data/uploads:ro -- \
+  sh -c 'backup.sh >&2 || exit 1; cat /sys/fs/cgroup/memory.peak 2>/dev/null || echo 0') \
+  || fail "backup.sh con ${many_files} imágenes no cupo en ${ops_limit} (revisa las opciones de rclone del Dockerfile de ops)"
+copied=$(find "$BUCKET_DIR/muchas/uploads" -type f | wc -l)
+(( copied == many_files )) || fail "se copiaron ${copied} de ${many_files} imágenes con el límite de memoria"
+peak_mb=$(( ${peak:-0} / 1024 / 1024 ))
+docker volume rm uploads_muchas >/dev/null || true
+
 # Las comillas invertidas son Markdown, no comandos.
 # shellcheck disable=SC2016
 {
@@ -91,5 +119,6 @@ docker run --rm -v uploads:/u alpine test -f "$first_image" || fail 'la imagen b
   echo '| Chequeo de disco | ok |'
   echo '| Respaldo fallido registrado en `ops_runs` | ok |'
   echo '| Restauración real (base + imágenes) con la app detenida | ok |'
+  echo "| Respaldo de ${many_files} imágenes con \`--memory ${ops_limit}\` sin swap | ok (pico ${peak_mb} MB, con caché de archivos) |"
 } >>"$SUMMARY"
 echo 'Imagen ops: todas las pruebas pasaron.'
