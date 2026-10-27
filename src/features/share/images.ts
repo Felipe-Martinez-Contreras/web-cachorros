@@ -34,7 +34,7 @@ export async function getShareImage(request: ShareRequest, version: string): Pro
 
     const data = await loadShareCard(request)
     if (!data) return null
-    if (data.kind === 'match' && data.matchday) {
+    if ((data.kind === 'match' || data.kind === 'jornada') && data.matchday) {
       data.matchday.photos = await Promise.all(data.matchday.photoSources.map(matchdayPhoto))
     }
     const started = performance.now()

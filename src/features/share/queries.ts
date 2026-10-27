@@ -1,9 +1,9 @@
 import 'server-only'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { and, asc, eq, gte, inArray, lt, ne } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, lt, ne, or } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { matches, mediaAssets, news, newsCategories, siteSettings, teams } from '@/db/schema'
+import { matches, mediaAssets, news, newsCategories, series, siteSettings, teams } from '@/db/schema'
 import type { MediaVariants } from '@/db/schema/media'
 import { formatMinute } from '@/features/matches/lib/match-clock'
 import { santiagoWallTime } from '@/features/matches/lib/schedule'
@@ -17,6 +17,7 @@ import { logger } from '@/lib/logger'
 import type { CardCrest, CardMatch, ShareCardData } from './dto'
 import {
   addDays,
+  jornadaCardVersion,
   lastClubGoal,
   matchCardVersion,
   type ShareRequest,
@@ -26,6 +27,7 @@ import {
   weekendOf,
   withDesignRevision,
 } from './lib/cards'
+import { jornadaStart, parseJornadaKey, selectJornadaMatches, weekendCardFor } from './lib/jornada'
 import { loadCardSponsor, loadMatchday, matchdayRevision } from './matchday'
 
 export type ShareVersion = { version: string; slug: string }
@@ -56,6 +58,12 @@ export async function shareVersionOf(request: ShareRequest): Promise<ShareVersio
       const sponsor = request.template === 'programacion' ? ((await loadCardSponsor()) ?? '') : ''
       const hash = shortHash([...rows.map((row) => `${row.id}.${row.version}`), sponsor])
       return { version: withDesignRevision(request.template, hash), slug: request.id }
+    }
+    case 'jornada': {
+      const rows = await jornadaMatches(request.id, request.series)
+      if (rows.length === 0) return null
+      const matchday = await matchdayRevision(request.photos)
+      return { version: jornadaCardVersion(rows, matchday), slug: request.id.slice(0, 10) }
     }
     case 'noticia': {
       const [row] = await db
@@ -88,9 +96,78 @@ async function weekendRows(saturday: string, template: 'programacion' | 'resulta
     .limit(MAX_WEEKEND_MATCHES)
 }
 
-/** Partidos del club de un fin de semana que todavía se juegan (para la programación), por hora. */
-export async function weekendMatchIds(saturday: string): Promise<string[]> {
-  return (await weekendRows(saturday, 'programacion')).map((row) => row.id)
+/**
+ * Partidos programados del club de una jornada en la tarjeta, en orden de juego y con su versión: con
+ * `seriesIds`, solo los de esas series; sin ellas, los que caben.
+ */
+export async function jornadaMatches(key: string, seriesIds?: readonly string[] | null) {
+  return selectJornadaMatches(await jornadaAllMatches(key), seriesIds)
+}
+
+/** Todos los partidos programados del club de una jornada (día en Santiago y rival), en orden de juego. */
+export async function jornadaAllMatches(key: string) {
+  const parsed = parseJornadaKey(key)
+  if (!parsed) return []
+  const rows = await db
+    .select({
+      id: matches.id,
+      version: matches.shareVersion,
+      kickoffAt: matches.kickoffAt,
+      seriesId: matches.seriesId,
+      seriesName: series.name,
+      seriesOrder: series.sortOrder,
+    })
+    .from(matches)
+    .innerJoin(series, eq(series.id, matches.seriesId))
+    .where(
+      and(
+        isClubMatch,
+        eq(matches.status, 'programado'),
+        gte(matches.kickoffAt, santiagoWallTime(parsed.date, '00:00')),
+        lt(matches.kickoffAt, santiagoWallTime(addDays(parsed.date, 1), '00:00')),
+        or(
+          and(eq(matches.clubSide, 'local'), eq(matches.awayTeamId, parsed.rivalId)),
+          and(eq(matches.clubSide, 'visita'), eq(matches.homeTeamId, parsed.rivalId)),
+        ),
+      ),
+    )
+    .orderBy(asc(matches.kickoffAt), asc(series.sortOrder))
+    .limit(30)
+  return rows.map((row) => ({ ...row, rivalId: parsed.rivalId }))
+}
+
+/**
+ * Qué tarjeta lleva la publicación automática de un fin de semana (`weekendCardFor`): «Próximo partido» si
+ * hay uno solo, «Jornada» si todos son una sola jornada o la grilla «Programación». `null` sin partidos.
+ */
+export async function weekendCardOf(saturday: string) {
+  const rows = await db
+    .select({
+      id: matches.id,
+      kickoffAt: matches.kickoffAt,
+      status: matches.status,
+      clubSide: matches.clubSide,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
+      seriesId: matches.seriesId,
+      seriesOrder: series.sortOrder,
+    })
+    .from(matches)
+    .innerJoin(series, eq(series.id, matches.seriesId))
+    .where(
+      and(
+        isClubMatch,
+        ne(matches.status, 'cancelado'),
+        gte(matches.kickoffAt, santiagoWallTime(saturday, '00:00')),
+        lt(matches.kickoffAt, santiagoWallTime(addDays(saturday, 2), '00:00')),
+      ),
+    )
+    .orderBy(asc(matches.kickoffAt))
+    .limit(MAX_WEEKEND_MATCHES)
+  const decision = weekendCardFor(
+    rows.map((row) => ({ ...row, rivalId: row.clubSide === 'local' ? row.awayTeamId : row.homeTeamId })),
+  )
+  return decision ? { ...decision, matchIds: rows.map((row) => row.id) } : null
 }
 
 /** Lo que cabe en una tarjeta de fin de semana. */
@@ -145,6 +222,30 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
         saturday: weekendOf(request.id),
         matches: await Promise.all(rows.map(toCardMatch)),
         sponsor: request.template === 'programacion' ? await loadCardSponsor() : null,
+      }
+    }
+    case 'jornada': {
+      const ids = (await jornadaMatches(request.id, request.series)).map((row) => row.id)
+      if (ids.length === 0) return null
+      const rows = await selectMatches().where(inArray(matches.id, ids))
+      // En el orden de juego de la jornada.
+      const ordered = ids.flatMap((id) => rows.filter((row) => row.id === id))
+      const [first] = ordered
+      const start = jornadaStart(ordered)
+      if (!first || !start) return null
+      const competitions = new Set(ordered.map((row) => row.competitionName))
+      const [matchday, card] = await Promise.all([loadMatchday(request.photos), toCardMatch(first)])
+      return {
+        kind: 'jornada',
+        template: 'jornada',
+        clubName: club.name,
+        match: {
+          ...card,
+          kickoffAt: start,
+          competitionName: competitions.size === 1 ? first.competitionName : '',
+        },
+        series: ordered.map((row) => row.seriesName),
+        matchday,
       }
     }
     case 'noticia': {

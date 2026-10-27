@@ -4,13 +4,13 @@ import { db } from '@/db/client'
 import { socialPublications } from '@/db/schema'
 import { getShareImage } from '@/features/share/images'
 import type { ShareRequest } from '@/features/share/lib/cards'
-import { loadShareCard, shareVersionOf, weekendMatchIds } from '@/features/share/queries'
+import { loadShareCard, shareVersionOf, weekendCardOf } from '@/features/share/queries'
 import { audit } from '@/lib/audit'
 import { env } from '@/lib/env'
 import { publicationKindLabels } from '@/lib/labels'
 import { logger } from '@/lib/logger'
 import type { PublishChannel } from './channels/types'
-import { nextMatchCaption, resultCaption, weekendCaption } from './lib/caption'
+import { jornadaCaption, nextMatchCaption, resultCaption, weekendCaption } from './lib/caption'
 import {
   type GraphFailure,
   isPublishable,
@@ -26,37 +26,54 @@ import {
 /** Las publicaciones van en 4:5: ocupan más pantalla en el feed del celular. */
 const PUBLISH_FORMAT = 'vertical' as const
 
-/** La tarjeta de una publicación. `photos`: las del matchday elegidas para ella (solo «Próximo partido»). */
+/**
+ * La tarjeta de una publicación. `photos`: las del matchday elegidas para ella («Próximo partido» y
+ * «Jornada»); `series`: las series marcadas (solo «Jornada»).
+ */
 export function shareRequestFor(
   kind: PublicationKind,
   subjectKey: string,
   photos?: readonly (string | null)[] | null,
+  series?: readonly string[] | null,
 ): ShareRequest {
   const request: ShareRequest = { template: kind, id: subjectKey, format: PUBLISH_FORMAT }
-  return kind === 'proximo' && photos ? { ...request, photos } : request
+  if (kind === 'proximo') return photos ? { ...request, photos } : request
+  if (kind !== 'jornada') return request
+  return { ...request, ...(photos ? { photos } : {}), ...(series ? { series } : {}) }
 }
 
 const siteLink = (path: string) => new URL(path, env.SITE_URL).toString()
 
 export type PublicationContent = {
-  /** La tarjeta que se sube (la programación de un solo partido usa la de «Próximo partido»). */
+  /**
+   * La tarjeta que se sube (la programación de un solo partido usa la de «Próximo partido», y la de una sola
+   * jornada, la de «Jornada»).
+   */
   request: ShareRequest
   version: string
   caption: string
   slug: string
 }
 
-/** Versión vigente de la tarjeta y el texto sugerido; `null` si el partido o el fin de semana ya no aplica. */
+/**
+ * Versión vigente de la tarjeta y el texto sugerido; `null` si el partido, la jornada o el fin de semana ya
+ * no aplica.
+ */
 export async function publicationContent(
   kind: PublicationKind,
   subjectKey: string,
   photos?: readonly (string | null)[] | null,
+  series?: readonly string[] | null,
 ): Promise<PublicationContent | null> {
+  if (kind === 'jornada') return jornadaContent(subjectKey, photos, series)
   if (kind === 'programacion') {
-    // Con un solo partido el fin de semana, la tarjeta matchday de ese partido dice más que una grilla.
-    const ids = await weekendMatchIds(subjectKey)
-    const [only] = ids
-    if (ids.length === 1 && only) return matchContent('proximo', only, 'Partido del fin de semana')
+    // Un solo partido o una sola jornada: la tarjeta matchday dice más que una grilla (y sigue siendo un post).
+    const weekend = await weekendCardOf(subjectKey)
+    const [only] = weekend?.matchIds ?? []
+    if (weekend?.card === 'proximo' && only) return matchContent('proximo', only, 'Partido del fin de semana')
+    if (weekend?.card === 'jornada' && weekend.jornadaKey) {
+      return jornadaContent(weekend.jornadaKey, null, null, 'Jornada del fin de semana')
+    }
   }
   const request = shareRequestFor(kind, subjectKey)
   if (request.template === 'programacion') {
@@ -66,6 +83,19 @@ export async function publicationContent(
     return { request, ...current, caption: weekendCaption(data, siteLink('/partidos')) }
   }
   return matchContent(kind, subjectKey, undefined, photos)
+}
+
+async function jornadaContent(
+  key: string,
+  photos: readonly (string | null)[] | null | undefined,
+  series: readonly string[] | null | undefined,
+  heading?: string,
+): Promise<PublicationContent | null> {
+  const request = shareRequestFor('jornada', key, photos, series)
+  const current = await shareVersionOf(request)
+  const data = current ? await loadShareCard(request) : null
+  if (!current || data?.kind !== 'jornada') return null
+  return { request, ...current, caption: jornadaCaption(data, siteLink('/partidos'), heading) }
 }
 
 async function matchContent(
@@ -117,14 +147,21 @@ export async function processPublication(
   if (!claimed) return { status: 'omitida' }
 
   const subject = { kind: claimed.kind, subject: claimed.subjectKey, channel: claimed.channel }
-  const content = await publicationContent(claimed.kind, claimed.subjectKey, claimed.photoIds).catch(
-    (error: unknown) => {
-      logger.error({ err: error, ...subject }, 'redes: no se pudo preparar la publicación')
-      return undefined
-    },
-  )
+  const content = await publicationContent(
+    claimed.kind,
+    claimed.subjectKey,
+    claimed.photoIds,
+    claimed.seriesIds,
+  ).catch((error: unknown) => {
+    logger.error({ err: error, ...subject }, 'redes: no se pudo preparar la publicación')
+    return undefined
+  })
   if (content === null) {
-    return finishWith(claimed, 'El partido o el fin de semana ya no está disponible para publicar.', now)
+    return finishWith(
+      claimed,
+      'El partido, la jornada o el fin de semana ya no está disponible para publicar.',
+      now,
+    )
   }
   const image = content
     ? await getShareImage(content.request, content.version).catch((error: unknown) => {

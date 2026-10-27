@@ -17,7 +17,7 @@ import { publicationKind, publicationStatus, publicationTrigger, socialChannel }
 import { matches } from './sport'
 
 /**
- * Publicaciones en redes (ADR 0009): una fila por canal, tipo y sujeto (partido o fin de semana). El índice
+ * Publicaciones en redes (ADR 0009): una fila por canal, tipo y sujeto (partido, fin de semana o jornada). El índice
  * único es la barrera de idempotencia: lo mismo nunca se publica dos veces. Los fallos se reintentan desde
  * la tarea `tick` y quedan visibles en el panel.
  */
@@ -27,7 +27,7 @@ export const socialPublications = pgTable(
     id: id(),
     channel: socialChannel('channel').notNull(),
     kind: publicationKind('kind').notNull(),
-    /** uuid del partido o sábado `YYYY-MM-DD` del fin de semana. */
+    /** uuid del partido, sábado `YYYY-MM-DD` del fin de semana o clave `AAAA-MM-DD_<rivalId>` de la jornada. */
     subjectKey: text('subject_key').notNull(),
     matchId: uuid('match_id').references(() => matches.id, { onDelete: 'set null' }),
     weekend: date('weekend'),
@@ -36,6 +36,8 @@ export const socialPublications = pgTable(
     message: text('message'),
     /** Fotos del matchday elegidas para esta publicación (`null`: las de Configuración). */
     photoIds: jsonb('photo_ids').$type<(string | null)[]>(),
+    /** Solo «Jornada»: las series marcadas para esta publicación (`null`: todas las de la jornada). */
+    seriesIds: jsonb('series_ids').$type<string[]>(),
     imageVersion: text('image_version'),
     status: publicationStatus('status').notNull().default('pendiente'),
     attempts: smallint('attempts').notNull().default(0),
