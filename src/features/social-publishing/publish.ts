@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { socialPublications } from '@/db/schema'
+import { mediaAssets, socialPublications } from '@/db/schema'
 import { getShareImage } from '@/features/share/images'
 import type { ShareRequest } from '@/features/share/lib/cards'
 import { loadShareCard, shareVersionOf, weekendCardOf } from '@/features/share/queries'
@@ -10,6 +10,7 @@ import { env } from '@/lib/env'
 import { publicationKindLabels } from '@/lib/labels'
 import { logger } from '@/lib/logger'
 import type { PublishChannel } from './channels/types'
+import { loadFacebookSettings } from './config'
 import { jornadaCaption, nextMatchCaption, resultCaption, weekendCaption } from './lib/caption'
 import {
   type GraphFailure,
@@ -18,6 +19,8 @@ import {
   type PublicationKind,
   statusAfterFailure,
 } from './lib/rules'
+import { withFallbackPhotos } from './lib/scheduling'
+import { checkScheduled } from './scheduled'
 
 // Publicar una fila de `social_publications` (ADR 0009): se toma con bloqueo para que dos procesos no la
 // envíen a la vez, se dibuja la tarjeta (caché y cola de 1 de `share`), se publica y se registra el
@@ -122,35 +125,78 @@ export type ProcessOutcome =
   | { status: 'omitida' }
 
 /**
- * Intenta publicar la fila `id`. Si otro proceso ya la tomó, o no le toca (publicada, incierta o esperando
- * su reintento), no hace nada (`omitida`).
+ * Las fotos elegidas que ya no se pueden publicar (borradas o marcadas «contiene menores» después de elegirlas)
+ * se reemplazan por la de respaldo de Ajustes en la misma posición, o quedan en gris: nunca sale una foto
+ * vetada y el post sale igual.
+ */
+async function publishablePhotos(
+  photos: readonly (string | null)[] | null,
+): Promise<{ photos: (string | null)[] | null; replaced: number }> {
+  if (!photos) return { photos: null, replaced: 0 }
+  const defaults = (await loadFacebookSettings()).photos ?? [null, null, null]
+  const ids = [...photos, ...defaults].filter((photo): photo is string => Boolean(photo))
+  const usable =
+    ids.length > 0
+      ? await db
+          .select({ id: mediaAssets.id })
+          .from(mediaAssets)
+          .where(
+            and(
+              inArray(mediaAssets.id, ids),
+              eq(mediaAssets.kind, 'imagen'),
+              eq(mediaAssets.containsMinors, false),
+            ),
+          )
+      : []
+  return withFallbackPhotos(photos, defaults, new Set(usable.map((row) => row.id)))
+}
+
+/**
+ * Intenta publicar la fila `id`. Si otro proceso ya la tomó, o no le toca (publicada, incierta, esperando
+ * su reintento o su hora), no hace nada (`omitida`). Una programada vuelve a pasar por sus seguros dentro del
+ * bloqueo: si el partido cambió o ya empezó, se descarta con el motivo.
  */
 export async function processPublication(
   id: string,
   channel: PublishChannel,
   now = new Date(),
 ): Promise<ProcessOutcome> {
-  const claimed = await db.transaction(async (tx) => {
+  const taken = await db.transaction(async (tx) => {
     const [row] = await tx
       .select()
       .from(socialPublications)
-      .where(and(eq(socialPublications.id, id), inArray(socialPublications.status, ['pendiente', 'error'])))
+      .where(
+        and(
+          eq(socialPublications.id, id),
+          inArray(socialPublications.status, ['pendiente', 'error', 'programada']),
+        ),
+      )
       .for('update', { skipLocked: true })
     if (!row || !isPublishable(row, now)) return null
+    if (row.scheduledAt) {
+      const guard = await checkScheduled(row, now, true, tx)
+      if (!guard.ok) return { discard: true as const, row, message: guard.message }
+    }
     const attempts = row.attempts + 1
     await tx
       .update(socialPublications)
       .set({ status: 'publicando', attempts, nextAttemptAt: null, updatedAt: now })
       .where(eq(socialPublications.id, id))
-    return { ...row, attempts }
+    return { discard: false as const, row: { ...row, attempts } }
   })
-  if (!claimed) return { status: 'omitida' }
+  if (!taken) return { status: 'omitida' }
+  if (taken.discard) return finishWith(taken.row, taken.message, now)
+  const claimed = taken.row
 
   const subject = { kind: claimed.kind, subject: claimed.subjectKey, channel: claimed.channel }
+  const photos = await publishablePhotos(claimed.photoIds)
+  if (photos.replaced > 0) {
+    logger.warn({ ...subject, replaced: photos.replaced }, 'redes: fotos reemplazadas por las de respaldo')
+  }
   const content = await publicationContent(
     claimed.kind,
     claimed.subjectKey,
-    claimed.photoIds,
+    photos.photos,
     claimed.seriesIds,
   ).catch((error: unknown) => {
     logger.error({ err: error, ...subject }, 'redes: no se pudo preparar la publicación')
@@ -192,6 +238,7 @@ export async function processPublication(
       .set({
         status: 'publicado',
         message: caption,
+        photoIds: photos.photos,
         imageVersion: content.version,
         externalId: result.externalId,
         externalUrl: result.url,
@@ -204,7 +251,13 @@ export async function processPublication(
       entityType: 'social_publication',
       entityId: claimed.id,
       summary: `Publicó en ${channelName(claimed.channel)}: ${kindName(claimed.kind)}`,
-      meta: { ...subject, trigger: claimed.trigger, postId: result.externalId },
+      meta: {
+        ...subject,
+        trigger: claimed.trigger,
+        scheduled: claimed.scheduledAt !== null,
+        postId: result.externalId,
+        ...(photos.replaced > 0 ? { replacedPhotos: photos.replaced } : {}),
+      },
     })
   })
   logger.info({ ...subject, postId: result.externalId }, 'redes: publicado')
