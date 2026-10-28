@@ -303,7 +303,7 @@ export const crestCardStyleLabels: Labels<typeof crestCardStyle> = {
   grises: 'Monocromo en grises',
 }
 
-/** Línea pequeña sobre «MATCHDAY» en las tarjetas (Configuración → Facebook). */
+/** Línea pequeña sobre «MATCHDAY» en las tarjetas (Facebook → Ajustes). */
 export const topLineModeLabels = {
   ninguna: 'Sin línea',
   auspiciador: 'Auspiciador de las tarjetas («POWERED BY …»)',

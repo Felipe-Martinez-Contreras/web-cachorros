@@ -94,8 +94,8 @@ export default async function JornadaPage({ params, searchParams }: Props) {
                 Series y fotos
               </h2>
               <p className="text-neutral-600">
-                Por defecto van todas las series y las fotos de Configuración → Facebook. Lo que cambies aquí
-                vale solo para esta tarjeta.
+                Por defecto van todas las series y las fotos de Facebook → Ajustes. Lo que cambies aquí vale
+                solo para esta tarjeta.
               </p>
               <JornadaOptionsForm
                 action={elegirOpcionesJornada.bind(null, jornada.key)}
