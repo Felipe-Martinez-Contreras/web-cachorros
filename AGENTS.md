@@ -308,6 +308,12 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   no se re-codifican y se sirven con `Content-Security-Policy: sandbox` y `nosniff`. En un formulario se suben con
   el campo `document` de `EntityForm`; el archivo de un documento debe ser `kind = 'documento'` y, si queda sin
   uso al reemplazarlo o eliminarlo, se borra con sus archivos.
+- **La cola de imágenes (`runHeavy`) es solo para procesar:** primero se leen los datos (BD y archivos), se
+  suelta la conexión y recién después se entra a la cola; nunca una consulta ni una transacción dentro. Si la
+  imagen la pide un navegador, se pasa `request.signal` (`runHeavy(tarea, { signal })`): lo abandonado no se
+  procesa (`QueueAbortedError` → 499). Lo que se dibuja para el panel se guarda en caché por versión (las
+  vistas previas de escudos, `features/share/crest-preview.ts`); en la e2-micro cada dibujo cuesta segundos de
+  CPU y sin caché deja al sitio sin CPU (incidente sha-8191eed, `docs/despliegue.md` 7.1).
 - sharp se carga solo al procesar una imagen (`import()` dentro de `storeUploadedImage`). Para borrar archivos
   usa `src/features/media/files.ts` (`uploadsDir()`, `removeMediaFiles()`), que no arrastra sharp: así una acción
   que solo borra no lo carga.
