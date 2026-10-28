@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { adminSql } from './db'
-import { ADMIN, expectAccessible, login } from './support'
+import { ADMIN, drawCardPreview, expectAccessible, login } from './support'
 
 // Publicación en Facebook contra la Graph API simulada (`graph-mock.mjs`): nunca se llama a Facebook real.
 
@@ -29,7 +29,9 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
 
   // 1. Activar la publicación y probar la conexión.
+  // La dirección de antes lleva a Facebook → Ajustes.
   await page.goto('/admin/configuracion/facebook')
+  await expect(page).toHaveURL(/\/admin\/facebook\/ajustes$/)
   await expect(page.getByRole('heading', { name: 'Facebook', level: 1 })).toBeVisible()
   await expect(page.getByText('Sitio de pruebas con publicación permitida')).toBeVisible()
   // El formulario se habilita al hidratar: un clic anterior se perdería.
@@ -38,10 +40,11 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   await expect(async () => {
     await enable.check()
   }).toPass()
-  await expect(page.getByRole('combobox', { name: 'Día de la programación' })).toHaveValue('5')
+  // La semanal es secundaria y viene apagada.
+  await expect(page.getByRole('checkbox', { name: /^Publicación automática semanal/ })).not.toBeChecked()
   await expectAccessible(page)
   await page.getByRole('button', { name: 'Guardar' }).click()
-  await expect(page.getByText('Configuración de Facebook guardada.')).toBeVisible()
+  await expect(page.getByText('Ajustes de Facebook guardados.')).toBeVisible()
   await page.getByRole('button', { name: 'Probar conexión' }).click()
   await expect(page.getByText('La conexión con la página de Facebook funciona.')).toBeVisible()
 
@@ -64,11 +67,10 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   // 3. Desde la ficha: vista previa de la tarjeta 4:5 y texto sugerido, editable.
   await page.goto(`/admin/partidos/${match?.id}`)
   const section = page.getByRole('region', { name: 'Facebook' })
-  await section.getByRole('link', { name: 'Publicar en Facebook' }).click()
+  await section.getByRole('link', { name: 'Publicar o programar en Facebook' }).click()
+  await expect(page).toHaveURL(new RegExp(`/admin/partidos/${match?.id}/facebook$`), { timeout: 15_000 })
   await expect(page.getByRole('heading', { name: 'Publicar en Facebook', level: 1 })).toBeVisible()
-  const preview = page.getByRole('img', { name: /Tarjeta «Próximo partido» que se subirá a Facebook/ })
-  await expect(preview).toBeVisible()
-  await expect.poll(() => preview.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1080)
+  await drawCardPreview(page, 'Tarjeta «Próximo partido» que se subirá a Facebook')
   const text = page.getByRole('textbox', { name: 'Texto de la publicación' })
   await expect(text).toHaveValue(/^⚽ Próximo partido · Honor/)
   await expect(text).toHaveValue(/Más información: http:\/\/localhost:\d+\/partidos\//)
@@ -76,7 +78,10 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
 
   const caption = `E2E previa revisada a mano (${testInfo.project.name})\n¡Vamos!`
   await text.fill(caption)
-  await page.getByRole('button', { name: 'Publicar en Facebook' }).click()
+  // Por defecto ofrece programarla (el partido es en meses); aquí se publica ahora.
+  await expect(page.getByRole('combobox', { name: 'Cuándo' })).toHaveValue('programar')
+  await page.getByRole('combobox', { name: 'Cuándo' }).selectOption({ label: 'Publicar ahora' })
+  await page.getByRole('button', { name: 'Publicar ahora' }).click()
   await expect(page.getByText('Publicado en Facebook.')).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/admin/partidos/${match?.id}$`))
 
@@ -86,9 +91,10 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
     'href',
     /^https:\/\/www\.facebook\.com\/1000000000001_\d+$/,
   )
-  await expect(section.getByRole('link', { name: 'Publicar en Facebook' })).toHaveCount(0)
+  await expect(section.getByRole('link', { name: 'Publicar o programar en Facebook' })).toHaveCount(0)
   await page.goto(`/admin/partidos/${match?.id}/facebook`)
-  await expect(page).toHaveURL(new RegExp(`/admin/partidos/${match?.id}$`))
+  await expect(page.getByRole('button', { name: 'Publicar ahora' })).toHaveCount(0)
+  await expect(page.getByText('Publicado', { exact: true })).toBeVisible()
 
   // 5. La API simulada recibió la imagen como archivo, el texto editado y el token fuera de la URL.
   const received = (await (await request.get(`${GRAPH_MOCK}/__peticiones`)).json()) as Received[]
@@ -98,8 +104,8 @@ test('publicar a mano la previa de un partido: vista previa, texto editable y un
   expect(posts[0]?.source?.bytes).toBeGreaterThan(10_000)
   expect(posts[0]).toMatchObject({ tokenInUrl: false, hasToken: true })
 
-  // 6. Y aparece en Configuración → Facebook.
-  await page.goto('/admin/configuracion/facebook')
+  // 6. Y aparece en Facebook → Publicadas.
+  await page.goto('/admin/facebook/publicadas')
   await expect(
     page
       .getByRole('listitem')
