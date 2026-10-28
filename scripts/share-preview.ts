@@ -15,8 +15,9 @@ import type {
 } from '@/features/share/dto'
 import { treatMatchdayPhoto, whiteLogo } from '@/features/share/images'
 import { SHARE_FORMATS, type ShareFormat } from '@/features/share/lib/cards'
-import { matchdayFrameBox, renderShareCard } from '@/features/share/render'
+import { matchdayFrameBox, matchdayPanelGeometry, renderShareCard } from '@/features/share/render'
 import { crestScale } from '@/lib/images/crest'
+import type { FocalPoint } from '@/lib/images/focal-crop'
 import { processImage } from '@/lib/images/process'
 
 // Dibuja las plantillas «Próximo partido», «Jornada» y «Programación» con datos de ejemplo (rivales, canchas,
@@ -100,6 +101,90 @@ const TEST_LOGO = svg(
    <text x="220" y="145" font-family="Arial" font-weight="700" font-size="110" fill="#1f4fa3">EJEMPLO</text>`,
 )
 
+/** Una foto sin tratar y su punto focal (se recorta por formato al dibujar). */
+type PhotoInput = { bytes: Buffer; focal: FocalPoint } | null
+/** Las fotos sin tratar de cada `MatchdayData` de prueba. */
+const rawPhotos = new WeakMap<MatchdayData, PhotoInput[]>()
+
+/**
+ * Jugador de prueba (una silueta, no una persona): cabeza en (`x`, `y`) con radio `r`, en una foto de `w × h`.
+ * `back`: de espalda, con número.
+ */
+function player(w: number, h: number, x: number, y: number, r: number, back = false): string {
+  const cx = w * x
+  const cy = h * y
+  const skin = '#c99f7f'
+  const limb = (x1: number, y1: number, x2: number, y2: number, width: number, color: string) =>
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}" stroke-linecap="round"/>`
+  const torso = [
+    `M${cx - r * 1.6} ${cy + r * 1.4}`,
+    `L${cx + r * 1.6} ${cy + r * 1.4}`,
+    `L${cx + r * 1.4} ${cy + r * 5.2}`,
+    `L${cx - r * 1.4} ${cy + r * 5.2} Z`,
+  ].join(' ')
+  const hair = `M${cx - r} ${cy - r * 0.1} A${r} ${r} 0 0 1 ${cx + r} ${cy - r * 0.1} Q${cx} ${cy - r * 0.55} ${cx - r} ${cy - r * 0.1} Z`
+  const number = back
+    ? `<text x="${cx}" y="${cy + r * 4.1}" font-family="Arial" font-weight="700" font-size="${r * 2.2}" text-anchor="middle" fill="#fff">10</text>`
+    : ''
+  const eyes = back
+    ? ''
+    : `<circle cx="${cx - r * 0.35}" cy="${cy + r * 0.05}" r="${r * 0.1}" fill="#222"/><circle cx="${cx + r * 0.35}" cy="${cy + r * 0.05}" r="${r * 0.1}" fill="#222"/>`
+  return [
+    limb(cx - r * 1.5, cy + r * 1.8, cx - r * 3.2, cy + r * 4.2, r * 0.7, skin),
+    limb(cx + r * 1.5, cy + r * 1.8, cx + r * 3.0, cy + r * 0.6, r * 0.7, skin),
+    limb(cx - r * 0.7, cy + r * 6.0, cx - r * 2.2, cy + r * 9.6, r * 0.9, skin),
+    limb(cx + r * 0.7, cy + r * 6.0, cx + r * 1.6, cy + r * 9.8, r * 0.9, skin),
+    limb(cx - r * 2.2, cy + r * 9.6, cx - r * 2.9, cy + r * 9.9, r * 0.8, '#111'),
+    limb(cx + r * 1.6, cy + r * 9.8, cx + r * 2.4, cy + r * 10.0, r * 0.8, '#111'),
+    `<path d="${torso}" fill="#b81d24"/>`,
+    `<rect x="${cx - r * 1.45}" y="${cy + r * 5.1}" width="${r * 2.9}" height="${r * 1.4}" fill="#111"/>`,
+    number,
+    `<rect x="${cx - r * 0.35}" y="${cy + r * 0.8}" width="${r * 0.7}" height="${r * 0.8}" fill="#b88d6e"/>`,
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${skin}"/>`,
+    `<path d="${hair}" fill="#2a1a12"/>`,
+    eyes,
+  ].join('')
+}
+
+/** Cancha con galería al fondo (el fondo de las fotos de prueba). */
+function pitch(w: number, h: number): string {
+  const crowd = Array.from(
+    { length: 60 },
+    (_, i) =>
+      `<circle cx="${(i * 97) % w}" cy="${h * 0.12 + ((i * 53) % (h * 0.3))}" r="${w * 0.012}" fill="#8a949c" opacity="0.5"/>`,
+  ).join('')
+  return [
+    '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">',
+    '<stop offset="0" stop-color="#3d4650"/><stop offset="0.45" stop-color="#59636b"/>',
+    '<stop offset="0.5" stop-color="#3f7a3a"/><stop offset="1" stop-color="#2f6a2c"/></linearGradient></defs>',
+    `<rect width="${w}" height="${h}" fill="url(#g)"/>`,
+    crowd,
+  ].join('')
+}
+
+const photoSvg = (w: number, h: number, body: string) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${pitch(w, h)}${body}</svg>`
+
+/**
+ * Fotos de prueba de cuerpo entero, como las del club: jugador en acción (horizontal), de espalda con número y
+ * un primer plano. El punto focal va en la cara, como lo marcaría el club.
+ */
+const PERSON_PHOTOS = [
+  {
+    svg: photoSvg(
+      2400,
+      1800,
+      `${player(2400, 1800, 0.56, 0.17, 105)}<circle cx="1700" cy="1660" r="70" fill="#fff" stroke="#111" stroke-width="8"/>`,
+    ),
+    focal: { focalX: 0.56, focalY: 0.17 },
+  },
+  {
+    svg: photoSvg(1500, 2000, player(1500, 2000, 0.5, 0.14, 120, true)),
+    focal: { focalX: 0.5, focalY: 0.14 },
+  },
+  { svg: photoSvg(1600, 2000, player(1600, 2000, 0.5, 0.24, 260)), focal: { focalX: 0.5, focalY: 0.24 } },
+] as const
+
 async function main() {
   await mkdir(OUT, { recursive: true })
   const clubSvg = await placeholder('escudo.svg')
@@ -149,36 +234,50 @@ async function main() {
   const away = (team: CardTeam, overrides: Partial<CardMatch> = {}) =>
     match({ clubSide: 'visita', home: team, away: club, venueName: 'Estadio de ejemplo', ...overrides })
 
-  // Fotos de muestra: las que dejes en `tmp/fotos-muestra/` (izquierda, centro y derecha; todas en blanco y
-  // negro). Nunca van al repositorio. Si no están, las tarjetas se dibujan con el fondo del club.
-  const samples = ['zapatos.jpg', 'balon.jpg', 'estadio.jpg']
-  const sampleBytes = await Promise.all(
-    samples.map((file) => readFile(path.join(root, 'tmp', 'fotos-muestra', file)).catch(() => null)),
-  )
-  const treat = async (index: number, focalZoom = 1) => {
-    const bytes = sampleBytes[index]
-    return bytes ? treatMatchdayPhoto(bytes, { focalX: 0.5, focalY: 0.6, focalZoom }) : null
-  }
-  const samplePhotos = await Promise.all([treat(0), treat(1), treat(2)])
-  // El encuadre de la captura de Medios: la misma foto (a 1920 × 1080), punto focal y zoom, para compararla
-  // con la vista previa del panel (`encuadre-medios.json` trae la caja del panel en la tarjeta).
+  // Fotos: se recortan por formato (cada uno tiene su barra), así que aquí van los bytes y el punto focal, y se
+  // tratan justo antes de dibujar cada formato. Por defecto, jugadores de cuerpo entero de prueba (la cabeza en
+  // el tercio superior); con las fotos del club en `tmp/fotos-muestra/personas/1.jpg`, `2.jpg` y `3.jpg` (o
+  // `.jpeg`) se usan esas, con el punto focal de `personas/focal.json` (`{ "1": { "focalX": …, "focalY": … } }`,
+  // en la cara de cada jugador; sin él, 50 % y 25 %). Nunca van al repositorio.
   const { default: sharp } = await import('sharp')
+  const peopleDir = path.join(root, 'tmp', 'fotos-muestra', 'personas')
+  const readPhoto = async (n: number) =>
+    (await readFile(path.join(peopleDir, `${n}.jpg`)).catch(() => null)) ??
+    (await readFile(path.join(peopleDir, `${n}.jpeg`)).catch(() => null))
+  const own = await Promise.all([1, 2, 3].map(readPhoto))
+  const ownFocal: Record<string, FocalPoint> = await readFile(path.join(peopleDir, 'focal.json'), 'utf8')
+    .then((text) => JSON.parse(text) as Record<string, FocalPoint>)
+    .catch(() => ({}))
+  const synthetic = await Promise.all(
+    PERSON_PHOTOS.map((photo) => sharp(Buffer.from(photo.svg)).jpeg({ quality: 88 }).toBuffer()),
+  )
+  const people: PhotoInput[] = PERSON_PHOTOS.map((photo, index) => {
+    const bytes = own[index]
+    if (bytes) return { bytes, focal: ownFocal[String(index + 1)] ?? { focalX: 0.5, focalY: 0.25 } }
+    return { bytes: synthetic[index] as Buffer, focal: photo.focal }
+  })
+  const zoomedPeople = people.map((photo) =>
+    photo ? { ...photo, focal: { ...photo.focal, focalZoom: 2 } } : null,
+  )
+  // El encuadre de la captura de Medios: la zapatilla (a 1920 × 1080), punto focal y zoom, para compararla con
+  // la vista previa del panel (`encuadre-medios.json` trae la caja del panel en la tarjeta).
+  const shoe = await readFile(path.join(root, 'tmp', 'fotos-muestra', 'zapatos.jpg')).catch(() => null)
   const framing = { focalX: 0.62, focalY: 0.4, focalZoom: 1.8 }
-  const framed = sampleBytes[0]
-    ? await treatMatchdayPhoto(
-        await sharp(sampleBytes[0]).resize(1920, 1080, { fit: 'cover' }).jpeg({ quality: 92 }).toBuffer(),
-        framing,
-      )
+  const framed: PhotoInput = shoe
+    ? {
+        bytes: await sharp(shoe).resize(1920, 1080, { fit: 'cover' }).jpeg({ quality: 92 }).toBuffer(),
+        focal: framing,
+      }
     : null
-  const zoomedPhotos = await Promise.all([treat(0, 2), treat(1, 2), treat(2, 2)])
 
   const sponsorLine: MatchdayTopLine = { kind: 'texto', text: 'Powered by Ferretería de Ejemplo' }
   const textLine: MatchdayTopLine = { kind: 'texto', text: 'ANFA · Asociación de fútbol de ejemplo' }
   const logoLine: MatchdayTopLine = { kind: 'logo', file: '', src: await whiteLogo(TEST_LOGO) }
-  const matchdayWith = (
-    topLine: MatchdayTopLine | null,
-    photos: (string | null)[] = samplePhotos,
-  ): MatchdayData => ({ topLine, photoSources: [null, null, null], photos })
+  const matchdayWith = (topLine: MatchdayTopLine | null, photos: PhotoInput[] = people): MatchdayData => {
+    const data: MatchdayData = { topLine, photoSources: [null, null, null], photos: [null, null, null] }
+    rawPhotos.set(data, photos)
+    return data
+  }
   const withPhotos = matchdayWith(sponsorLine)
   const noPhotos = matchdayWith(sponsorLine, [null, null, null])
 
@@ -296,7 +395,7 @@ async function main() {
     {
       name: 'foto-zoom-200',
       formats: ['vertical'],
-      data: next(match({}), matchdayWith(sponsorLine, zoomedPhotos)),
+      data: next(match({}), matchdayWith(sponsorLine, zoomedPeople)),
     },
     {
       name: 'encuadre-medios',
@@ -314,6 +413,15 @@ async function main() {
   const sizes: string[] = []
   for (const item of cases) {
     for (const format of item.formats) {
+      // Como en `prepareCardImages`: cada foto se recorta a la barra de este formato.
+      const matchday = item.data.kind === 'match' || item.data.kind === 'jornada' ? item.data.matchday : null
+      const raw = matchday ? rawPhotos.get(matchday) : undefined
+      const panel = matchdayPanelGeometry(item.data, format)
+      if (matchday && raw && panel) {
+        matchday.photos = await Promise.all(
+          raw.map((photo) => (photo ? treatMatchdayPhoto(photo.bytes, photo.focal, panel) : null)),
+        )
+      }
       const bytes = await renderShareCard(item.data, format)
       const file = `${item.name}-${format}.${SHARE_FORMATS[format].ext}`
       await writeFile(path.join(OUT, file), bytes)
@@ -324,9 +432,12 @@ async function main() {
   const box = matchdayFrameBox(match({}), 'vertical', sponsorLine)
   const panel = { left: box.panelLeft, top: box.panelTop, width: box.panelWidth, height: box.panelHeight }
   await writeFile(path.join(OUT, 'encuadre-medios.json'), JSON.stringify({ ...framing, ...panel }))
-  for (const format of ['vertical', 'cuadrado', 'historia'] as const) {
-    const { panelWidth, panelHeight } = matchdayFrameBox(match({}), format, sponsorLine)
-    console.log(`Panel ${format}: ${(panelWidth / panelHeight).toFixed(3)}`)
+  for (const format of ['vertical', 'cuadrado', 'historia', 'og'] as const) {
+    const describe = (panel: ReturnType<typeof matchdayPanelGeometry>) =>
+      panel ? `${panel.ratio.toFixed(3)} (tapa ${(panel.hiddenTop * 100).toFixed(1)} %)` : '-'
+    const proximo = describe(matchdayPanelGeometry(next(match({})), format))
+    const fecha = describe(matchdayPanelGeometry(jornada(match({}), fiveSeries), format))
+    console.log(`Panel ${format}: próximo ${proximo} · jornada ${fecha}`)
   }
   console.log(`Listo: ${OUT}`)
 }
