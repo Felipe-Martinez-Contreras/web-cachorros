@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
-import { Controller, type FieldValues, type Path, type Resolver, useForm } from 'react-hook-form'
+import { Controller, type FieldValues, type Path, type Resolver, useForm, useWatch } from 'react-hook-form'
 import type { ZodType } from 'zod'
 import { FormBody } from '@/components/admin/form-body'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -24,6 +24,8 @@ type Base = {
   help?: string
   /** `false` agrega «(opcional)» a la etiqueta. */
   required?: boolean
+  /** Solo se muestra cuando el campo `switchField` del formulario tiene este valor. */
+  showIf?: string
 }
 
 export type FieldDef =
@@ -56,8 +58,11 @@ type EntityFormProps<T extends FieldValues> = {
   fields: FieldDef[]
   defaultValues: T
   action: (input: unknown) => Promise<ActionResult<unknown>>
-  submitLabel?: string
-  successMessage?: string
+  /** Con `switchField`, puede depender de su valor (por ejemplo «Publicar ahora» o «Programar»). */
+  submitLabel?: string | ((choice: string) => string)
+  successMessage?: string | ((choice: string) => string)
+  /** Campo (un `select`) que decide qué campos se ven (`showIf`) y el texto del botón. */
+  switchField?: string
   /** A dónde ir al guardar (normalmente la lista); sin ella se queda en la pantalla. */
   redirectTo?: string | ((id: string) => string)
   /** Formularios de «agregar» que se quedan en la pantalla: vuelven a sus valores iniciales al guardar. */
@@ -101,6 +106,7 @@ export function EntityForm<T extends FieldValues>({
   mediaPreviews,
   resetOnSuccess = false,
   autosave = false,
+  switchField,
 }: EntityFormProps<T>) {
   // Una página puede tener varios formularios con los mismos campos: cada uno prefija sus ids.
   const uid = useId()
@@ -115,6 +121,13 @@ export function EntityForm<T extends FieldValues>({
     defaultValues: defaultValues as never,
   })
   const { errors, isSubmitting } = form.formState
+  // Solo se observa el campo que decide (no todo el formulario: no se vuelve a dibujar con cada letra).
+  const choice = String(
+    useWatch({ control: form.control, name: (switchField ?? fields[0]?.name ?? '') as Path<T> }) ?? '',
+  )
+  const byChoice = (value: string | ((choice: string) => string)) =>
+    typeof value === 'function' ? value(choice) : value
+  const visibleFields = fields.filter((field) => !switchField || !field.showIf || field.showIf === choice)
   const [autosaveState, setAutosaveState] = useState<AutosaveState>({ kind: 'idle' })
   // Evita que un autoguardado y un guardado manual se pisen.
   const savingRef = useRef(false)
@@ -157,12 +170,12 @@ export function EntityForm<T extends FieldValues>({
       for (const [name, messages] of entries) {
         form.setError(name as Path<T>, { type: 'server', message: messages[0] })
       }
-      const first = entries.find(([name]) => fields.some((field) => field.name === name))
+      const first = entries.find(([name]) => visibleFields.some((field) => field.name === name))
       if (first) form.setFocus(first[0] as Path<T>)
       setFormError(result.message)
       return
     }
-    toast({ message: successMessage })
+    toast({ message: byChoice(successMessage) })
     if (resetOnSuccess) form.reset()
     const savedId = (result.data as { id?: unknown } | null)?.id
     if (typeof redirectTo === 'function') {
@@ -177,7 +190,7 @@ export function EntityForm<T extends FieldValues>({
     <form onSubmit={onSubmit} noValidate className="max-w-2xl">
       <FormBody className="grid gap-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
-        {fields.map((field) => {
+        {visibleFields.map((field) => {
           const error = errors[field.name]?.message
           if (field.type === 'media') {
             return (
@@ -330,7 +343,7 @@ export function EntityForm<T extends FieldValues>({
         })}
         <div className="mt-2 flex flex-wrap gap-2">
           <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
-            {isSubmitting ? 'Guardando…' : submitLabel}
+            {isSubmitting ? 'Guardando…' : byChoice(submitLabel)}
           </Button>
           {cancelHref && (
             <Link href={cancelHref} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
