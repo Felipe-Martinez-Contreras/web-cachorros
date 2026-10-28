@@ -17,6 +17,9 @@ import {
 type Action = (input: unknown) => Promise<ActionResult<unknown>>
 type Option = { value: string; label: string }
 
+/** Campos que casi nunca hace falta tocar: van al final, en un `<details>` cerrado. */
+const ADVANCED = 'Opciones avanzadas'
+
 export function NewsForm({
   action,
   defaults,
@@ -132,6 +135,7 @@ export function NewsForm({
           label: 'Dirección en el sitio',
           type: 'text',
           required: false,
+          group: ADVANCED,
           help: 'La última parte del enlace (…/noticias/esta-parte). Si la dejas vacía sale del título. Si la cambias, el enlace antiguo sigue funcionando.',
         },
         {
@@ -139,6 +143,7 @@ export function NewsForm({
           label: 'Título para buscadores',
           type: 'text',
           required: false,
+          group: ADVANCED,
           help: 'Si lo dejas vacío se usa el título.',
         },
         {
@@ -148,6 +153,7 @@ export function NewsForm({
           rows: 2,
           maxLength: 160,
           required: false,
+          group: ADVANCED,
           help: 'Si la dejas vacía se usa el resumen.',
         },
         {
@@ -155,7 +161,8 @@ export function NewsForm({
           label: 'Imagen al compartir',
           type: 'media',
           required: false,
-          help: 'Si no eliges una, se usa la foto principal.',
+          group: ADVANCED,
+          help: 'Normalmente déjala vacía: al compartir se usa la foto principal.',
         },
       ]}
     />

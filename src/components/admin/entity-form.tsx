@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Controller, type FieldValues, type Path, type Resolver, useForm, useWatch } from 'react-hook-form'
 import type { ZodType } from 'zod'
 import { FormBody } from '@/components/admin/form-body'
@@ -26,6 +27,11 @@ type Base = {
   required?: boolean
   /** Solo se muestra cuando el campo `switchField` del formulario tiene este valor. */
   showIf?: string
+  /**
+   * Campos poco usados: los del mismo grupo van al final, dentro de un `<details>` cerrado con este título.
+   * Si uno tiene un error al guardar, el grupo se abre solo y el foco va a ese campo.
+   */
+  group?: string
 }
 
 export type FieldDef =
@@ -159,188 +165,222 @@ export function EntityForm<T extends FieldValues>({
     }
   }, [autosave, form, schema, action])
 
-  const onSubmit = form.handleSubmit(async () => {
-    setFormError(null)
-    savingRef.current = true
-    const result = await action(form.getValues()).finally(() => {
-      savingRef.current = false
-    })
-    if (!result.ok) {
-      const entries = Object.entries(result.fieldErrors ?? {})
-      for (const [name, messages] of entries) {
-        form.setError(name as Path<T>, { type: 'server', message: messages[0] })
+  const ungrouped = visibleFields.filter((field) => !field.group)
+  const groups = [...new Set(visibleFields.flatMap((field) => (field.group ? [field.group] : [])))]
+  const [openGroups, setOpenGroups] = useState<string[]>([])
+
+  /** Lleva el foco al campo con error; si está en un grupo cerrado, primero lo abre. */
+  const focusField = (name: string) => {
+    const group = visibleFields.find((field) => field.name === name)?.group
+    if (group && !openGroups.includes(group)) flushSync(() => setOpenGroups((current) => [...current, group]))
+    form.setFocus(name as Path<T>)
+  }
+
+  const onSubmit = form.handleSubmit(
+    async () => {
+      setFormError(null)
+      savingRef.current = true
+      const result = await action(form.getValues()).finally(() => {
+        savingRef.current = false
+      })
+      if (!result.ok) {
+        const entries = Object.entries(result.fieldErrors ?? {})
+        for (const [name, messages] of entries) {
+          form.setError(name as Path<T>, { type: 'server', message: messages[0] })
+        }
+        const first = entries.find(([name]) => visibleFields.some((field) => field.name === name))
+        if (first) focusField(first[0])
+        setFormError(result.message)
+        return
       }
-      const first = entries.find(([name]) => visibleFields.some((field) => field.name === name))
-      if (first) form.setFocus(first[0] as Path<T>)
-      setFormError(result.message)
-      return
+      toast({ message: byChoice(successMessage) })
+      if (resetOnSuccess) form.reset()
+      const savedId = (result.data as { id?: unknown } | null)?.id
+      if (typeof redirectTo === 'function') {
+        if (typeof savedId === 'string') router.push(redirectTo(savedId))
+      } else if (redirectTo) {
+        router.push(redirectTo)
+      }
+      router.refresh()
+    },
+    (invalid) => {
+      // La validación del navegador no puede enfocar un campo dentro de un grupo cerrado: se abre y se enfoca.
+      const first = visibleFields.find((field) => invalid[field.name])
+      if (first?.group) focusField(first.name)
+    },
+  )
+
+  const renderField = (field: FieldDef) => {
+    const error = errors[field.name]?.message
+    if (field.type === 'media') {
+      return (
+        <Controller
+          key={field.name}
+          control={form.control}
+          name={field.name as Path<T>}
+          render={({ field: control }) => (
+            <MediaPicker
+              label={field.label}
+              help={field.help}
+              required={field.required}
+              kind={field.kind}
+              adjustLink={field.adjustLink}
+              error={typeof error === 'string' ? error : undefined}
+              value={previews[field.name] ?? null}
+              onChange={(media) => {
+                setPreviews((current) => ({ ...current, [field.name]: media }))
+                control.onChange(media?.id ?? '')
+              }}
+            />
+          )}
+        />
+      )
     }
-    toast({ message: byChoice(successMessage) })
-    if (resetOnSuccess) form.reset()
-    const savedId = (result.data as { id?: unknown } | null)?.id
-    if (typeof redirectTo === 'function') {
-      if (typeof savedId === 'string') router.push(redirectTo(savedId))
-    } else if (redirectTo) {
-      router.push(redirectTo)
+    if (field.type === 'document') {
+      return (
+        <Controller
+          key={field.name}
+          control={form.control}
+          name={field.name as Path<T>}
+          render={({ field: control }) => (
+            <DocumentPicker
+              label={field.label}
+              help={field.help}
+              required={field.required}
+              error={typeof error === 'string' ? error : undefined}
+              value={previews[field.name] ?? null}
+              onChange={(media) => {
+                setPreviews((current) => ({ ...current, [field.name]: media }))
+                control.onChange(media?.id ?? '')
+              }}
+            />
+          )}
+        />
+      )
     }
-    router.refresh()
-  })
+    if (field.type === 'richtext') {
+      return (
+        <Controller
+          key={field.name}
+          control={form.control}
+          name={field.name as Path<T>}
+          render={({ field: control }) => (
+            <RichTextEditor
+              label={field.label}
+              help={field.help}
+              required={field.required}
+              error={typeof error === 'string' ? error : undefined}
+              value={control.value ?? null}
+              onChange={control.onChange}
+            />
+          )}
+        />
+      )
+    }
+    if (field.type === 'checkboxes') {
+      return (
+        <Controller
+          key={field.name}
+          control={form.control}
+          name={field.name as Path<T>}
+          render={({ field: control }) => {
+            const selected: string[] = Array.isArray(control.value) ? control.value : []
+            return (
+              <fieldset className="grid gap-1">
+                <legend className="font-medium">
+                  {field.label}
+                  {field.required === false && (
+                    <span className="font-normal text-neutral-600"> (opcional)</span>
+                  )}
+                </legend>
+                <div className="grid gap-x-4 sm:grid-cols-2">
+                  {field.options.map((option) => (
+                    <CheckboxField
+                      key={option.value}
+                      id={`${uid}-${field.name}-${option.value}`}
+                      name={`${field.name}-${option.value}`}
+                      label={option.label}
+                      checked={selected.includes(option.value)}
+                      onChange={(event) =>
+                        control.onChange(
+                          event.target.checked
+                            ? [...selected, option.value]
+                            : selected.filter((value) => value !== option.value),
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+                {field.help && <p className="text-sm text-neutral-600">{field.help}</p>}
+                {typeof error === 'string' && <p className="text-sm font-medium text-danger">{error}</p>}
+              </fieldset>
+            )
+          }}
+        />
+      )
+    }
+    const shared = {
+      id: `${uid}-${field.name}`,
+      label: field.label,
+      help: field.help,
+      required: field.required,
+      error: typeof error === 'string' ? error : undefined,
+      ...form.register(field.name as Path<T>),
+    }
+    if (field.type === 'textarea') {
+      return <TextareaField key={field.name} {...shared} rows={field.rows} maxLength={field.maxLength} />
+    }
+    if (field.type === 'select') {
+      return (
+        <SelectField key={field.name} {...shared}>
+          {field.emptyLabel !== undefined && <option value="">{field.emptyLabel}</option>}
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </SelectField>
+      )
+    }
+    if (field.type === 'checkbox') return <CheckboxField key={field.name} {...shared} />
+    return (
+      <Field
+        key={field.name}
+        {...shared}
+        type={field.type}
+        placeholder={field.placeholder}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        inputMode={field.inputMode}
+        autoComplete={field.autoComplete ?? 'off'}
+      />
+    )
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-2xl">
       <FormBody className="grid gap-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
-        {visibleFields.map((field) => {
-          const error = errors[field.name]?.message
-          if (field.type === 'media') {
-            return (
-              <Controller
-                key={field.name}
-                control={form.control}
-                name={field.name as Path<T>}
-                render={({ field: control }) => (
-                  <MediaPicker
-                    label={field.label}
-                    help={field.help}
-                    required={field.required}
-                    kind={field.kind}
-                    adjustLink={field.adjustLink}
-                    error={typeof error === 'string' ? error : undefined}
-                    value={previews[field.name] ?? null}
-                    onChange={(media) => {
-                      setPreviews((current) => ({ ...current, [field.name]: media }))
-                      control.onChange(media?.id ?? '')
-                    }}
-                  />
-                )}
-              />
-            )
-          }
-          if (field.type === 'document') {
-            return (
-              <Controller
-                key={field.name}
-                control={form.control}
-                name={field.name as Path<T>}
-                render={({ field: control }) => (
-                  <DocumentPicker
-                    label={field.label}
-                    help={field.help}
-                    required={field.required}
-                    error={typeof error === 'string' ? error : undefined}
-                    value={previews[field.name] ?? null}
-                    onChange={(media) => {
-                      setPreviews((current) => ({ ...current, [field.name]: media }))
-                      control.onChange(media?.id ?? '')
-                    }}
-                  />
-                )}
-              />
-            )
-          }
-          if (field.type === 'richtext') {
-            return (
-              <Controller
-                key={field.name}
-                control={form.control}
-                name={field.name as Path<T>}
-                render={({ field: control }) => (
-                  <RichTextEditor
-                    label={field.label}
-                    help={field.help}
-                    required={field.required}
-                    error={typeof error === 'string' ? error : undefined}
-                    value={control.value ?? null}
-                    onChange={control.onChange}
-                  />
-                )}
-              />
-            )
-          }
-          if (field.type === 'checkboxes') {
-            return (
-              <Controller
-                key={field.name}
-                control={form.control}
-                name={field.name as Path<T>}
-                render={({ field: control }) => {
-                  const selected: string[] = Array.isArray(control.value) ? control.value : []
-                  return (
-                    <fieldset className="grid gap-1">
-                      <legend className="font-medium">
-                        {field.label}
-                        {field.required === false && (
-                          <span className="font-normal text-neutral-600"> (opcional)</span>
-                        )}
-                      </legend>
-                      <div className="grid gap-x-4 sm:grid-cols-2">
-                        {field.options.map((option) => (
-                          <CheckboxField
-                            key={option.value}
-                            id={`${uid}-${field.name}-${option.value}`}
-                            name={`${field.name}-${option.value}`}
-                            label={option.label}
-                            checked={selected.includes(option.value)}
-                            onChange={(event) =>
-                              control.onChange(
-                                event.target.checked
-                                  ? [...selected, option.value]
-                                  : selected.filter((value) => value !== option.value),
-                              )
-                            }
-                          />
-                        ))}
-                      </div>
-                      {field.help && <p className="text-sm text-neutral-600">{field.help}</p>}
-                      {typeof error === 'string' && (
-                        <p className="text-sm font-medium text-danger">{error}</p>
-                      )}
-                    </fieldset>
-                  )
-                }}
-              />
-            )
-          }
-          const shared = {
-            id: `${uid}-${field.name}`,
-            label: field.label,
-            help: field.help,
-            required: field.required,
-            error: typeof error === 'string' ? error : undefined,
-            ...form.register(field.name as Path<T>),
-          }
-          if (field.type === 'textarea') {
-            return (
-              <TextareaField key={field.name} {...shared} rows={field.rows} maxLength={field.maxLength} />
-            )
-          }
-          if (field.type === 'select') {
-            return (
-              <SelectField key={field.name} {...shared}>
-                {field.emptyLabel !== undefined && <option value="">{field.emptyLabel}</option>}
-                {field.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectField>
-            )
-          }
-          if (field.type === 'checkbox') return <CheckboxField key={field.name} {...shared} />
-          return (
-            <Field
-              key={field.name}
-              {...shared}
-              type={field.type}
-              placeholder={field.placeholder}
-              min={field.min}
-              max={field.max}
-              step={field.step}
-              inputMode={field.inputMode}
-              autoComplete={field.autoComplete ?? 'off'}
-            />
-          )
-        })}
+        {ungrouped.map(renderField)}
+        {groups.map((group) => (
+          <details
+            key={group}
+            open={openGroups.includes(group)}
+            onToggle={(event) => {
+              const open = event.currentTarget.open
+              setOpenGroups((current) =>
+                open ? [...new Set([...current, group])] : current.filter((item) => item !== group),
+              )
+            }}
+            className="rounded-md border border-neutral-200 p-3"
+          >
+            <summary className="min-h-12 cursor-pointer content-center font-semibold">{group}</summary>
+            <div className="mt-3 grid gap-4">
+              {visibleFields.filter((field) => field.group === group).map(renderField)}
+            </div>
+          </details>
+        ))}
         <div className="mt-2 flex flex-wrap gap-2">
           <Button type="submit" variant="dark" size="lg" loading={isSubmitting}>
             {isSubmitting ? 'Guardando…' : byChoice(submitLabel)}
