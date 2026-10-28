@@ -9,6 +9,8 @@ import { groupHomeMatches, homeMatchWindow } from '@/features/matches/lib/home-w
 import { listPendingNews } from '@/features/news/admin-queries'
 import { recentShareCards } from '@/features/share/admin-queries'
 import { ShareCards } from '@/features/share/components/share-cards'
+import { facebookNotices } from '@/features/social-publishing/admin-queries'
+import { DiscardedNotice, ScheduledNotice } from '@/features/social-publishing/components/facebook-notices'
 import { diskPercent, type OpsRunSummary, systemHealth } from '@/features/system/lib/health'
 import { getSystemRuns } from '@/features/system/queries'
 import { requirePanelUser } from '@/lib/auth/session'
@@ -111,11 +113,12 @@ export default async function AdminHomePage() {
   const user = await requirePanelUser()
   const now = new Date()
   const window = homeMatchWindow(now)
-  const [matches, pendingNews, runs, shareCards] = await Promise.all([
+  const [matches, pendingNews, runs, shareCards, facebook] = await Promise.all([
     can(user, 'matches:write') ? listClubMatchesBetween(window.from, window.to) : [],
     can(user, 'news:write') ? listPendingNews() : [],
     getSystemRuns(),
     can(user, 'matches:write') ? recentShareCards(now) : [],
+    can(user, 'social:write') ? facebookNotices(now) : null,
   ])
   const groups = groupHomeMatches(matches, now)
   const health = systemHealth(runs, now)
@@ -145,6 +148,13 @@ export default async function AdminHomePage() {
           )}
         </ul>
       </nav>
+
+      {facebook && (facebook.hasScheduled || facebook.discarded.length > 0) && (
+        <div className="grid gap-3">
+          {facebook.hasScheduled && <ScheduledNotice notice={facebook.scheduledNotice} />}
+          <DiscardedNotice items={facebook.discarded} />
+        </div>
+      )}
 
       {can(user, 'matches:write') && (
         <>

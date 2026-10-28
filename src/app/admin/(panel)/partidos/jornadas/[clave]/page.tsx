@@ -1,20 +1,22 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { PageHeader, ResourceList } from '@/components/admin/resource-list'
+import { PageHeader } from '@/components/admin/resource-list'
 import { Alert } from '@/components/ui/feedback'
 import { elegirOpcionesJornada } from '@/features/share/actions'
 import { jornadaAdmin, type ShareCardLink } from '@/features/share/admin-queries'
+import { CardPreview } from '@/features/share/components/card-preview'
 import { ShareCards } from '@/features/share/components/share-cards'
-import { SHARE_FORMATS, type ShareFormat } from '@/features/share/lib/cards'
+import type { ShareFormat } from '@/features/share/lib/cards'
 import { parseSeries } from '@/features/share/lib/jornada'
-import { publicarJornadaEnFacebook } from '@/features/social-publishing/actions'
+import { publicarOProgramarJornada } from '@/features/social-publishing/actions'
 import {
   jornadaCardUrl,
   jornadaDraft,
   jornadaFacebookState,
+  scheduleDefault,
 } from '@/features/social-publishing/admin-queries'
-import { JornadaOptionsForm, ManualPublishForm } from '@/features/social-publishing/components/forms'
-import { PublicationRow } from '@/features/social-publishing/components/publication-row'
+import { JornadaOptionsForm } from '@/features/social-publishing/components/forms'
+import { FacebookPublishSection } from '@/features/social-publishing/components/publish-section'
 import { encodePhotos, parsePhotos } from '@/features/social-publishing/lib/photos'
 import { requirePanelUser } from '@/lib/auth/session'
 import { formatTime } from '@/lib/format'
@@ -57,6 +59,7 @@ export default async function JornadaPage({ params, searchParams }: Props) {
         slug: jornada.date,
         formats: FORMATS,
         urls: Object.fromEntries(FORMATS.map((format) => [format, urlOf(format)])),
+        previewCached: draft.cached.cuadrado ?? false,
       }
     : null
 
@@ -74,13 +77,11 @@ export default async function JornadaPage({ params, searchParams }: Props) {
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <figure className="grid content-start gap-2">
-            {/* biome-ignore lint/performance/noImgElement: la tarjeta ya viene en su tamaño final. */}
-            <img
+            <CardPreview
               src={urlOf('vertical')}
-              width={SHARE_FORMATS.vertical.width}
-              height={SHARE_FORMATS.vertical.height}
+              cached={draft.cached.vertical ?? false}
               alt={`Tarjeta de la jornada: ${title}`}
-              className="h-auto w-full max-w-sm rounded-md border border-neutral-200 bg-ink"
+              className="max-w-sm"
             />
             <figcaption className="text-sm text-neutral-600">
               4:5, la que se sube a Facebook
@@ -127,27 +128,21 @@ export default async function JornadaPage({ params, searchParams }: Props) {
                 <h2 id="facebook-titulo" className="text-lg font-bold">
                   Publicar en Facebook
                 </h2>
-                {facebook.publication ? (
-                  <ResourceList label="Publicación en Facebook">
-                    <PublicationRow publication={facebook.publication} />
-                  </ResourceList>
-                ) : facebook.blockedReason ? (
-                  <Alert variant="warning" title="Por ahora no se puede publicar">
-                    {facebook.blockedReason}
-                  </Alert>
-                ) : (
-                  <ManualPublishForm
-                    action={publicarJornadaEnFacebook.bind(
-                      null,
-                      jornada.key,
-                      chosenSeries ? chosenSeries.join(',') : null,
-                      chosenPhotos ? encodePhotos(chosenPhotos) : null,
-                    )}
-                    caption={draft.caption}
-                    backHref={`/admin/partidos/jornadas/${jornada.key}`}
-                    help="Se armó con los datos de la jornada y las series marcadas. Puedes cambiarlo antes de publicar."
-                  />
-                )}
+                <FacebookPublishSection
+                  status={facebook}
+                  publication={facebook.publication}
+                  canSchedule
+                  schedule={scheduleDefault(draft.firstKickoff)}
+                  caption={draft.caption}
+                  backHref={`/admin/partidos/jornadas/${jornada.key}`}
+                  help="Se armó con los datos de la jornada y las series marcadas."
+                  action={publicarOProgramarJornada.bind(
+                    null,
+                    jornada.key,
+                    chosenSeries ? chosenSeries.join(',') : null,
+                    chosenPhotos ? encodePhotos(chosenPhotos) : null,
+                  )}
+                />
               </section>
             )}
           </div>

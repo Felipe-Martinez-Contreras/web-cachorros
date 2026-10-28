@@ -22,6 +22,7 @@ const { runSocialPublishing } = await import('@/features/social-publishing/tick'
 const { publicationContent } = await import('@/features/social-publishing/publish')
 const { STARTED_WHILE_DISABLED } = await import('@/features/social-publishing/lib/scheduling')
 const actions = await import('@/features/social-publishing/actions')
+const { recentlyDiscardedScheduled } = await import('@/features/social-publishing/admin-queries')
 
 const admin = postgres(testDb.adminUrl, { max: 1, onnotice: () => {} })
 let f: SportFixture
@@ -301,6 +302,13 @@ describe('seguros', () => {
     expect(mail?.text).toContain('Motivo: Se postergó un partido de la jornada.')
     expect(mail?.text).toContain(`http://localhost:3000/admin/partidos/jornadas/${saturday}_${f.rivalTeamId}`)
     expect((await only()).discard_notified_at).not.toBeNull()
+    // El panel lo avisa con el motivo y el enlace para volver a programarla.
+    expect(await recentlyDiscardedScheduled(fri('10:02'))).toMatchObject([
+      {
+        reason: 'Se postergó un partido de la jornada.',
+        href: `/admin/partidos/jornadas/${saturday}_${f.rivalTeamId}`,
+      },
+    ])
   })
 
   it('si el correo falla, se reintenta en el tick siguiente', async () => {
@@ -383,6 +391,35 @@ describe('seguros', () => {
     await runSocialPublishing(fri('10:01'), channel)
     expect(publishPhoto).toHaveBeenCalledTimes(1)
     expect(await only()).toMatchObject({ status: 'publicado', photo_ids: [fallback, null, null] })
+  })
+})
+
+describe('descartes a mano', () => {
+  it('«Descartar» o «Cancelar» desde el panel no avisan por correo; solo los seguros', async () => {
+    const { key } = await jornada('d-mano')
+    await actAs('admin')
+    await actions.programarJornadaEnFacebook(key, null, null, { message: 'x', ...when(friday, '10:00') })
+    const { id } = await only()
+    // Una programada que falló al publicarse queda «Con error»; una persona la descarta.
+    await admin`update social_publications set status = 'error', last_error = 'Facebook pidió esperar.',
+      attempts = 1, next_attempt_at = ${fri('11:00')} where id = ${id}`
+    expect(await actions.descartarPublicacion(id)).toEqual({ ok: true, data: { id } })
+    const discarded = await only()
+    expect(discarded.status).toBe('descartado')
+    expect(discarded.discard_notified_at).not.toBeNull()
+    const { channel } = fakeChannel()
+    await runSocialPublishing(fri('11:05'), channel)
+    await runSocialPublishing(fri('11:10'), channel)
+    expect(doubles.sendMail).not.toHaveBeenCalled()
+    // Tampoco aparece en el aviso del panel de «programadas que no saldrán».
+    expect(await recentlyDiscardedScheduled()).toEqual([])
+
+    // Cancelar borra la fila: tampoco hay nada que avisar.
+    await admin`delete from social_publications`
+    await actions.programarJornadaEnFacebook(key, null, null, { message: 'x', ...when(friday, '10:00') })
+    expect(await actions.cancelarProgramada((await only()).id)).toMatchObject({ ok: true })
+    await runSocialPublishing(fri('09:00'), channel)
+    expect(doubles.sendMail).not.toHaveBeenCalled()
   })
 })
 

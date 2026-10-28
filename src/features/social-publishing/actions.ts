@@ -30,7 +30,7 @@ import {
 import { facebookSettingsSchema, nextFacebookSettings, readFacebookSettings } from './lib/settings'
 import { type ProcessOutcome, processPublication, publicationContent } from './publish'
 import { loadGuardMatches } from './scheduled'
-import { manualPublishSchema, schedulePublishSchema, scheduleTimeSchema } from './schemas'
+import { manualPublishSchema, PUBLISH_WHEN, schedulePublishSchema, scheduleTimeSchema } from './schemas'
 
 // Acciones del panel para Facebook (sección Facebook, la página de cada jornada y la de cada partido).
 // Publicar llama a la Graph API después de la transacción: la fila queda en la cola aunque Facebook falle, y
@@ -458,6 +458,35 @@ export async function programarJornadaEnFacebook(
       }
     },
   })
+}
+
+/** «Publicar ahora» o «Programar», según lo elegido en el formulario (cada acción vuelve a validar). */
+function wantsSchedule(input: unknown): boolean {
+  const when = (input as { when?: unknown } | null)?.when
+  return when === PUBLISH_WHEN[1]
+}
+
+/** Formulario de la página de un partido: publica la previa o el resultado ahora, o programa la previa. */
+export async function publicarOProgramarPartido(
+  matchId: string,
+  photos: string | null,
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  return wantsSchedule(input)
+    ? programarEnFacebook(matchId, photos, input)
+    : publicarEnFacebook(matchId, photos, input)
+}
+
+/** Formulario de la página de una jornada: la publica ahora o la programa. */
+export async function publicarOProgramarJornada(
+  key: string,
+  series: string | null,
+  photos: string | null,
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  return wantsSchedule(input)
+    ? programarJornadaEnFacebook(key, series, photos, input)
+    : publicarJornadaEnFacebook(key, series, photos, input)
 }
 
 /** Cambia la hora de una programada: se vuelve a validar contra los partidos vigentes. */

@@ -1,11 +1,17 @@
 import type { Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { PageHeader } from '@/components/admin/resource-list'
 import { Alert } from '@/components/ui/feedback'
 import { getMatchAdmin } from '@/features/matches/admin-queries'
-import { elegirFotosPublicacion, publicarEnFacebook } from '@/features/social-publishing/actions'
-import { manualPublishDraft, matchFacebookState } from '@/features/social-publishing/admin-queries'
-import { ManualPhotosForm, ManualPublishForm } from '@/features/social-publishing/components/forms'
+import { CardPreview } from '@/features/share/components/card-preview'
+import { elegirFotosPublicacion, publicarOProgramarPartido } from '@/features/social-publishing/actions'
+import {
+  manualPublishDraft,
+  matchFacebookState,
+  scheduleDefault,
+} from '@/features/social-publishing/admin-queries'
+import { ManualPhotosForm } from '@/features/social-publishing/components/forms'
+import { FacebookPublishSection } from '@/features/social-publishing/components/publish-section'
 import { encodePhotos, parsePhotos } from '@/features/social-publishing/lib/photos'
 import { requirePanelUser } from '@/lib/auth/session'
 import { isUuid } from '@/lib/form-schemas'
@@ -21,12 +27,14 @@ export default async function PublishMatchPage({ params, searchParams }: Props) 
   if (!isUuid(id)) notFound()
   const [match, state] = await Promise.all([getMatchAdmin(id), matchFacebookState(id)])
   if (!match || !state) notFound()
-  // Ya publicado (o en la cola): la ficha del partido muestra su estado y el enlace.
-  if (state.publication) redirect(`/admin/partidos/${id}`)
-  // Fotos elegidas solo para este post (`?fotos=`); si no vienen, las de Configuración → Facebook.
+  // Fotos elegidas solo para este post (`?fotos=`); si no vienen, las de Facebook → Ajustes.
   const { fotos } = await searchParams
   const chosen = parsePhotos(typeof fotos === 'string' ? fotos : null)
-  const draft = state.kind && !state.blockedReason ? await manualPublishDraft(id, chosen) : null
+  // El formulario solo hace falta si no hay publicación o si la anterior se descartó.
+  const needsForm = !state.publication || state.publication.status === 'descartado'
+  const draft = state.kind && needsForm ? await manualPublishDraft(id, chosen) : null
+  // Al publicar o programar se vuelve a la ficha del partido, que muestra el estado.
+  const backHref = `/admin/partidos/${id}`
 
   return (
     <>
@@ -35,10 +43,17 @@ export default async function PublishMatchPage({ params, searchParams }: Props) 
         description={`${match.seriesName}: ${match.homeName} vs ${match.awayName}`}
         back={{ href: `/admin/partidos/${id}`, label: 'Partido' }}
       />
-      {state.blockedReason ? (
-        <Alert variant="warning" title="Por ahora no se puede publicar">
-          {state.blockedReason}
-        </Alert>
+      {!needsForm ? (
+        <FacebookPublishSection
+          status={state}
+          publication={state.publication}
+          canSchedule={state.canSchedule}
+          schedule={null}
+          caption=""
+          backHref={backHref}
+          help=""
+          action={publicarOProgramarPartido.bind(null, id, null)}
+        />
       ) : !draft ? (
         <Alert variant="warning" title="Este partido no se puede publicar">
           Se publica la previa de un partido programado o postergado, o el resultado de uno finalizado.
@@ -46,13 +61,11 @@ export default async function PublishMatchPage({ params, searchParams }: Props) 
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <figure className="grid content-start gap-2">
-            {/* biome-ignore lint/performance/noImgElement: la tarjeta ya viene en su tamaño final. */}
-            <img
+            <CardPreview
               src={draft.previewUrl}
-              width={1080}
-              height={1350}
+              cached={draft.previewCached}
               alt={`Tarjeta «${publicationKindLabels[draft.kind]}» que se subirá a Facebook`}
-              className="h-auto w-full max-w-sm rounded-md border border-neutral-200"
+              className="max-w-sm"
             />
             <figcaption className="text-sm text-neutral-600">
               {publicationKindLabels[draft.kind]} · la imagen 4:5 que se subirá
@@ -60,10 +73,15 @@ export default async function PublishMatchPage({ params, searchParams }: Props) 
             </figcaption>
           </figure>
           <div className="grid content-start gap-8">
-            <ManualPublishForm
-              action={publicarEnFacebook.bind(null, id, chosen ? encodePhotos(chosen) : null)}
+            <FacebookPublishSection
+              status={state}
+              publication={state.publication}
+              canSchedule={state.canSchedule}
+              schedule={scheduleDefault(state.kickoffAt)}
               caption={draft.caption}
-              backHref={`/admin/partidos/${id}`}
+              backHref={backHref}
+              help="Se armó con los datos del partido."
+              action={publicarOProgramarPartido.bind(null, id, chosen ? encodePhotos(chosen) : null)}
             />
             {draft.kind === 'proximo' && (
               <section aria-labelledby="fotos-del-post" className="grid gap-3">
@@ -71,7 +89,7 @@ export default async function PublishMatchPage({ params, searchParams }: Props) 
                   Fotos de esta publicación
                 </h2>
                 <p className="text-neutral-600">
-                  Por defecto se usan las de Configuración → Facebook. Si las cambias aquí, la vista previa se
+                  Por defecto se usan las de Facebook → Ajustes. Si las cambias aquí, la vista previa se
                   actualiza y solo este post las lleva.
                 </p>
                 <ManualPhotosForm
