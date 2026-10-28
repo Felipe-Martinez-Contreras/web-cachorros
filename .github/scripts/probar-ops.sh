@@ -98,8 +98,11 @@ docker run --rm -v uploads_muchas:/u alpine sh -c '
 # shellcheck disable=SC2016
 peak=$(ops --memory "$ops_limit" --memory-swap "$ops_limit" -e BACKUP_GCS_BUCKET=/bucket/muchas \
   -v uploads_muchas:/srv/app-data/uploads:ro -- \
-  sh -c 'backup.sh >&2 || exit 1; cat /sys/fs/cgroup/memory.peak 2>/dev/null || echo 0') \
-  || fail "backup.sh con ${many_files} imágenes no cupo en ${ops_limit} (revisa las opciones de rclone del Dockerfile de ops)"
+  sh -c 'backup.sh >&2 || { grep -E "^(anon|file|file_dirty|file_writeback|shmem|sock|kernel) " \
+    /sys/fs/cgroup/memory.stat >&2; cat /sys/fs/cgroup/memory.events >&2; exit 1; }
+    cat /sys/fs/cgroup/memory.peak 2>/dev/null || echo 0') \
+  || { sudo dmesg 2>/dev/null | grep -iE 'killed process|oom-kill' | tail -n 3 >&2 || true
+       fail "backup.sh con ${many_files} imágenes no cupo en ${ops_limit} (revisa las opciones de rclone del Dockerfile de ops)"; }
 copied=$(find "$BUCKET_DIR/muchas/uploads" -type f | wc -l)
 (( copied == many_files )) || fail "se copiaron ${copied} de ${many_files} imágenes con el límite de memoria"
 peak_mb=$(( ${peak:-0} / 1024 / 1024 ))
