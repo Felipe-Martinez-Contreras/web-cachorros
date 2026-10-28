@@ -466,4 +466,78 @@ test.describe('capturas del reporte de fase', () => {
     await page.goto('/admin/facebook/publicadas')
     await page.screenshot({ path: `${dir}/facebook-publicadas-${width}.png`, fullPage: true })
   })
+
+  test('ajustes-noticias-portada: portada y formulario de noticias (antes y después)', async ({
+    page,
+  }, testInfo) => {
+    // CAPTURAS=ajustes-noticias-portada/antes o …/despues
+    test.skip(
+      !fase.startsWith('ajustes-noticias-portada'),
+      'Estas capturas son del ajuste de noticias y portada.',
+    )
+    test.setTimeout(120_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+
+    // El título y el botón de producción (el seed trae otros), puestos desde el panel y restaurados al final.
+    const hero = {
+      title: 'Los hijos de leones no ceden jamás',
+      ctaLabel: 'Ver próximos partidos',
+      ctaHref: '/partidos',
+    }
+    const fields = {
+      title: 'Título (opcional)',
+      ctaLabel: 'Texto del botón (opcional)',
+      ctaHref: 'A dónde lleva el botón (opcional)',
+    } as const
+    const setHero = async (values: Record<keyof typeof fields, string>) => {
+      await page.goto('/admin/configuracion/portada')
+      await expect(page.getByRole('textbox', { name: fields.title, exact: true })).toBeEnabled()
+      for (const key of Object.keys(fields) as (keyof typeof fields)[]) {
+        await page.getByRole('textbox', { name: fields[key], exact: true }).fill(values[key])
+      }
+      await page.getByRole('button', { name: 'Guardar' }).click()
+      await expect(
+        page
+          .getByRole('status')
+          .filter({ hasText: /guardad/i })
+          .first(),
+      ).toBeVisible()
+    }
+    await page.goto('/admin/configuracion/portada')
+    await expect(page.getByRole('textbox', { name: fields.title, exact: true })).toBeEnabled()
+    const original = {
+      title: await page.getByRole('textbox', { name: fields.title, exact: true }).inputValue(),
+      ctaLabel: await page.getByRole('textbox', { name: fields.ctaLabel, exact: true }).inputValue(),
+      ctaHref: await page.getByRole('textbox', { name: fields.ctaHref, exact: true }).inputValue(),
+    }
+    await setHero(hero)
+    try {
+      // La primera pantalla (sin desplazar) y la portada completa.
+      await page.goto('/')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(hero.title)
+      await page.waitForLoadState('networkidle')
+      await page.screenshot({ path: `${dir}/portada-primera-pantalla-${width}.png` })
+      if (width === 1280) {
+        await page.setViewportSize({ width: 1920, height: 1080 })
+        await page.screenshot({ path: `${dir}/portada-primera-pantalla-1920.png` })
+        await page.setViewportSize({ width: 1280, height: 800 })
+      }
+      await loadLazyImages(page)
+      await page.screenshot({ path: `${dir}/portada-completa-${width}.png`, fullPage: true })
+    } finally {
+      await setHero(original)
+    }
+    await page.goto('/admin/noticias/nueva')
+    await expect(page.getByRole('heading', { name: 'Nueva noticia', level: 1 })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Título', exact: true })).toBeEnabled()
+    await page.screenshot({ path: `${dir}/noticia-formulario-${width}.png`, fullPage: true })
+    const advanced = page.getByText('Opciones avanzadas', { exact: true })
+    if ((await advanced.count()) > 0) {
+      await advanced.click()
+      await page.screenshot({ path: `${dir}/noticia-formulario-avanzadas-${width}.png`, fullPage: true })
+    }
+  })
 })
