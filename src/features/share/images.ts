@@ -7,7 +7,13 @@ import { type FocalPoint, focalCrop } from '@/lib/images/focal-crop'
 import { logger } from '@/lib/logger'
 import { cardCrestImage } from './crest-card'
 import type { CardCrest, MatchdayPhotoSource, MatchdayTopLine, ShareCardData } from './dto'
-import { MATCHDAY_CROP_RATIO, type ShareRequest, shareCachePath } from './lib/cards'
+import {
+  type PanelGeometry,
+  panelFocalAnchor,
+  type ShareFormat,
+  type ShareRequest,
+  shareCachePath,
+} from './lib/cards'
 import { loadShareCard, readMediaFile } from './queries'
 
 // Tarjetas generadas una vez por versión (especificación 2.8): se guardan en `SHARE_CACHE_DIR` y se
@@ -47,7 +53,7 @@ export async function getShareImage(
       if (ready) return { bytes: ready, fromCache: true }
 
       const started = performance.now()
-      await prepareCardImages(data)
+      await prepareCardImages(data, request.format)
       const { renderShareCard } = await import('./render')
       const bytes = await renderShareCard(data, request.format)
       const ms = Math.round(performance.now() - started)
@@ -72,10 +78,13 @@ export async function getShareImage(
  * Lo que la tarjeta necesita procesar con sharp, ya con los datos leídos: las fotos del matchday, el logo de
  * la línea superior, los escudos sin disco y la foto de la noticia. Corre dentro de la cola.
  */
-export async function prepareCardImages(data: ShareCardData): Promise<void> {
+export async function prepareCardImages(data: ShareCardData, format: ShareFormat): Promise<void> {
   if ((data.kind === 'match' || data.kind === 'jornada') && data.matchday) {
+    // Cada formato tiene su barra: la foto se recorta a esa medida exacta.
+    const { matchdayPanelGeometry } = await import('./render')
+    const panel = matchdayPanelGeometry(data, format)
     data.matchday.photos = await Promise.all(
-      data.matchday.photoSources.map((source) => matchdayPhoto(source)),
+      data.matchday.photoSources.map((source) => (panel ? matchdayPhoto(source, panel) : null)),
     )
     await fillTopLineLogo(data.matchday.topLine)
   }
@@ -154,24 +163,31 @@ async function removeOldVersions(request: ShareRequest, current: string): Promis
   }
 }
 
-/** Proporción del recorte (ancho / alto) y su alto: alcanza para el panel más alto (9:16) sin pesar de más. */
-const PANEL_RATIO = MATCHDAY_CROP_RATIO
+/** Alto de la foto recortada: alcanza para el panel más alto (9:16) sin pesar de más. */
 const PANEL_HEIGHT = 1200
 /** Contraste del blanco y negro (alrededor del gris medio): los grises bajos pasan a negro profundo. */
 const PANEL_CONTRAST = 1.25
 
 /**
- * Foto de un panel como *data URI* JPEG: recortada a la proporción del panel alrededor de su punto focal
- * (con su zoom) y en blanco y negro con contraste (Satori no aplica filtros). `null` si el archivo no está.
+ * Foto de un panel como *data URI* JPEG: recortada a la barra exacta del formato, con su punto focal (y su
+ * zoom) en la parte que se ve (bajo «MATCHDAY») y algo de aire por encima, en blanco y negro con contraste
+ * (Satori no aplica filtros). `null` si el archivo no está.
  */
-export async function matchdayPhoto(source: MatchdayPhotoSource | null): Promise<string | null> {
+export async function matchdayPhoto(
+  source: MatchdayPhotoSource | null,
+  panel: PanelGeometry,
+): Promise<string | null> {
   if (!source) return null
   const bytes = await readMediaFile(source.file)
-  return bytes ? treatMatchdayPhoto(bytes, source) : null
+  return bytes ? treatMatchdayPhoto(bytes, source, panel) : null
 }
 
 /** El recorte y el tratamiento de un panel a partir de los bytes de la foto (también lo usa `share-preview`). */
-export async function treatMatchdayPhoto(bytes: Buffer, focal: FocalPoint): Promise<string | null> {
+export async function treatMatchdayPhoto(
+  bytes: Buffer,
+  focal: FocalPoint,
+  panel: PanelGeometry,
+): Promise<string | null> {
   const { default: sharp } = await import('sharp')
   // Primero se endereza según su EXIF, para que el recorte use las medidas reales.
   const { data, info } = await sharp(bytes, { limitInputPixels: 50_000_000 })
@@ -180,7 +196,7 @@ export async function treatMatchdayPhoto(bytes: Buffer, focal: FocalPoint): Prom
   const { width, height } = info
   if (width === 0 || height === 0) return null
   const jpeg = await sharp(data)
-    .extract(focalCrop(width, height, PANEL_RATIO, focal))
+    .extract(focalCrop(width, height, panel.ratio, focal, panelFocalAnchor(panel)))
     .resize({ height: PANEL_HEIGHT, withoutEnlargement: true })
     .grayscale()
     // Estira el rango (sin los extremos sueltos) y sube el contraste: negros profundos, blancos limpios.

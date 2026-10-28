@@ -158,7 +158,7 @@ describe('versión de la tarjeta', () => {
     expect(jornadaCardVersion([a, { ...b, version: 4 }], 'x1')).not.toBe(base)
     expect(jornadaCardVersion([a, b], 'x2')).not.toBe(base)
     expect(base).toMatch(/^[0-9a-z]{1,16}$/)
-    expect(base.endsWith('j2')).toBe(true)
+    expect(base.endsWith('j3')).toBe(true)
   })
 })
 

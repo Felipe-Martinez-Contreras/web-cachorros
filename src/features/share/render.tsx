@@ -21,6 +21,7 @@ import {
   clampText,
   displayLines,
   fitDisplaySize,
+  type PanelGeometry,
   SERIES_SEPARATOR,
   SHARE_FORMATS,
   type ShareFormat,
@@ -799,9 +800,10 @@ function MatchdayWhen({
  * Tamaño de los dos nombres (Bebas Neue, sin cortar): los dos con la misma letra, cada uno en una línea si
  * cabe achicándola un poco; si no, en dos líneas.
  */
-function matchdayNames(home: string, away: string, width: number, size: number) {
+function matchdayNames(home: string, away: string, width: number, size: number, floor = size * 0.72) {
   const sizeFor = (name: string) => {
-    const single = fitDisplaySize(name, width, size, 1, size * 0.72, CHAR_EM.bebas)
+    // En una línea si cabe sin bajar de `floor` (más que la hora: los nombres mandan en el pie).
+    const single = fitDisplaySize(name, width, size, 1, Math.min(floor, size), CHAR_EM.bebas)
     return displayLines(name, width, single, CHAR_EM.bebas) === 1
       ? single
       : fitDisplaySize(name, width, size, 2, size * 0.5, CHAR_EM.bebas)
@@ -815,6 +817,15 @@ function matchdayNames(home: string, away: string, width: number, size: number) 
 }
 
 type InfoSizes = { names: number; series: number; venue: number; when: number }
+
+/**
+ * Lo más chico que puede quedar un nombre en una línea antes de pasar a dos: algo más grande que la hora
+ * (jerarquía del pie: nombres, cuándo, series, torneo).
+ */
+const namesFloor = (sizes: InfoSizes) => sizes.when * 1.15
+
+/** «VS», proporcional a los nombres como quedaron. */
+const versusSize = (names: number) => names * 0.5
 
 /** Ancho medio de una mayúscula de Barlow Condensed SemiBold, en em, con el espaciado de la línea naranja. */
 const SERIES_CHAR_EM = 0.55
@@ -837,10 +848,11 @@ function matchdayInfoMetrics(match: CardMatch, width: number, sizes: InfoSizes) 
     clampText(match.away.name, 80),
     width,
     sizes.names,
+    namesFloor(sizes),
   )
   const gap = sizes.series * 0.3
   const series = sizes.series * 1.25
-  const namesBlock = names.size * names.lines * 1.02 + sizes.names * 0.45 + gap * 2
+  const namesBlock = names.size * names.lines * 1.02 + versusSize(names.size) + gap * 2
   return {
     height:
       series + namesBlock + (match.venueName ? sizes.venue * 1.2 + gap : 0) + sizes.when * 1.15 + gap * 2,
@@ -858,6 +870,7 @@ function matchdayInfoTextWidth(match: CardMatch, width: number, sizes: InfoSizes
     clampText(match.away.name, 80),
     width,
     sizes.names,
+    namesFloor(sizes),
   )
   // Un nombre en dos líneas ya usa todo el ancho.
   const nameWidth = (name: string) =>
@@ -951,7 +964,7 @@ function MatchdayInfo({
 }) {
   const home = clampText(match.home.name, 80)
   const away = clampText(match.away.name, 80)
-  const names = matchdayNames(home, away, fitWidth, sizes.names)
+  const names = matchdayNames(home, away, fitWidth, sizes.names, namesFloor(sizes))
   const series = seriesLine(match)
   const seriesSize = seriesFontSize(series, fitWidth, sizes.series)
   const name = (text: string) => (
@@ -999,7 +1012,7 @@ function MatchdayInfo({
         style={{
           display: 'flex',
           fontFamily: MD_DISPLAY,
-          fontSize: sizes.names * 0.45,
+          fontSize: versusSize(names.size),
           lineHeight: 1,
           color: ACCENT,
         }}
@@ -1036,12 +1049,11 @@ function matchdaySizes(layout: Layout) {
       top: 140,
       sponsor: 34,
       title: 300,
-      crest: 190,
+      crest: 160,
       info: { names: 118, series: 32, venue: 38, when: 58 },
       gap: 48,
       bottom: 100,
       panelGap: 60,
-      band: { size: 104, min: 64 },
     }
   }
   if (layout.height > 1200) {
@@ -1054,7 +1066,6 @@ function matchdaySizes(layout: Layout) {
       gap: 30,
       bottom: 44,
       panelGap: 50,
-      band: { size: 86, min: 52 },
     }
   }
   return {
@@ -1066,7 +1077,6 @@ function matchdaySizes(layout: Layout) {
     gap: 22,
     bottom: 30,
     panelGap: 40,
-    band: { size: 66, min: 42 },
   }
 }
 
@@ -1150,15 +1160,17 @@ function MatchdayCard({ data, layout }: { data: MatchCardData; layout: Layout })
  * «Jornada»: el matchday con las series que juegan en una banda bajo los paneles y la hora de inicio de la
  * jornada (la del primer partido) en vez de la de cada serie.
  */
+/** La jornada vista como un partido: la línea naranja lleva la competencia (si es una sola) en vez de la serie. */
+const jornadaMatch = (data: JornadaCardData): CardMatch => ({
+  ...data.match,
+  seriesName: '',
+  roundLabel: null,
+  competitionName: data.match.competitionName || 'Jornada',
+})
+
 function JornadaCard({ data, layout }: { data: JornadaCardData; layout: Layout }) {
   const { topLine, photos } = data.matchday
-  // La línea naranja lleva la competencia (si todas son de la misma) en lugar de la serie.
-  const match: CardMatch = {
-    ...data.match,
-    seriesName: '',
-    roundLabel: null,
-    competitionName: data.match.competitionName || 'Jornada',
-  }
+  const match = jornadaMatch(data)
   const props = { match, layout, topLine, photos, series: data.series, whenPrefix: 'Inicio' }
   return layout.wide ? <MatchdayWide {...props} /> : <MatchdayFrame {...props} />
 }
@@ -1208,6 +1220,12 @@ function SeriesBand({ lines, size }: { lines: string[][]; size: number }) {
 
 const bandHeight = (lines: number, size: number) => (lines > 0 ? lines * size + (lines - 1) * size * 0.08 : 0)
 
+/**
+ * Tamaño de la banda de series (y su mínimo, en dos líneas): menor que la hora y mayor que el torneo, para
+ * que no compita con los nombres de los equipos ni le quite alto a las barras.
+ */
+const seriesBandSizes = (info: InfoSizes): [number, number] => [info.when * 0.82, info.series * 1.15]
+
 /** Nombres de serie para la banda (sin marcadores de contenido pendiente y con un largo razonable). */
 const clampSeries = (series: readonly string[]) => series.map((name) => clampText(name, 24))
 
@@ -1227,6 +1245,29 @@ export function matchdayFrameBox(
   return frameBox(match, layout, topLine, series)
 }
 
+/** Medidas de los paneles de la OG (1200 × 630): a la derecha, a todo el alto, sin el título encima. */
+const WIDE_PANELS = { pad: 40, gap: 14, width: 420 } as const
+
+/**
+ * La barra de la tarjeta en ese formato: su proporción y la parte de arriba que tapa «MATCHDAY». Con esto
+ * `images.ts` recorta cada foto a la medida exacta y deja el punto focal en lo que se ve. `null` si la
+ * tarjeta no lleva fotos.
+ */
+export function matchdayPanelGeometry(data: ShareCardData, format: ShareFormat): PanelGeometry | null {
+  if (data.kind !== 'match' && data.kind !== 'jornada') return null
+  if (format === 'og') {
+    const { height } = SHARE_FORMATS.og
+    const width = (WIDE_PANELS.width - WIDE_PANELS.gap * 2) / 3
+    return { ratio: width / (height - WIDE_PANELS.pad * 2), hiddenTop: 0 }
+  }
+  const topLine = data.matchday?.topLine ?? null
+  const box =
+    data.kind === 'jornada'
+      ? matchdayFrameBox(jornadaMatch(data), format, topLine, data.series)
+      : matchdayFrameBox(data.match, format, topLine)
+  return { ratio: box.panelWidth / box.panelHeight, hiddenTop: box.titleOverlap / box.panelHeight }
+}
+
 function frameBox(
   match: CardMatch,
   layout: Layout,
@@ -1244,9 +1285,7 @@ function frameBox(
   const titleOverlap = titleBox * TITLE_OVERLAP
   const crest = z.crest * s
   const bottomRow = teamsRowHeight(match, contentWidth, crest, info)
-  const band = series
-    ? seriesBandLayout(clampSeries(series), contentWidth, z.band.size * s, z.band.min * s)
-    : null
+  const band = series ? seriesBandLayout(clampSeries(series), contentWidth, ...seriesBandSizes(info)) : null
   const bandBlock = band ? bandHeight(band.lines.length, band.size) + z.gap * s : 0
   const panelTop = z.top * s + sponsorHeight + (titleBox - titleOverlap)
   const panelHeight = height - panelTop - z.gap * s - bandBlock - bottomRow - z.bottom * s
@@ -1341,13 +1380,14 @@ function MatchdayFrame({ match, layout, topLine, photos, series, whenPrefix }: M
 /** Open Graph (1200 × 630): título y datos a la izquierda, los tres paneles a la derecha. */
 function MatchdayWide({ match, layout, topLine, photos, series, whenPrefix }: MatchdayProps) {
   const { width, height } = layout
-  const pad = 40
-  const panelGap = 14
-  const panelsWidth = 420
+  const { pad, gap: panelGap, width: panelsWidth } = WIDE_PANELS
   const panelWidth = (panelsWidth - panelGap * 2) / 3
   const leftWidth = width - pad * 3 - panelsWidth
   const crest = 96
-  const band = series ? seriesBandLayout(clampSeries(series), leftWidth, 40, 24) : null
+  const wideInfo = series
+    ? { names: 44, series: 16, venue: 18, when: 24 }
+    : { names: 50, series: 16, venue: 19, when: 26 }
+  const band = series ? seriesBandLayout(clampSeries(series), leftWidth, ...seriesBandSizes(wideInfo)) : null
   // La luz del fondo va detrás de la barra central.
   const center: [number, number] = [((width - pad - panelsWidth / 2) / width) * 100, 45]
   return (
@@ -1387,11 +1427,7 @@ function MatchdayWide({ match, layout, topLine, photos, series, whenPrefix }: Ma
             width={leftWidth}
             crest={crest}
             hug
-            sizes={
-              band
-                ? { names: 44, series: 16, venue: 18, when: 24 }
-                : { names: 50, series: 16, venue: 19, when: 26 }
-            }
+            sizes={wideInfo}
             whenPrefix={whenPrefix}
           />
           {band && <SeriesBand lines={band.lines} size={band.size} />}

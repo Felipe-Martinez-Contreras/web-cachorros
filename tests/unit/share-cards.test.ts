@@ -161,7 +161,7 @@ describe('fitDisplaySize', () => {
 
 describe('withDesignRevision', () => {
   it('suma la revisión del diseño a las plantillas rediseñadas', () => {
-    expect(withDesignRevision('proximo', 3)).toBe('3m2')
+    expect(withDesignRevision('proximo', 3)).toBe('3m3')
     expect(withDesignRevision('programacion', 'abc')).toBe('abcp2')
     expect(withDesignRevision('resultado', 3)).toBe('3e1')
     expect(isValidVersion(withDesignRevision('proximo', 12))).toBe(true)
