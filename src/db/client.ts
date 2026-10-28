@@ -9,8 +9,15 @@ function createClient() {
   // (requisito para que `next build` funcione sin base de datos).
   return postgres(env.DATABASE_URL ?? 'postgres://sin-configurar', {
     max: env.DB_POOL_MAX ?? 5,
-    idle_timeout: 30,
-    connect_timeout: 10,
+    // Una conexión ociosa se cierra a los 2 minutos (no a los 30 s): con la CPU de la VM ocupada, cada
+    // reconexión es un handshake más que puede no alcanzar a completarse (incidente sha-8191eed).
+    idle_timeout: 120,
+    // Se renuevan cada 30 minutos aunque estén en uso: una conexión que quedó mal no dura para siempre.
+    max_lifetime: 60 * 30,
+    // Plazo para conectar y autenticarse. Si se cumple, la consulta falla y la siguiente vuelve a intentar.
+    connect_timeout: 15,
+    // Para reconocerlas en pg_stat_activity.
+    connection: { application_name: 'cachorros-web' },
     onnotice: () => {},
   })
 }

@@ -35,6 +35,9 @@ export const env = createEnv({
       z.url({ protocol: /^postgres(ql)?$/, error: 'Debe empezar con postgres://' }),
     ),
     DB_POOL_MAX: z.coerce.number().int().min(1).max(20).default(5),
+    // Si /api/health no llega a la BD durante este tiempo seguido, la app termina con código 1 y Docker la
+    // vuelve a levantar (`restart: unless-stopped`). 0 lo desactiva; sin valor, 180 s fuera de desarrollo.
+    HEALTH_RESTART_AFTER_S: z.coerce.number().int().min(0).max(3600).optional(),
 
     BETTER_AUTH_SECRET: requerida('Genera una con el comando del README.').pipe(
       z.string().min(32, { error: 'Debe tener al menos 32 caracteres.' }),
