@@ -2,11 +2,11 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { mediaAssets, teams } from '@/db/schema'
 import { crestCardStyle } from '@/db/schema/enums'
-import { type CrestCardStyle, crestPreviewTile } from '@/features/share/crest-card'
-import { readMediaFile } from '@/features/share/queries'
+import { QueueAbortedError } from '@/features/media/lib/upload-rules'
+import type { CrestCardStyle } from '@/features/share/crest-card'
+import { getCrestPreview } from '@/features/share/crest-preview'
 import { AuthError, requirePermission } from '@/lib/auth/session'
 import { isUuid } from '@/lib/form-schemas'
-import { runHeavy } from '@/lib/heavy-queue'
 import { requestLogger } from '@/lib/logger'
 
 type Params = { params: Promise<{ id: string; estilo: string }> }
@@ -19,8 +19,8 @@ const isStyle = (value: string): value is CrestCardStyle =>
 /**
  * `GET /api/admin/escudos/[id]/[estilo]`: el escudo de un equipo tal como sale en las tarjetas matchday con
  * ese estilo (`color`, `blanco` o `grises`), sobre el fondo oscuro. Solo para el panel (Rivales → Escudos en
- * las tarjetas). Se trata en la cola de sharp; el navegador lo guarda unos minutos (la dirección lleva el id
- * del archivo del escudo, así que cambia al reemplazarlo).
+ * las tarjetas). Se dibuja una sola vez por versión del escudo y estilo (`getCrestPreview`, en la cola de
+ * sharp); la consulta termina antes de entrar a la cola. Si el navegador se va antes, no se dibuja.
  */
 export async function GET(request: Request, { params }: Params) {
   try {
@@ -33,24 +33,32 @@ export async function GET(request: Request, { params }: Params) {
   if (!isUuid(id) || !isStyle(estilo)) return new Response(null, { status: 404, headers: noStore })
   try {
     const [team] = await db
-      .select({ variants: mediaAssets.variants })
+      .select({ mediaId: mediaAssets.id, variants: mediaAssets.variants })
       .from(teams)
       .innerJoin(mediaAssets, eq(mediaAssets.id, teams.crestMediaId))
       .where(eq(teams.id, id.toLowerCase()))
       .limit(1)
-    const variants = team?.variants
-    const file = variants?.png512 ?? (variants?.master.endsWith('.png') ? variants.master : null)
-    const bytes = file ? await readMediaFile(file) : null
-    const tile = bytes ? await runHeavy(() => crestPreviewTile(bytes, estilo)) : null
-    if (!tile) return new Response(null, { status: 404, headers: noStore })
-    return new Response(new Uint8Array(tile), {
+    const preview = team?.variants
+      ? await getCrestPreview({
+          mediaId: team.mediaId,
+          variants: team.variants,
+          style: estilo,
+          signal: request.signal,
+        })
+      : null
+    if (!preview) return new Response(null, { status: 404, headers: noStore })
+    return new Response(new Uint8Array(preview.bytes), {
       headers: {
-        'Cache-Control': 'private, max-age=600',
+        // La dirección lleva el id del archivo del escudo: cambia al reemplazarlo.
+        'Cache-Control': 'private, max-age=3600',
         'Content-Type': 'image/png',
+        'X-Cache': preview.fromCache ? 'hit' : 'miss',
         'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch (error) {
+    // El navegador se fue antes de su turno en la cola: no se dibujó (y nadie lee la respuesta).
+    if (error instanceof QueueAbortedError) return new Response(null, { status: 499, headers: noStore })
     requestLogger(request.headers).error({ err: error }, 'no se pudo dibujar la vista previa de un escudo')
     return new Response(null, { status: 503, headers: noStore })
   }

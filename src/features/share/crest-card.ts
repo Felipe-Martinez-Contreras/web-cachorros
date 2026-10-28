@@ -16,6 +16,12 @@ export type DarkTreatment = 'contorno' | 'resplandor'
 
 export type CardCrestImage = { src: string; scale: number }
 
+/**
+ * Revisión del tratamiento de los escudos: entra en el nombre de las vistas previas en caché
+ * (`crest-preview.ts`). Súbela si cambia cómo se dibuja un escudo.
+ */
+export const CREST_TREATMENT_REVISION = 1
+
 type Rgba = { data: Uint8ClampedArray; width: number; height: number }
 
 /** Casi blanco: lo que se quita de un fondo blanco (con tolerancia para el suavizado del borde). */
