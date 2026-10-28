@@ -327,6 +327,7 @@ describe('ajustes de Facebook', () => {
         .data,
     ).toEqual({
       enabled: true,
+      weekly: false,
       weekday: 5,
       time: '12:00',
       publishResults: false,
@@ -346,6 +347,7 @@ describe('ajustes de Facebook', () => {
       FACEBOOK_DEFAULTS,
       {
         enabled: true,
+        weekly: true,
         weekday: 5,
         time: '12:00',
         publishResults: true,
@@ -356,11 +358,16 @@ describe('ajustes de Facebook', () => {
       },
       t1,
     )
-    expect(on).toMatchObject({ enabledAt: t1.toISOString(), resultsEnabledAt: t1.toISOString() })
+    expect(on).toMatchObject({
+      enabledAt: t1.toISOString(),
+      weeklyEnabledAt: t1.toISOString(),
+      resultsEnabledAt: t1.toISOString(),
+    })
     const again = nextFacebookSettings(
       on,
       {
         enabled: true,
+        weekly: true,
         weekday: 4,
         time: '18:00',
         publishResults: true,
@@ -380,6 +387,7 @@ describe('ajustes de Facebook', () => {
       again,
       {
         enabled: false,
+        weekly: false,
         weekday: 4,
         time: '18:00',
         publishResults: false,
@@ -391,6 +399,7 @@ describe('ajustes de Facebook', () => {
       t2,
     )
     expect(off.enabledAt).toBeUndefined()
+    expect(off.weeklyEnabledAt).toBeUndefined()
     expect(off.resultsEnabledAt).toBeUndefined()
   })
 })

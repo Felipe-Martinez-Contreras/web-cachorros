@@ -2,13 +2,17 @@ import * as z from 'zod'
 import type { SocialPublishingSettings } from '@/db/schema/system'
 import { checkbox, optionalText, optionalUuid, requiredTime } from '@/lib/form-schemas'
 
-// Configuración de la publicación en Facebook (panel → Configuración → Facebook). Lógica pura.
+// Configuración de la publicación en Facebook (panel → Facebook → Ajustes). Lógica pura.
 
 export type FacebookSettings = NonNullable<SocialPublishingSettings['facebook']>
 
-/** Por defecto: desactivada, la programación el viernes a las 12:00 y sin resultados automáticos. */
+/**
+ * Por defecto: desactivada, sin la programación semanal (si se activa, el viernes a las 12:00) y sin resultados
+ * automáticos.
+ */
 export const FACEBOOK_DEFAULTS: FacebookSettings = {
   enabled: false,
+  weekly: false,
   weekday: 5,
   time: '12:00',
   publishResults: false,
@@ -27,6 +31,7 @@ export const PUBLISH_WEEKDAYS = [1, 2, 3, 4, 5, 6] as const
 export const facebookSettingsSchema = z
   .object({
     enabled: checkbox(),
+    weekly: checkbox(),
     weekday: z.coerce
       .number({ error: 'Elige el día.' })
       .int()
@@ -56,6 +61,8 @@ export type FacebookSettingsInput = z.infer<typeof facebookSettingsSchema>
 
 const stored = z.object({
   enabled: z.boolean(),
+  weekly: z.boolean().default(false),
+  weeklyEnabledAt: z.string().optional(),
   weekday: z.number().int().min(1).max(6),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   publishResults: z.boolean(),
@@ -113,10 +120,23 @@ export function nextFacebookSettings(
       logoId: topLineMode === 'logo' ? (topLineLogo ?? null) : null,
     },
     enabledAt: input.enabled ? (current.enabled ? current.enabledAt : at) : undefined,
+    weeklyEnabledAt: input.weekly ? (current.weekly ? current.weeklyEnabledAt : at) : undefined,
     resultsEnabledAt: input.publishResults
       ? current.publishResults
         ? current.resultsEnabledAt
         : at
       : undefined,
   }
+}
+
+/**
+ * Desde cuándo corre la programación semanal: necesita el interruptor general y la suya, así que vale la más
+ * reciente de las dos fechas. `undefined` si está apagada.
+ */
+export function weeklyActiveSince(settings: FacebookSettings): string | undefined {
+  if (!settings.enabled || !settings.weekly || !settings.enabledAt || !settings.weeklyEnabledAt)
+    return undefined
+  return Date.parse(settings.enabledAt) > Date.parse(settings.weeklyEnabledAt)
+    ? settings.enabledAt
+    : settings.weeklyEnabledAt
 }

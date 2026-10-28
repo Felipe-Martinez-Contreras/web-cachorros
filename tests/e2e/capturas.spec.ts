@@ -1,7 +1,7 @@
 // Capturas para el reporte de fase (360 px y 1280 px). playwright.config.ts las excluye de las pruebas normales:
 //   PowerShell:  $env:CAPTURAS = 'fase-2b'; pnpm test:e2e capturas; Remove-Item Env:CAPTURAS
 import { expect, type Page, test } from '@playwright/test'
-import { ADMIN, login, waitForTurnstile } from './support'
+import { ADMIN, drawCardPreview, login, waitForTurnstile } from './support'
 
 const fase = process.env.CAPTURAS ?? ''
 const dir = `docs/fases/capturas/${fase}`
@@ -376,7 +376,7 @@ test.describe('capturas del reporte de fase', () => {
     await login(page, ADMIN.email)
     await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
 
-    await page.goto('/admin/configuracion/facebook')
+    await page.goto('/admin/facebook/ajustes')
     // El formulario se habilita al hidratar: un clic anterior se perdería.
     const enable = page.getByRole('checkbox', { name: 'Publicar en Facebook' })
     await expect(enable).toBeEnabled()
@@ -384,7 +384,7 @@ test.describe('capturas del reporte de fase', () => {
       await enable.check()
     }).toPass()
     await page.getByRole('button', { name: 'Guardar' }).click()
-    await expect(page.getByText('Configuración de Facebook guardada.')).toBeVisible()
+    await expect(page.getByText('Ajustes de Facebook guardados.')).toBeVisible()
     await page.reload()
     await page.screenshot({ path: `${dir}/panel-facebook-${width}.png`, fullPage: true })
 
@@ -399,9 +399,71 @@ test.describe('capturas del reporte de fase', () => {
     const section = page.getByRole('region', { name: 'Facebook' })
     await section.scrollIntoViewIfNeeded()
     await page.screenshot({ path: `${dir}/panel-partido-facebook-${width}.png`, fullPage: true })
-    await section.getByRole('link', { name: 'Publicar en Facebook' }).click()
-    const preview = page.getByRole('img', { name: /que se subirá a Facebook/ })
-    await expect.poll(() => preview.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1080)
+    await section.getByRole('link', { name: 'Publicar o programar en Facebook' }).click()
+    await drawCardPreview(page, 'Tarjeta «Próximo partido» que se subirá a Facebook')
     await page.screenshot({ path: `${dir}/panel-publicar-facebook-${width}.png`, fullPage: true })
+  })
+
+  test('facebook-por-jornada: sección Facebook y una jornada programada', async ({ page }, testInfo) => {
+    test.skip(fase !== 'facebook-por-jornada', 'Estas capturas son de la publicación programada.')
+    test.setTimeout(180_000)
+    const width = page.viewportSize()?.width ?? testInfo.project.name
+    const isMobile = testInfo.project.name === 'celular'
+    const santiagoDate = (days: number) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(
+        Date.now() + days * 86_400_000,
+      )
+    await login(page, ADMIN.email)
+    await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+
+    // Facebook activo (Ajustes).
+    await page.goto('/admin/facebook/ajustes')
+    const enable = page.getByRole('checkbox', { name: 'Publicar en Facebook' })
+    await expect(enable).toBeEnabled()
+    await expect(async () => {
+      await enable.check()
+    }).toPass()
+    await page.getByRole('button', { name: 'Guardar' }).click()
+    await expect(page.getByText('Ajustes de Facebook guardados.')).toBeVisible()
+    await page.reload()
+    // Se captura con el formulario ya habilitado (después de hidratar), con lo guardado.
+    await expect(enable).toBeEnabled()
+    await expect(enable).toBeChecked()
+    await page.screenshot({ path: `${dir}/facebook-ajustes-${width}.png`, fullPage: true })
+
+    // Una jornada de tres series (fechas 50 y 51: e2e-clean las borra).
+    await page.goto('/admin/partidos/jornada')
+    await page.getByLabel('Día', { exact: true }).fill(santiagoDate(isMobile ? 150 : 151))
+    await page.getByRole('combobox', { name: 'Rival' }).selectOption({ label: 'Real Los Espinos' })
+    await page.getByRole('combobox', { name: 'El club juega de' }).selectOption({ label: 'Local' })
+    for (const [serie, time] of [
+      ['Tercera', '10:00'],
+      ['Segunda', '12:00'],
+      ['Honor', '15:30'],
+    ] as const) {
+      await page.getByRole('checkbox', { name: serie, exact: true }).check()
+      await page.getByLabel(`Hora de ${serie}`).fill(time)
+      await page
+        .getByRole('spinbutton', { name: new RegExp(`^Fecha n.º de ${serie}`) })
+        .fill(String(isMobile ? 50 : 51))
+    }
+    await page.getByRole('button', { name: 'Programar 3 partidos' }).click()
+    await page.getByRole('link', { name: 'Ver tarjeta de la jornada' }).click()
+    await drawCardPreview(page, 'Tarjeta de la jornada:')
+    await page.screenshot({ path: `${dir}/jornada-sin-programar-${width}.png`, fullPage: true })
+
+    // Programarla con la hora sugerida.
+    const facebook = page.getByRole('region', { name: 'Publicar en Facebook' })
+    await expect(facebook.getByRole('combobox', { name: 'Cuándo' })).toBeEnabled()
+    await facebook.getByRole('button', { name: 'Programar' }).click()
+    await expect(page.getByText('Publicación programada.')).toBeVisible()
+    await expect(facebook.getByText(/^Se publicará el/)).toBeVisible()
+    await page.screenshot({ path: `${dir}/jornada-programada-${width}.png`, fullPage: true })
+
+    await page.goto('/admin/facebook')
+    await loadLazyImages(page)
+    await page.screenshot({ path: `${dir}/facebook-programadas-${width}.png`, fullPage: true })
+    await page.goto('/admin/facebook/publicadas')
+    await page.screenshot({ path: `${dir}/facebook-publicadas-${width}.png`, fullPage: true })
   })
 })

@@ -128,5 +128,6 @@ export const publicationStatus = pgEnum('publication_status', [
   'error',
   'incierto',
   'descartado',
+  'programada',
 ])
 export const publicationTrigger = pgEnum('publication_trigger', ['automatica', 'manual'])

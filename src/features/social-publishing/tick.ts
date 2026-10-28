@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, gte, lt, lte, ne, or } from 'drizzle-orm'
+import { and, asc, eq, gte, lt, lte, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { matches, socialPublications } from '@/db/schema'
 import { santiagoWallTime } from '@/features/matches/lib/schedule'
@@ -17,11 +17,14 @@ import {
   STUCK_PUBLISHING_MS,
 } from './lib/rules'
 import { upcomingWeekend, weeklyDecision } from './lib/schedule'
+import { weeklyActiveSince } from './lib/settings'
 import { processPublication } from './publish'
+import { notifyDiscardedScheduled, runScheduledGuards } from './scheduled'
 
-// Lo que hace la tarea `tick` (cada 5 minutos) con las redes: encola la programación del fin de semana y
-// los resultados cuando corresponde, y publica lo pendiente o reintenta lo que falló. Idempotente: el
-// índice único `(canal, tipo, sujeto)` impide encolar dos veces lo mismo.
+// Lo que hace la tarea `tick` (cada 5 minutos) con las redes: revisa los seguros de lo programado, encola la
+// programación del fin de semana (si está activa) y los resultados cuando corresponde, y publica lo
+// programado que llegó a su hora, lo pendiente o reintenta lo que falló. Idempotente: el índice único
+// `(canal, tipo, sujeto)` impide encolar dos veces lo mismo.
 
 /** Cuántas publicaciones se envían por tick, como máximo (cada una dibuja una tarjeta). */
 const PER_TICK = 3
@@ -37,9 +40,9 @@ export async function runSocialPublishing(
   now = new Date(),
   channel: PublishChannel | null = facebook(),
 ): Promise<SocialTickSummary> {
-  await housekeeping(now)
   const settings = await loadFacebookSettings()
   const availability = facebookAvailability(settings)
+  await housekeeping(now, availability.ok && channel !== null)
   if (!availability.ok || !channel) {
     return {
       skipped: availability.ok ? 'sin_configurar' : availability.reason,
@@ -55,7 +58,7 @@ export async function runSocialPublishing(
     now,
     weekday: settings.weekday,
     time: settings.time,
-    enabledAt: settings.enabledAt,
+    enabledAt: weeklyActiveSince(settings),
     firstKickoff: await firstKickoff(saturday),
   })
   if (decision.publish && !(await weekendAlreadyPublished(decision.saturday))) {
@@ -116,6 +119,7 @@ export async function runSocialPublishing(
         eq(socialPublications.channel, 'facebook'),
         or(
           eq(socialPublications.status, 'pendiente'),
+          and(eq(socialPublications.status, 'programada'), lte(socialPublications.scheduledAt, now)),
           and(
             eq(socialPublications.status, 'error'),
             lte(socialPublications.nextAttemptAt, now),
@@ -124,7 +128,7 @@ export async function runSocialPublishing(
         ),
       ),
     )
-    .orderBy(asc(socialPublications.createdAt))
+    .orderBy(asc(dueAt))
     .limit(PER_TICK)
 
   let published = 0
@@ -184,11 +188,16 @@ async function firstKickoff(saturday: string): Promise<Date | null> {
   return row?.kickoffAt ?? null
 }
 
+/** Desde cuándo cuenta una publicación: una programada, desde su hora. */
+const dueAt = sql<Date>`coalesce(${socialPublications.scheduledAt}, ${socialPublications.createdAt})`
+
 /**
- * Orden de la cola, aunque la publicación esté apagada: un «publicando» que quedó a medias pasa a
- * «Sin confirmar» (no se sabe si llegó a Facebook) y un pendiente viejo se descarta.
+ * Orden de la cola, aunque la publicación esté apagada: las programadas que ya no valen se descartan (con
+ * aviso por correo), un «publicando» que quedó a medias pasa a «Sin confirmar» (no se sabe si llegó a
+ * Facebook) y un pendiente viejo se descarta.
  */
-async function housekeeping(now: Date): Promise<void> {
+async function housekeeping(now: Date, available: boolean): Promise<void> {
+  const guarded = await runScheduledGuards(now, available)
   const stuck = await db
     .update(socialPublications)
     .set({
@@ -211,16 +220,21 @@ async function housekeeping(now: Date): Promise<void> {
     })
     .where(
       and(
-        lt(socialPublications.createdAt, new Date(now.getTime() - STALE_PENDING_MS)),
+        lt(dueAt, new Date(now.getTime() - STALE_PENDING_MS).toISOString()),
         // Lo que agotó sus intentos queda «Con error», visible en el panel.
         or(
           eq(socialPublications.status, 'pendiente'),
+          and(eq(socialPublications.status, 'programada'), lte(socialPublications.scheduledAt, now)),
           and(eq(socialPublications.status, 'error'), lt(socialPublications.attempts, MAX_PUBLISH_ATTEMPTS)),
         ),
       ),
     )
     .returning({ id: socialPublications.id })
-  if (stuck.length + stale.length > 0) {
-    logger.warn({ stuck: stuck.length, stale: stale.length }, 'redes: publicaciones sin terminar')
+  if (guarded + stuck.length + stale.length > 0) {
+    logger.warn(
+      { guarded, stuck: stuck.length, stale: stale.length },
+      'redes: publicaciones descartadas o sin terminar',
+    )
   }
+  await notifyDiscardedScheduled(now)
 }

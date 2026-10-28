@@ -87,24 +87,38 @@ export default async function EditMatchPage({ params }: { params: Promise<{ id: 
           <h2 id="facebook" className="scroll-mt-20 text-lg font-bold">
             Facebook
           </h2>
-          {facebook.publication ? (
-            <ResourceList label="Publicación en Facebook">
-              <PublicationRow publication={facebook.publication} />
-            </ResourceList>
-          ) : facebook.blockedReason ? (
+          {facebook.publication && facebook.publication.status !== 'descartado' ? (
+            <>
+              <ResourceList label="Publicación en Facebook">
+                <PublicationRow publication={facebook.publication} />
+              </ResourceList>
+              {facebook.publication.status === 'programada' && (
+                <div>
+                  <Link
+                    href={`/admin/partidos/${match.id}/facebook`}
+                    className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                  >
+                    Cambiar o cancelar
+                  </Link>
+                </div>
+              )}
+            </>
+          ) : facebook.blockedReason && !facebook.canSchedule ? (
             <p className="text-neutral-600">{facebook.blockedReason}</p>
           ) : (
             <>
               <p className="text-neutral-600">
-                Sube la tarjeta «{publicationKindLabels[facebook.kind]}» a la página del club. Antes de
-                publicar ves la imagen y puedes cambiar el texto.
+                {facebook.publication?.status === 'descartado' &&
+                  `${facebook.publication.lastError ?? 'La publicación anterior se descartó.'} `}
+                Sube la tarjeta «{publicationKindLabels[facebook.kind]}» a la página del club, ahora o a la
+                hora que elijas. Antes ves la imagen y puedes cambiar el texto.
               </p>
               <div>
                 <Link
                   href={`/admin/partidos/${match.id}/facebook`}
                   className={buttonVariants({ variant: 'outline', size: 'lg' })}
                 >
-                  Publicar en Facebook
+                  Publicar o programar en Facebook
                 </Link>
               </div>
             </>

@@ -99,3 +99,28 @@ export async function openModule(page: Page, name: string, isMobile: boolean) {
   }
   await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
 }
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Las tarjetas del panel no se dibujan al abrir la página: si todavía no existe, aparece «Ver imagen».
+ * Se pide (así se dibuja y queda en caché) y se recarga: la vista previa queda como imagen de 1080 px.
+ */
+export async function drawCardPreview(page: Page, altPrefix: string) {
+  const image = page.getByRole('img', { name: new RegExp(`^${escapeRegExp(altPrefix)}`) })
+  // El nombre es «Ver imagen» y, solo para lectores de pantalla, de qué tarjeta es.
+  const link = page.getByRole('link', {
+    name: new RegExp(`^Ver imagen\\s*:\\s*${escapeRegExp(altPrefix)}`),
+  })
+  await expect(image.or(link).first()).toBeVisible()
+  if ((await link.count()) > 0) {
+    const href = await link.first().getAttribute('href')
+    const response = await page.request.get(href ?? '')
+    expect(response.status()).toBe(200)
+    expect(response.headers()['content-type']).toBe('image/png')
+    await page.reload()
+  }
+  await expect(image).toBeVisible()
+  await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1080)
+  return image
+}

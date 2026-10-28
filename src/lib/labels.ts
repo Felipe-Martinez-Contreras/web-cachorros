@@ -293,6 +293,7 @@ export const publicationStatusLabels: Labels<typeof publicationStatus> = {
   error: 'Con error',
   incierto: 'Sin confirmar',
   descartado: 'Descartado',
+  programada: 'Programada',
 }
 
 /** Escudo de un equipo en las tarjetas para redes (Panel → Rivales). */
@@ -302,7 +303,7 @@ export const crestCardStyleLabels: Labels<typeof crestCardStyle> = {
   grises: 'Monocromo en grises',
 }
 
-/** Línea pequeña sobre «MATCHDAY» en las tarjetas (Configuración → Facebook). */
+/** Línea pequeña sobre «MATCHDAY» en las tarjetas (Facebook → Ajustes). */
 export const topLineModeLabels = {
   ninguna: 'Sin línea',
   auspiciador: 'Auspiciador de las tarjetas («POWERED BY …»)',

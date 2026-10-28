@@ -13,6 +13,7 @@ const STATUS_VARIANT = {
   error: 'danger',
   incierto: 'accent',
   descartado: 'outline',
+  programada: 'neutral',
 } as const
 
 const RETRYABLE = new Set(['error', 'incierto', 'descartado'])
@@ -35,7 +36,9 @@ export function PublicationRow({
       }
       subtitle={
         <>
-          {status === 'publicado' ? 'Publicado' : 'Creado'} el {formatLongDateTime(when)}
+          {status === 'programada' && publication.scheduledAt
+            ? `Se publicará el ${formatLongDateTime(publication.scheduledAt)}`
+            : `${status === 'publicado' ? 'Publicado' : 'Creado'} el ${formatLongDateTime(when)}`}
           {publication.trigger === 'manual' ? ' · a mano' : ' · automática'}
           {publication.attempts > 1 && ` · ${publication.attempts} intentos`}
           {publication.lastError && status !== 'publicado' && (

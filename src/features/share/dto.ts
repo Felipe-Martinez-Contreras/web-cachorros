@@ -55,7 +55,7 @@ export type MatchCardData = {
 export type MatchdayPhotoSource = { file: string; focalX: number; focalY: number; focalZoom: number }
 
 /**
- * Línea pequeña sobre «MATCHDAY» (Configuración → Facebook): un texto («POWERED BY …» o el que se escriba) o
+ * Línea pequeña sobre «MATCHDAY» (Facebook → Ajustes): un texto («POWERED BY …» o el que se escriba) o
  * un logo en blanco (`src` lo llena `images.ts`, dentro de la cola). `null`: no se dibuja.
  */
 export type MatchdayTopLine =
@@ -78,7 +78,7 @@ export type WeekendCardData = {
   /** Sábado `YYYY-MM-DD`. */
   saturday: string
   matches: CardMatch[]
-  /** Solo en «Programación»: la línea superior del matchday (la misma de Configuración → Facebook). */
+  /** Solo en «Programación»: la línea superior del matchday (la misma de Facebook → Ajustes). */
   topLine: MatchdayTopLine | null
 }
 

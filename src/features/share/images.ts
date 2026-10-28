@@ -1,5 +1,5 @@
 import 'server-only'
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { env } from '@/lib/env'
 import { runHeavy } from '@/lib/heavy-queue'
@@ -25,6 +25,19 @@ export function shareCacheDir(): string {
 }
 
 export type ShareImage = { bytes: Buffer; fromCache: boolean }
+
+/**
+ * ¿Ya está dibujada esta versión? Solo mira el disco (no lee la BD ni entra a la cola): el panel la usa para
+ * mostrar una miniatura sin dibujar nada al abrir la página.
+ */
+export async function isShareImageCached(request: ShareRequest, version: string): Promise<boolean> {
+  try {
+    await access(path.join(/* turbopackIgnore: true */ shareCacheDir(), shareCachePath(request, version)))
+    return true
+  } catch {
+    return false
+  }
+}
 
 /**
  * Imagen de una tarjeta en su versión vigente: desde el disco si ya existe; si no, se dibuja y se guarda, y

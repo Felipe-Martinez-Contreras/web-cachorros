@@ -8,8 +8,8 @@ import type { MatchdayData, MatchdayTopLine } from './dto'
 import { shortHash } from './lib/cards'
 
 // Lo que agrega el matchday («Próximo partido», «Jornada» y, la línea superior, «Programación») a una
-// tarjeta: la línea sobre el título (Configuración → Facebook: el auspiciador de Configuración → Destacados,
-// un texto o un logo) y las 3 fotos de Configuración → Facebook (o las elegidas para una publicación). Las
+// tarjeta: la línea sobre el título (Facebook → Ajustes: el auspiciador de Configuración → Destacados,
+// un texto o un logo) y las 3 fotos de Facebook → Ajustes (o las elegidas para una publicación). Las
 // fotos marcadas «contiene menores» nunca salen del sitio (6.3): se descartan aquí, aunque ya estuvieran
 // elegidas.
 

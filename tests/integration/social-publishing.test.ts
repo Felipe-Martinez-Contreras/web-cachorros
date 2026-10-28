@@ -53,8 +53,11 @@ async function setFacebook(settings: Record<string, string | number | boolean> |
   await admin`update site_settings set social_publishing = ${settings ? admin.json({ facebook: settings }) : null} where id = 1`
 }
 
+// La programación semanal es secundaria y viene apagada: estas pruebas la activan.
 const enabled = {
   enabled: true,
+  weekly: true,
+  weeklyEnabledAt: '2020-01-01T00:00:00.000Z',
   weekday: 5,
   time: '12:00',
   publishResults: false,
@@ -392,7 +395,7 @@ describe('acciones del panel', () => {
     const fetchMock = graphReplies({ id: '1', post_id: '1_1' })
     expect(await actions.publicarEnFacebook(id, null, { message: 'Previa' })).toEqual({
       ok: false,
-      message: 'La publicación en Facebook está desactivada en Configuración.',
+      message: 'La publicación en Facebook está desactivada en Facebook → Ajustes.',
     })
     expect(fetchMock).not.toHaveBeenCalled()
   })

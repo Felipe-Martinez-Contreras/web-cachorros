@@ -2,6 +2,7 @@ import { Download } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import type { ShareCardLink } from '../admin-queries'
 import { SHARE_FORMATS, type ShareFormat, SOCIAL_FORMATS, shareFilename, shareUrl } from '../lib/cards'
+import { CardPreviewLink } from './card-preview'
 import { ShareFileButton } from './share-file-button'
 
 const FORMAT_HINTS: Record<ShareFormat, string> = {
@@ -28,16 +29,24 @@ export function ShareCards({ cards }: { cards: ShareCardLink[] }) {
             key={`${card.template}-${card.id}`}
             className="grid content-start gap-3 rounded-lg border border-neutral-200 p-3"
           >
-            {/* biome-ignore lint/performance/noImgElement: la tarjeta ya viene en su tamaño final desde /api/share. */}
-            <img
-              src={urlOf('cuadrado')}
-              alt={`Vista previa: ${card.label}, ${card.title}`}
-              width={SHARE_FORMATS.cuadrado.width}
-              height={SHARE_FORMATS.cuadrado.height}
-              loading="lazy"
-              decoding="async"
-              className="aspect-square h-auto w-full rounded-md bg-ink"
-            />
+            {card.previewCached === false ? (
+              <CardPreviewLink
+                href={urlOf('cuadrado')}
+                label={`Vista previa: ${card.label}, ${card.title}`}
+                className="aspect-square"
+              />
+            ) : (
+              /* biome-ignore lint/performance/noImgElement: la tarjeta ya viene en su tamaño final desde /api/share. */
+              <img
+                src={urlOf('cuadrado')}
+                alt={`Vista previa: ${card.label}, ${card.title}`}
+                width={SHARE_FORMATS.cuadrado.width}
+                height={SHARE_FORMATS.cuadrado.height}
+                loading="lazy"
+                decoding="async"
+                className="aspect-square h-auto w-full rounded-md bg-ink"
+              />
+            )}
             <div>
               <h3 className="font-bold">{card.label}</h3>
               <p className="text-sm text-neutral-600">{card.title}</p>
