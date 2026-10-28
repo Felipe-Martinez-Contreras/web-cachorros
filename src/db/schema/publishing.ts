@@ -3,6 +3,7 @@ import {
   check,
   date,
   index,
+  integer,
   jsonb,
   pgTable,
   smallint,
@@ -15,6 +16,16 @@ import { id, timestamps } from './_columns'
 import { user } from './auth'
 import { publicationKind, publicationStatus, publicationTrigger, socialChannel } from './enums'
 import { matches } from './sport'
+
+/**
+ * Lo que se programó: el día (Santiago), el rival y los partidos de la tarjeta con su hora y su estado. El seguro
+ * lo compara con lo vigente antes de publicar (`scheduleGuard`).
+ */
+export type ScheduleSnapshot = {
+  day: string
+  rivalId: string
+  matches: { id: string; kickoffAt: string }[]
+}
 
 /**
  * Publicaciones en redes (ADR 0009): una fila por canal, tipo y sujeto (partido, fin de semana o jornada). El índice
@@ -48,11 +59,18 @@ export const socialPublications = pgTable(
     externalUrl: text('external_url'),
     requestedBy: text('requested_by').references(() => user.id, { onDelete: 'set null' }),
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    /** Solo «programada»: cuándo se publica. */
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    scheduledSnapshot: jsonb('scheduled_snapshot').$type<ScheduleSnapshot>(),
+    /** Aviso por correo a los administradores cuando un seguro descarta una programada (una sola vez). */
+    discardNotifiedAt: timestamp('discard_notified_at', { withTimezone: true }),
+    discardNotifyAttempts: integer('discard_notify_attempts').notNull().default(0),
     ...timestamps(),
   },
   (table) => [
     uniqueIndex('social_publications_subject_uq').on(table.channel, table.kind, table.subjectKey),
     index('social_publications_status_next_idx').on(table.status, table.nextAttemptAt),
+    index('social_publications_status_scheduled_idx').on(table.status, table.scheduledAt),
     index('social_publications_match_id_idx').on(table.matchId),
     index('social_publications_requested_by_idx').on(table.requestedBy),
     check('social_publications_attempts_check', sql`${table.attempts} between 0 and 20`),

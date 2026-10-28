@@ -13,6 +13,7 @@ const STATUS_VARIANT = {
   error: 'danger',
   incierto: 'accent',
   descartado: 'outline',
+  programada: 'neutral',
 } as const
 
 const RETRYABLE = new Set(['error', 'incierto', 'descartado'])

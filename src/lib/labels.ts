@@ -293,6 +293,7 @@ export const publicationStatusLabels: Labels<typeof publicationStatus> = {
   error: 'Con error',
   incierto: 'Sin confirmar',
   descartado: 'Descartado',
+  programada: 'Programada',
 }
 
 /** Escudo de un equipo en las tarjetas para redes (Panel → Rivales). */

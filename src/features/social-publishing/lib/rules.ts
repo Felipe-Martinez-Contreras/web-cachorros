@@ -9,7 +9,10 @@ type MatchStatus = (typeof matchStatus.enumValues)[number]
 export const MAX_PUBLISH_ATTEMPTS = 5
 /** Espera antes de cada reintento (tras el intento 1, 2, 3 y 4). */
 const BACKOFF_MINUTES = [5, 15, 45, 120] as const
-/** Un pendiente más viejo que esto ya no sirve (la previa o la programación quedaron atrás). */
+/**
+ * Un pendiente más viejo que esto ya no sirve (la previa o la programación quedaron atrás). Una programada
+ * cuenta desde su hora, no desde que se programó.
+ */
 export const STALE_PENDING_MS = 48 * 60 * 60 * 1000
 /** Un «publicando» más viejo que esto se cortó a medias: no se sabe si llegó a Facebook. */
 export const STUCK_PUBLISHING_MS = 10 * 60 * 1000
@@ -28,18 +31,21 @@ export function publicationKindFor(
 }
 
 type PublicationState = {
-  status: 'pendiente' | 'publicando' | 'publicado' | 'error' | 'incierto' | 'descartado'
+  status: 'pendiente' | 'publicando' | 'publicado' | 'error' | 'incierto' | 'descartado' | 'programada'
   attempts: number
   nextAttemptAt: Date | null
+  scheduledAt?: Date | null
 }
 
 /**
  * ¿Se puede intentar publicar esta fila ahora? Lo publicado, lo que está en curso y lo incierto nunca se
- * vuelve a enviar solo (así no hay posts duplicados); un error se reintenta a su hora y hasta el máximo.
- * Junto con el índice único `(canal, tipo, sujeto)`, es la regla de idempotencia.
+ * vuelve a enviar solo (así no hay posts duplicados); un error se reintenta a su hora y hasta el máximo, y
+ * una programada sale desde su hora. Junto con el índice único `(canal, tipo, sujeto)`, es la regla de
+ * idempotencia.
  */
 export function isPublishable(row: PublicationState, now: Date): boolean {
   if (row.status === 'pendiente') return true
+  if (row.status === 'programada') return Boolean(row.scheduledAt && row.scheduledAt <= now)
   if (row.status !== 'error') return false
   return row.attempts < MAX_PUBLISH_ATTEMPTS && row.nextAttemptAt !== null && row.nextAttemptAt <= now
 }
@@ -90,7 +96,7 @@ export function publishAvailability(input: {
     return {
       ok: false,
       reason: 'desactivada',
-      message: 'La publicación en Facebook está desactivada en Configuración.',
+      message: 'La publicación en Facebook está desactivada en Facebook → Ajustes.',
     }
   }
   return { ok: true }

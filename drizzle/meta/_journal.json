@@ -64,6 +64,13 @@
       "when": 1793133609490,
       "tag": "0008_encuadre_y_escudos_tarjetas",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793152668035,
+      "tag": "0009_publicacion_programada",
+      "breakpoints": true
     }
   ]
 }
