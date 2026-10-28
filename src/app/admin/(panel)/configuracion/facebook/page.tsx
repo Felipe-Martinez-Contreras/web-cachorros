@@ -44,6 +44,7 @@ export default async function FacebookSettingsPage() {
           previews={state.photoPreviews}
           defaults={{
             enabled: settings.enabled,
+            weekly: settings.weekly ?? false,
             weekday: String(settings.weekday),
             time: settings.time,
             publishResults: settings.publishResults,

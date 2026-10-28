@@ -60,10 +60,14 @@ export type HeroSettings = {
   mobileMediaId?: string
 }
 export type SeoDefaults = { description?: string; ogMediaId?: string }
-/** Publicación automática en redes (panel → Configuración → Facebook); se valida con Zod en su dominio. */
+/** Publicación en redes (panel → Facebook → Ajustes); se valida con Zod en su dominio. */
 export type SocialPublishingSettings = {
   facebook?: {
+    /** Interruptor general: sin él no se publica nada (ni a mano, ni programado, ni automático). */
     enabled: boolean
+    /** Programación automática semanal (solo sábado y domingo); secundaria, apagada por defecto. */
+    weekly?: boolean
+    weeklyEnabledAt?: string
     /** Día de la publicación de la programación: 1 = lunes … 6 = sábado. */
     weekday: number
     /** Hora de pared en Santiago, `HH:MM`. */

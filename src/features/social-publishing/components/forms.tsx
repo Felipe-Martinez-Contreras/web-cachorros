@@ -46,6 +46,7 @@ export function FacebookSettingsForm({
   action: Action
   defaults: {
     enabled: boolean
+    weekly: boolean
     weekday: string
     time: string
     publishResults: boolean
@@ -69,7 +70,13 @@ export function FacebookSettingsForm({
           name: 'enabled',
           label: 'Publicar en Facebook',
           type: 'checkbox',
-          help: 'Activa la programación automática del fin de semana y el botón «Publicar en Facebook» de cada partido.',
+          help: 'Interruptor general: sin él no sale nada, ni lo publicado a mano ni lo programado.',
+        },
+        {
+          name: 'weekly',
+          label: 'Publicación automática semanal',
+          type: 'checkbox',
+          help: 'Opción secundaria: solo cubre sábado y domingo. Lo normal es programar cada jornada o partido desde su página.',
         },
         {
           name: 'weekday',
