@@ -10,7 +10,7 @@ import { actAs, ensureTestUsers } from './session'
 const { sql } = await import('@/db/client')
 const { uploadsDir } = await import('@/features/media/files')
 const { processImage } = await import('@/lib/images/process')
-const { getShareImage, shareCacheDir } = await import('@/features/share/images')
+const { getShareImage, prepareCardImages, shareCacheDir } = await import('@/features/share/images')
 const { loadShareCard, shareVersionOf } = await import('@/features/share/queries')
 const route = await import('@/app/api/share/[plantilla]/[id]/[formato]/route')
 const crestRoute = await import('@/app/api/admin/escudos/[id]/[estilo]/route')
@@ -156,10 +156,16 @@ describe('tarjetas para redes', () => {
       kind: 'texto',
       text: 'Asociación de prueba',
     })
-    // El escudo del matchday va sin disco, tratado aparte; los demás conservan el disco.
-    expect(card?.kind === 'match' && card.match.away.crest?.bare?.src).toMatch(/^data:image\/png;base64,/)
+    // El escudo del matchday va sin disco: la lectura deja lo necesario y se trata después, en la cola
+    // (`prepareCardImages`); los demás conservan el disco.
+    if (card?.kind !== 'match') throw new Error('Se esperaba la tarjeta de un partido.')
+    expect(card.match.away.crest?.bareSource?.style).toBe('blanco')
+    expect(card.match.away.crest?.bare).toBeUndefined()
+    await prepareCardImages(card)
+    expect(card.match.away.crest?.bare?.src).toMatch(/^data:image\/png;base64,/)
+    expect(card.match.away.crest?.bareSource).toBeNull()
     const result = await loadShareCard({ template: 'resultado', id, format: 'vertical' })
-    expect(result?.kind === 'match' && result.match.away.crest?.bare).toBeNull()
+    expect(result?.kind === 'match' && result.match.away.crest?.bareSource).toBeNull()
 
     await admin`update site_settings set social_publishing = ${admin.json((settings?.value ?? null) as postgres.JSONValue)} where id = 1`
     await admin`update teams set card_crest_style = 'color' where id = ${f.rivalTeamId}`

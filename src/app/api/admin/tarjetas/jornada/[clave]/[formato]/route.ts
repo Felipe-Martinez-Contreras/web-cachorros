@@ -1,3 +1,4 @@
+import { QueueAbortedError } from '@/features/media/lib/upload-rules'
 import { getShareImage } from '@/features/share/images'
 import {
   parseShareRequest,
@@ -24,6 +25,8 @@ export async function GET(request: Request, { params }: Params) {
   try {
     await requirePermission('matches:write')
   } catch (error) {
+    // Quien la pidió se fue antes de su turno en la cola: no se dibujó (y nadie lee la respuesta).
+    if (error instanceof QueueAbortedError) return new Response(null, { status: 499 })
     const status = error instanceof AuthError && error.reason === 'sin_sesion' ? 401 : 403
     return new Response(null, { status, headers: noStore })
   }
@@ -41,7 +44,7 @@ export async function GET(request: Request, { params }: Params) {
   const card: ShareRequest = { ...base, ...(series ? { series } : {}), ...(photos ? { photos } : {}) }
   try {
     const current = await shareVersionOf(card)
-    const image = current ? await getShareImage(card, current.version) : null
+    const image = current ? await getShareImage(card, current.version, request.signal) : null
     if (!current || !image) return new Response(null, { status: 404, headers: noStore })
     const { ext } = SHARE_FORMATS[card.format]
     const download = search.get('descargar') === '1'

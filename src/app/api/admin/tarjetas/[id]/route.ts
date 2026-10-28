@@ -1,3 +1,4 @@
+import { QueueAbortedError } from '@/features/media/lib/upload-rules'
 import { getShareImage } from '@/features/share/images'
 import type { ShareRequest } from '@/features/share/lib/cards'
 import { shareVersionOf } from '@/features/share/queries'
@@ -19,6 +20,8 @@ export async function GET(request: Request, { params }: Params) {
   try {
     await requirePermission('social:write')
   } catch (error) {
+    // Quien la pidió se fue antes de su turno en la cola: no se dibujó (y nadie lee la respuesta).
+    if (error instanceof QueueAbortedError) return new Response(null, { status: 499 })
     const status = error instanceof AuthError && error.reason === 'sin_sesion' ? 401 : 403
     return new Response(null, { status, headers: noStore })
   }
@@ -28,7 +31,7 @@ export async function GET(request: Request, { params }: Params) {
   const card: ShareRequest = { template: 'proximo', id: id.toLowerCase(), format: 'vertical', photos }
   try {
     const current = await shareVersionOf(card)
-    const image = current ? await getShareImage(card, current.version) : null
+    const image = current ? await getShareImage(card, current.version, request.signal) : null
     if (!image) return new Response(null, { status: 404, headers: noStore })
     return new Response(new Uint8Array(image.bytes), {
       headers: { ...noStore, 'Content-Type': 'image/png', 'X-Content-Type-Options': 'nosniff' },

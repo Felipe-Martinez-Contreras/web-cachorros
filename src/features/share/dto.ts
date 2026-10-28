@@ -8,7 +8,16 @@ import type { ShareTemplate } from './lib/cards'
  * Escudo de 512 px (contenido en el cuadrado) y su escala óptica dentro del disco blanco (`crestScale`).
  * `bare`: el mismo tratado para el matchday, sin disco (`crest-card.ts`); solo en esas plantillas.
  */
-export type CardCrest = { src: string; scale: number; bare?: { src: string; scale: number } | null }
+export type CardCrest = {
+  src: string
+  scale: number
+  bare?: { src: string; scale: number } | null
+  /**
+   * Lo que falta para `bare`: el PNG y el estilo. Lo trata `images.ts` dentro de la cola de sharp, después de
+   * leer los datos (así ninguna consulta espera la cola ni corre dentro de ella).
+   */
+  bareSource?: { png: Buffer; style: 'color' | 'blanco' | 'grises' } | null
+}
 
 export type CardTeam = { name: string; crest: CardCrest | null }
 
@@ -96,8 +105,10 @@ export type NewsCardData = {
   title: string
   categoryName: string | null
   publishedAt: string
-  /** Foto de la noticia como *data URI* JPEG (ya reducida), o `null`. */
+  /** Foto de la noticia como *data URI* JPEG (ya reducida, la llena `images.ts` en la cola), o `null`. */
   photo: string | null
+  /** Archivo de la foto (relativo a `UPLOADS_DIR`), sin menores. */
+  photoFile: string | null
 }
 
 export type ShareCardData = MatchCardData | WeekendCardData | JornadaCardData | NewsCardData

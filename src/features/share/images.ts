@@ -5,7 +5,8 @@ import { env } from '@/lib/env'
 import { runHeavy } from '@/lib/heavy-queue'
 import { type FocalPoint, focalCrop } from '@/lib/images/focal-crop'
 import { logger } from '@/lib/logger'
-import type { MatchdayPhotoSource, MatchdayTopLine } from './dto'
+import { cardCrestImage } from './crest-card'
+import type { CardCrest, MatchdayPhotoSource, MatchdayTopLine, ShareCardData } from './dto'
 import { MATCHDAY_CROP_RATIO, type ShareRequest, shareCachePath } from './lib/cards'
 import { loadShareCard, readMediaFile } from './queries'
 
@@ -20,45 +21,110 @@ export function shareCacheDir(): string {
 export type ShareImage = { bytes: Buffer; fromCache: boolean }
 
 /**
- * Imagen de una tarjeta en su versión vigente: desde el disco si ya existe; si no, se dibuja (en la cola),
- * se guarda y se borran las versiones anteriores del mismo formato. `null` si sus datos ya no existen.
+ * Imagen de una tarjeta en su versión vigente: desde el disco si ya existe; si no, se dibuja y se guarda, y
+ * se borran las versiones anteriores del mismo formato. `null` si sus datos ya no existen.
+ *
+ * Primero se leen los datos (BD y archivos) y recién después se entra a la cola de 1 para procesar (sharp y
+ * Satori): ninguna consulta corre dentro de la cola ni retiene una conexión mientras espera su turno. Con
+ * `signal`, si quien la pidió se fue antes de su turno, no se dibuja (`QueueAbortedError`).
  */
-export async function getShareImage(request: ShareRequest, version: string): Promise<ShareImage | null> {
+export async function getShareImage(
+  request: ShareRequest,
+  version: string,
+  signal?: AbortSignal,
+): Promise<ShareImage | null> {
   const file = path.join(/* turbopackIgnore: true */ shareCacheDir(), shareCachePath(request, version))
   const cached = await readIfExists(file)
   if (cached) return { bytes: cached, fromCache: true }
 
-  return runHeavy(async () => {
-    // Otra petición pudo generarla mientras esta esperaba su turno.
-    const ready = await readIfExists(file)
-    if (ready) return { bytes: ready, fromCache: true }
+  const data = await loadShareCard(request)
+  if (!data) return null
 
-    const data = await loadShareCard(request)
-    if (!data) return null
-    if ((data.kind === 'match' || data.kind === 'jornada') && data.matchday) {
-      data.matchday.photos = await Promise.all(
-        data.matchday.photoSources.map((source) => matchdayPhoto(source)),
+  return runHeavy(
+    async () => {
+      // Otra petición pudo generarla mientras esta esperaba su turno.
+      const ready = await readIfExists(file)
+      if (ready) return { bytes: ready, fromCache: true }
+
+      const started = performance.now()
+      await prepareCardImages(data)
+      const { renderShareCard } = await import('./render')
+      const bytes = await renderShareCard(data, request.format)
+      const ms = Math.round(performance.now() - started)
+      logger.info(
+        { template: request.template, format: request.format, ms, bytes: bytes.byteLength },
+        'tarjeta generada',
       )
-      await fillTopLineLogo(data.matchday.topLine)
-    }
-    if (data.kind === 'weekend') await fillTopLineLogo(data.topLine)
-    const started = performance.now()
-    const { renderShareCard } = await import('./render')
-    const bytes = await renderShareCard(data, request.format)
-    const ms = Math.round(performance.now() - started)
-    logger.info(
-      { template: request.template, format: request.format, ms, bytes: bytes.byteLength },
-      'tarjeta generada',
-    )
 
-    await mkdir(path.dirname(file), { recursive: true })
-    // Se escribe aparte y se renombra: una lectura simultánea nunca ve un archivo a medias.
-    const temporary = `${file}.${process.pid}.tmp`
-    await writeFile(temporary, bytes)
-    await rename(temporary, file)
-    await removeOldVersions(request, file)
-    return { bytes, fromCache: false }
-  })
+      await mkdir(path.dirname(file), { recursive: true })
+      // Se escribe aparte y se renombra: una lectura simultánea nunca ve un archivo a medias.
+      const temporary = `${file}.${process.pid}.tmp`
+      await writeFile(temporary, bytes)
+      await rename(temporary, file)
+      await removeOldVersions(request, file)
+      return { bytes, fromCache: false }
+    },
+    { signal },
+  )
+}
+
+/**
+ * Lo que la tarjeta necesita procesar con sharp, ya con los datos leídos: las fotos del matchday, el logo de
+ * la línea superior, los escudos sin disco y la foto de la noticia. Corre dentro de la cola.
+ */
+export async function prepareCardImages(data: ShareCardData): Promise<void> {
+  if ((data.kind === 'match' || data.kind === 'jornada') && data.matchday) {
+    data.matchday.photos = await Promise.all(
+      data.matchday.photoSources.map((source) => matchdayPhoto(source)),
+    )
+    await fillTopLineLogo(data.matchday.topLine)
+  }
+  if (data.kind === 'weekend') await fillTopLineLogo(data.topLine)
+  if (data.kind === 'news' && data.photoFile) data.photo = await newsPhoto(data.photoFile)
+  const crests = cardCrests(data)
+  // El mismo escudo (el del club, un rival repetido) se trata una sola vez.
+  const treated = new Map<string, CardCrest['bare']>()
+  for (const crest of crests) {
+    if (!crest.bareSource) continue
+    const key = `${crest.bareSource.style}:${crest.src}`
+    if (!treated.has(key)) {
+      const { png, style } = crest.bareSource
+      treated.set(
+        key,
+        await cardCrestImage(png, { style }).catch((error: unknown) => {
+          logger.warn({ err: error }, 'no se pudo tratar un escudo para la tarjeta')
+          return null
+        }),
+      )
+    }
+    crest.bare = treated.get(key) ?? null
+    crest.bareSource = null
+  }
+}
+
+/** Todos los escudos de una tarjeta. */
+function cardCrests(data: ShareCardData): CardCrest[] {
+  const teams: (CardCrest | null)[] = []
+  if (data.kind === 'match' || data.kind === 'jornada')
+    teams.push(data.match.home.crest, data.match.away.crest)
+  if (data.kind === 'weekend') {
+    teams.push(data.clubCrest)
+    for (const match of data.matches) teams.push(match.home.crest, match.away.crest)
+  }
+  if (data.kind === 'news') teams.push(data.clubCrest)
+  return teams.filter((crest): crest is CardCrest => crest !== null)
+}
+
+/** Foto de la noticia reducida a JPEG de 1200 px (Satori no lee WebP y así pesa poco en memoria). */
+async function newsPhoto(file: string): Promise<string | null> {
+  const bytes = await readMediaFile(file)
+  if (!bytes) return null
+  const { default: sharp } = await import('sharp')
+  const jpeg = await sharp(bytes, { limitInputPixels: 50_000_000 })
+    .resize({ width: 1200, height: 900, fit: 'cover', withoutEnlargement: true })
+    .jpeg({ quality: 80, mozjpeg: true })
+    .toBuffer()
+  return `data:image/jpeg;base64,${jpeg.toString('base64')}`
 }
 
 async function readIfExists(file: string): Promise<Buffer | null> {

@@ -15,7 +15,7 @@ import { isNewsVisible } from '@/features/news/queries'
 import { loadMinorIds } from '@/features/players/public'
 import { crestScale } from '@/lib/images/crest'
 import { logger } from '@/lib/logger'
-import { type CrestCardStyle, cardCrestImage } from './crest-card'
+import type { CrestCardStyle } from './crest-card'
 import type { CardCrest, CardMatch, ShareCardData } from './dto'
 import {
   addDays,
@@ -311,7 +311,8 @@ export async function loadShareCard(request: ShareRequest): Promise<ShareCardDat
         categoryName: row.categoryName,
         publishedAt: row.publishedAt.toISOString(),
         // Una foto con menores nunca sale del sitio (6.3).
-        photo: media && !media.containsMinors ? await newsPhoto(media.variants) : null,
+        photo: null,
+        photoFile: media && !media.containsMinors ? (media.variants?.master ?? null) : null,
       }
     }
   }
@@ -371,8 +372,8 @@ type CrestMedia = { variants: MediaVariants | null; width: number | null; height
 
 /**
  * Escudo como *data URI* PNG desde su variante de 512 px (2.7), con su escala óptica en el disco. Con
- * `bareStyle` (plantillas matchday) suma la versión sin disco, tratada con ese estilo (`crest-card.ts`). Sin
- * archivo, la tarjeta usa un disco con la inicial.
+ * `bareStyle` (plantillas matchday) deja lo necesario para la versión sin disco, que se trata en la cola
+ * (`prepareCardImages`). Sin archivo, la tarjeta usa un disco con la inicial.
  */
 async function cardCrest(
   media: CrestMedia | null | undefined,
@@ -383,30 +384,12 @@ async function cardCrest(
   if (!media || !file) return null
   const bytes = await readMediaFile(file)
   if (!bytes) return null
-  const bare = bareStyle
-    ? await cardCrestImage(bytes, { style: bareStyle }).catch((error: unknown) => {
-        logger.warn({ err: error, file }, 'no se pudo tratar un escudo para la tarjeta')
-        return null
-      })
-    : null
   return {
     src: `data:image/png;base64,${bytes.toString('base64')}`,
     scale: crestScale(media.width, media.height, variants?.logo).disc,
-    bare,
+    // El tratamiento (sharp) se hace después, en la cola: aquí solo se leen los datos.
+    bareSource: bareStyle ? { png: bytes, style: bareStyle } : null,
   }
-}
-
-/** Foto de la noticia reducida a JPEG de 1200 px (Satori no lee WebP y así pesa poco en memoria). */
-async function newsPhoto(variants: MediaVariants | null): Promise<string | null> {
-  if (!variants) return null
-  const bytes = await readMediaFile(variants.master)
-  if (!bytes) return null
-  const { default: sharp } = await import('sharp')
-  const jpeg = await sharp(bytes, { limitInputPixels: 50_000_000 })
-    .resize({ width: 1200, height: 900, fit: 'cover', withoutEnlargement: true })
-    .jpeg({ quality: 80, mozjpeg: true })
-    .toBuffer()
-  return `data:image/jpeg;base64,${jpeg.toString('base64')}`
 }
 
 export async function readMediaFile(relativePath: string): Promise<Buffer | null> {
