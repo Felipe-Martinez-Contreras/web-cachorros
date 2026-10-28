@@ -134,19 +134,36 @@ const DESIGN_REVISION: Partial<Record<ShareTemplate, string>> = {
   gol: 'e1',
   resultados: 'e1',
   noticia: 'e1',
-  // m2 / p2 / j2: matchday v2 (fotos en blanco y negro, escudos sin disco, fondo con profundidad).
-  proximo: 'm2',
+  // p2: programación del matchday v2 (fotos en blanco y negro, escudos sin disco, fondo con profundidad).
   programacion: 'p2',
-  jornada: 'j2',
+  // m3 / j3: barras más altas, recorte en la parte visible de la barra y banda de series más chica.
+  proximo: 'm3',
+  jornada: 'j3',
 }
 
 /**
- * Proporción (ancho / alto) del recorte de las fotos del matchday: la del panel más angosto (la historia,
- * 0,346). En los demás formatos Satori lo recorta al centro (arriba y abajo), que es el punto focal.
+ * Una barra del matchday: su proporción (ancho / alto) y la fracción de arriba que tapa «MATCHDAY». Cada
+ * foto se recorta a la barra exacta de cada formato (`matchdayPanelGeometry`, en el render).
  */
-export const MATCHDAY_CROP_RATIO = 0.34
-/** Proporción de un panel en el formato vertical (4:5), la que muestra la vista previa del panel → Medios. */
-export const MATCHDAY_PANEL_RATIO = 0.437
+export type PanelGeometry = { ratio: number; hiddenTop: number }
+
+/**
+ * Dónde queda el punto focal dentro de la parte visible de la barra, desde arriba: algo sobre la mitad, para
+ * que una cabeza tenga aire y no quede pegada al borde (ni detrás del título).
+ */
+export const MATCHDAY_FOCAL_ANCHOR = 0.38
+
+/** Altura del recorte (fracción) en que va el punto focal: en la parte visible, con aire por encima. */
+export function panelFocalAnchor(panel: PanelGeometry): number {
+  return panel.hiddenTop + (1 - panel.hiddenTop) * MATCHDAY_FOCAL_ANCHOR
+}
+
+/**
+ * La barra del formato vertical (4:5) de «Próximo partido», la que muestra la vista previa del panel →
+ * Medios. La calcula `node scripts/run.mjs share-preview` (línea «Panel vertical»): actualízala si cambia el
+ * diseño.
+ */
+export const MATCHDAY_PREVIEW_PANEL: PanelGeometry = { ratio: 0.435, hiddenTop: 0.073 }
 
 /** Versión pública de una tarjeta: la de sus datos más la revisión del diseño de la plantilla. */
 export function withDesignRevision(template: ShareTemplate, version: string | number): string {

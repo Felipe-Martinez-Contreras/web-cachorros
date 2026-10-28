@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MATCHDAY_FOCAL_ANCHOR, panelFocalAnchor } from '@/features/share/lib/cards'
 import { coverCrop, FOCAL_ZOOM_MAX, focalCrop } from '@/lib/images/focal-crop'
 
 describe('recorte alrededor del punto focal', () => {
@@ -66,5 +67,24 @@ describe('recorte alrededor del punto focal', () => {
       width: 500,
       height: 1000,
     })
+  })
+})
+
+describe('punto focal en la parte visible de una barra', () => {
+  it('con anchorY, el punto queda a esa altura del recorte (aire por encima)', () => {
+    // Foto 3000 × 2000 con la cara al 20 % de alto; barra 0,4 que el título tapa un 8 % arriba.
+    const panel = { ratio: 0.4, hiddenTop: 0.08 }
+    const anchor = panelFocalAnchor(panel)
+    expect(anchor).toBeCloseTo(0.08 + 0.92 * MATCHDAY_FOCAL_ANCHOR, 5)
+    const crop = focalCrop(3000, 2000, panel.ratio, { focalX: 0.5, focalY: 0.6, focalZoom: 1.5 }, anchor)
+    // La cara (60 % de alto = 1200 px) cae a `anchor` del recorte: bajo la parte tapada, no al centro.
+    expect((1200 - crop.top) / crop.height).toBeCloseTo(anchor, 2)
+    expect((1200 - crop.top) / crop.height).toBeGreaterThan(panel.hiddenTop)
+    expect((1200 - crop.top) / crop.height).toBeLessThan(0.5)
+  })
+
+  it('si la cabeza está muy arriba, el recorte no se sale de la foto', () => {
+    const crop = focalCrop(3000, 2000, 0.4, { focalX: 0.5, focalY: 0.05 }, 0.42)
+    expect(crop.top).toBe(0)
   })
 })

@@ -129,7 +129,7 @@ describe('tarjetas para redes', () => {
     const withPhoto = { ...request, photos: [photo?.id ?? null, null, null] }
     const version = async () => (await shareVersionOf(withPhoto))?.version
     const initial = await version()
-    expect(initial).toMatch(/m2$/)
+    expect(initial).toMatch(/m3$/)
 
     await admin`update teams set card_crest_style = 'blanco' where id = ${f.rivalTeamId}`
     const monochrome = await version()
@@ -161,7 +161,7 @@ describe('tarjetas para redes', () => {
     if (card?.kind !== 'match') throw new Error('Se esperaba la tarjeta de un partido.')
     expect(card.match.away.crest?.bareSource?.style).toBe('blanco')
     expect(card.match.away.crest?.bare).toBeUndefined()
-    await prepareCardImages(card)
+    await prepareCardImages(card, 'vertical')
     expect(card.match.away.crest?.bare?.src).toMatch(/^data:image\/png;base64,/)
     expect(card.match.away.crest?.bareSource).toBeNull()
     const result = await loadShareCard({ template: 'resultado', id, format: 'vertical' })
@@ -175,7 +175,7 @@ describe('tarjetas para redes', () => {
     const id = await createMatch(admin, f, 'tarjeta-og', 'programado')
     // La versión de la previa: la del partido, la del matchday (fotos y auspiciador) y la del diseño.
     const version = (await shareVersionOf({ template: 'proximo', id, format: 'og' }))?.version
-    expect(version).toMatch(/^1[0-9a-z]+m2$/)
+    expect(version).toMatch(/^1[0-9a-z]+m3$/)
     const response = await getCard('proximo', id, 'og', `?v=${version}`)
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('image/jpeg')
