@@ -36,6 +36,11 @@ export type ShareCardLink = {
   formats?: readonly ShareFormat[]
   /** Direcciones propias por formato (la jornada con series o fotos elegidas sale de la ruta del panel). */
   urls?: Partial<Record<ShareFormat, string>>
+  /**
+   * `false`: la vista previa todavía no está dibujada y se ofrece un enlace para verla (así abrir la página no
+   * dibuja nada). Sin el campo, se muestra la imagen como siempre.
+   */
+  previewCached?: boolean
 }
 
 const homeTeam = alias(teams, 'home_team')
