@@ -10,15 +10,22 @@ export type CropRect = { left: number; top: number; width: number; height: numbe
 
 /**
  * Rectángulo de proporción `ratio` (ancho / alto) dentro de una foto de `width × height`: el más grande que
- * cabe, achicado por el zoom y centrado en el punto focal sin salirse de la foto.
+ * cabe, achicado por el zoom, con el punto focal al centro a lo ancho y a `anchorY` del alto (0,5 = al medio;
+ * menos deja más aire arriba), sin salirse de la foto.
  */
-export function focalCrop(width: number, height: number, ratio: number, focal: FocalPoint): CropRect {
+export function focalCrop(
+  width: number,
+  height: number,
+  ratio: number,
+  focal: FocalPoint,
+  anchorY = 0.5,
+): CropRect {
   const zoom = clamp(focal.focalZoom ?? 1, FOCAL_ZOOM_MIN, FOCAL_ZOOM_MAX)
   const fullWidth = Math.min(width, height * ratio)
   const cropWidth = Math.max(1, Math.round(fullWidth / zoom))
   const cropHeight = Math.max(1, Math.min(height, Math.round(cropWidth / ratio)))
   const left = Math.round(clamp(focal.focalX * width - cropWidth / 2, 0, width - cropWidth))
-  const top = Math.round(clamp(focal.focalY * height - cropHeight / 2, 0, height - cropHeight))
+  const top = Math.round(clamp(focal.focalY * height - cropHeight * anchorY, 0, height - cropHeight))
   return { left, top, width: cropWidth, height: cropHeight }
 }
 
