@@ -20,7 +20,6 @@ import { getActiveSponsors } from '@/features/sponsors/queries'
 import { cn } from '@/lib/cn'
 import { formatDayMonth } from '@/lib/format'
 import { ClubImage } from './club-image'
-import { ClubCrest } from './site-header'
 
 // Capas de la portada (especificación 5.3). Cada una resuelve sus datos en runtime (`connection()`), dentro
 // de su propio <Suspense>, y consume consultas cacheadas por tags. Una capa sin contenido no se renderiza.
@@ -94,11 +93,11 @@ export async function HeroSection() {
         <div className="absolute inset-0 -z-10 bg-linear-to-t from-ink via-ink/70 to-ink/20" />
 
         <div className="container-site grid gap-5 pt-24 pb-28 md:pb-36">
-          {site && <ClubCrest site={site} className="size-20 md:size-28" />}
           <p className="text-eyebrow text-accent">
             {site?.clubName} · Desde {site?.foundedYear}
           </p>
-          <h1 className="text-display max-w-5xl text-balance">{hero?.title ?? site?.shortName}</h1>
+          {/* Sin el escudo grande: el de la barra de navegación ya identifica al club. */}
+          <h1 className="text-hero max-w-5xl text-balance">{hero?.title ?? site?.shortName}</h1>
           {hero?.subtitle && <p className="max-w-xl text-lg text-paper/90 md:text-xl">{hero.subtitle}</p>}
           {hero?.ctaLabel && hero.ctaHref && (
             <div>

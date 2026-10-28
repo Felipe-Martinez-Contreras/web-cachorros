@@ -156,6 +156,7 @@ export default async function DesignSystemPage() {
       <Section id="tipografia" title="Tipografía">
         <div className="grid gap-4 overflow-hidden">
           <p className="text-display">Display</p>
+          <p className="text-hero">Título de la portada</p>
           <p className="text-h1">Título H1</p>
           <p className="text-h2">Título H2</p>
           <p className="text-h3">Título H3</p>

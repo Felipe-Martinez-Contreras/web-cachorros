@@ -121,6 +121,53 @@ test.describe('portada', () => {
     expect(cls, 'CLS con la fuente retrasada').toBeLessThanOrEqual(0.05)
   })
 
+  test('el título cabe en 2 líneas en escritorio y el botón se ve sin desplazar', async ({ page }) => {
+    // El título real del club (el seed trae otro más corto): se pone en la página ya dibujada, con el mismo CSS.
+    const TITLE = 'Los hijos de leones no ceden jamás'
+    const measure = async (width: number, height: number) => {
+      await page.setViewportSize({ width, height })
+      await page.goto('/')
+      await page.evaluate(() => document.fonts.ready)
+      const heading = page.getByRole('heading', { level: 1 })
+      await heading.evaluate((element, text) => {
+        element.textContent = text
+      }, TITLE)
+      const lines = await heading.evaluate((element) => {
+        const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight)
+        return Math.round(element.getBoundingClientRect().height / lineHeight)
+      })
+      // Sin palabras cortadas: con `overflow-wrap: normal`, una palabra que no cabe desbordaría.
+      const overflow = await heading.evaluate((element) => element.scrollWidth - element.clientWidth)
+      const cta = await page
+        .getByRole('region', { name: 'Presentación' })
+        .getByRole('link')
+        .last()
+        .boundingBox()
+      // En el celular, la barra inferior tapa el final de la pantalla.
+      const bottomNav = page.locator('nav.fixed[aria-label="Principal"]')
+      const limit = (await bottomNav.isVisible()) ? ((await bottomNav.boundingBox())?.y ?? height) : height
+      return { lines, overflow, ctaBottom: (cta?.y ?? 0) + (cta?.height ?? 0), limit }
+    }
+
+    for (const [width, height] of [
+      [1280, 800],
+      [1920, 1080],
+    ] as const) {
+      const result = await measure(width, height)
+      expect(result.lines, `líneas del título a ${width} px`).toBe(2)
+      expect(result.overflow).toBeLessThanOrEqual(0)
+      expect(result.ctaBottom, `botón a ${width}×${height}`).toBeLessThanOrEqual(result.limit)
+    }
+    const mobile = await measure(360, 800)
+    expect(mobile.lines).toBeGreaterThanOrEqual(3)
+    expect(mobile.lines).toBeLessThanOrEqual(4)
+    expect(mobile.overflow).toBeLessThanOrEqual(0)
+    expect(mobile.ctaBottom, 'botón a 360×800').toBeLessThanOrEqual(mobile.limit)
+
+    // Sin el escudo grande sobre el título: el de la barra de navegación ya identifica al club.
+    await expect(page.getByRole('region', { name: 'Presentación' }).locator('.crest')).toHaveCount(0)
+  })
+
   test('no tiene violaciones de accesibilidad serias ni críticas', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
