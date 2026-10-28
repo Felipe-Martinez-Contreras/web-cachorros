@@ -78,3 +78,38 @@ clave de cada canal: sumarlo no cambia el esquema.
   su contraseña o se quita la app. El panel lo muestra como «Con error» y la guía explica cómo renovarlo.
 - La CI nunca llama a Facebook: la integración simula `fetch` y apunta a una dirección que falla al instante,
   y las e2e usan `tests/e2e/graph-mock.mjs`.
+
+## Adenda (28 de octubre de 2026): programar por jornada o partido
+
+**Contexto.** La programación semanal publica un solo post para sábado y domingo, a una hora fija. El club
+prefiere decidir cuándo sale cada jornada o partido.
+
+**Decisión** (rama `facebook-por-jornada`, PR #24):
+
+- **Misma tabla, estado nuevo.** `social_publications` suma el estado `programada`, `scheduled_at` y
+  `scheduled_snapshot` (día en Santiago, rival y partidos de la tarjeta al programar), más
+  `discard_notified_at` / `discard_notify_attempts` para el aviso por correo (migración 0009, solo aditiva; sin
+  CHECK sobre `programada`, porque Postgres no deja usar un valor de enum en la misma transacción que lo crea).
+  El índice único `(channel, kind, subject_key)` sigue siendo la idempotencia: una publicación por jornada o
+  partido. Una fila `descartado` se reutiliza al volver a programar o publicar (`ON CONFLICT … DO UPDATE
+  WHERE status = 'descartado'`); cancelar una programada la borra.
+- **Publicación.** `tick` publica las programadas cuya hora llegó, con el mismo bloqueo, reintentos y auditoría.
+  La tarjeta y el texto se arman al publicar con los datos vigentes (series y fotos guardadas en la fila); un
+  texto igual al sugerido se guarda como `null` para regenerarse. La hora debe estar al menos 5 minutos en el
+  futuro y antes del primer partido.
+- **Seguros** (`scheduleGuard`, lógica pura). Cada tick (aunque Facebook esté apagado) y otra vez dentro del
+  bloqueo, se compara la foto con los partidos vigentes. Se descarta con el motivo si un partido se cancela,
+  posterga, suspende o elimina, si cambia el día o el rival, si cambió la hora y el texto se escribió a mano, si
+  el inicio quedó antes de la hora programada o si el partido ya empezó (así, con Facebook apagado, nunca sale
+  tarde). Un cambio de hora el mismo día con el texto sugerido se mantiene. Una foto que pasa a «contiene
+  menores» se reemplaza por la de respaldo de Ajustes.
+- **Aviso.** Un descarte por seguro avisa en el panel y por correo a los administradores, una sola vez por fila,
+  con hasta 5 reintentos en 48 horas. Un descarte a mano marca `discard_notified_at` al descartar y no avisa.
+- **Panel.** Sección propia «Facebook» (Programadas, Publicadas, Ajustes); la jornada y el partido ofrecen
+  «Publicar ahora» o «Programar». Las miniaturas no se dibujan al abrir una página: si la versión no está en
+  caché, «Ver imagen» la dibuja al tocarla.
+- **La semanal queda secundaria** (`weekly`, apagada por defecto): solo cubre sábado y domingo. No se elimina
+  todavía.
+
+**Consecuencias.** Sin dependencias ni servicios nuevos. Al desplegar, la semanal se apaga aunque estuviera
+activa; hay que programar cada jornada o volver a activarla en Ajustes.

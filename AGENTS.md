@@ -219,15 +219,24 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   de la tarjeta «jornada» y el `subject_key` de su publicación. La ruta pública la dibuja con todas sus series;
   con series o fotos elegidas sale de `GET /api/admin/tarjetas/jornada/[clave]/[formato]?series=&fotos=` (con
   sesión), y la publicación guarda lo elegido en `series_ids` / `photo_ids`.
-- **Publicación en Facebook (ADR 0009):** `src/features/social-publishing/`. Toda publicación es una fila de
-  `social_publications` (único `(channel, kind, subject_key)`): se encola con `ON CONFLICT DO NOTHING` y se
-  publica con `processPublication()`, que la toma con `FOR UPDATE SKIP LOCKED`; nunca se llama a la Graph API
-  dentro de una transacción. `tick` encola y reintenta (`runSocialPublishing`). La programación automática es
-  un solo post por sábado: su tarjeta la decide `weekendCardFor()` (un partido → «Próximo partido», una sola
-  jornada → «Jornada», si no → la grilla) y no sale si ese partido o esa jornada ya se publicó a mano. El
-  texto sale de los mismos DTO de las tarjetas. Secretos solo en `.env` (`FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`); fuera de producción no se
-  publica salvo `FACEBOOK_ALLOW_NON_PRODUCTION=true`. Las pruebas nunca llaman a Facebook: `fetch` simulado en
-  integración y `tests/e2e/graph-mock.mjs` (puerto 3190) en las e2e.
+- **Publicación en Facebook (ADR 0009):** `src/features/social-publishing/`, sección propia del panel
+  (`/admin/facebook`: Programadas, Publicadas y Ajustes). Toda publicación es una fila de `social_publications`
+  (único `(channel, kind, subject_key)`): se encola o se programa con `claimSubject()` (una fila descartada se
+  reutiliza) y se publica con `processPublication()`, que la toma con `FOR UPDATE SKIP LOCKED`; nunca se llama a
+  la Graph API dentro de una transacción. Lo normal es **programar cada jornada o partido** desde su página
+  (`programarJornadaEnFacebook`, `programarEnFacebook`): estado `programada` con `scheduled_at` y
+  `scheduled_snapshot`; la tarjeta y el texto (si quedó el sugerido, `message = null`) se arman al publicar.
+  Los seguros (`scheduleGuard`, `lib/scheduling.ts`) corren en cada `tick` aunque Facebook esté apagado y otra
+  vez dentro del bloqueo: lo que cambió (cancelado, postergado, otro día o rival, hora con texto a mano, ya
+  empezó) queda `descartado` con el motivo, aviso en el panel y un correo a los administradores
+  (`scheduled.ts`, una vez por fila). Un descarte a mano marca `discard_notified_at` y no avisa. La
+  programación automática semanal (`weekly`, apagada por defecto, solo sábado y domingo) es secundaria: su
+  tarjeta la decide `weekendCardFor()` y no sale si ese partido o esa jornada ya se publicó o programó. El
+  texto sale de los mismos DTO de las tarjetas. Las miniaturas del panel no se dibujan al abrir una página
+  (`isShareImageCached()` + `CardPreview`: «Ver imagen» si no está en caché). Secretos solo en `.env`
+  (`FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_TOKEN`); fuera de producción no se publica salvo
+  `FACEBOOK_ALLOW_NON_PRODUCTION=true`. Las pruebas nunca llaman a Facebook: `fetch` simulado en integración y
+  `tests/e2e/graph-mock.mjs` (puerto 3190) en las e2e. Guía: `docs/integraciones/facebook.md`.
 - **Feed de redes (2.9):** curado en el panel → Redes sociales; la portada lee `socialFeed().latest()`
   (`src/features/social/provider.ts`). «Ver aquí» crea el iframe del embed oficial solo al tocarlo.
 - **PWA (6.16):** `app/manifest.ts` en runtime, íconos en `public/icons/` y `public/sw.js`, que se registra como

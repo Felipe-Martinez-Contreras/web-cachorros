@@ -1,21 +1,23 @@
 # Publicación en la página de Facebook
 
-El sitio puede publicar solo en la página de Facebook del club:
+El sitio publica en la página de Facebook del club. Todo se maneja desde el menú del panel → **Facebook**
+(pestañas **Programadas**, **Publicadas** y **Ajustes**):
 
-- **La programación del fin de semana:** el día y la hora que se elijan (por defecto, el viernes a las 12:00,
-  hora de Chile), con la tarjeta 4:5 y un texto armado con los partidos. Siempre es un solo post: con un solo
-  partido sale su tarjeta «Próximo partido»; si todos los partidos son una sola jornada (contra el mismo rival
-  el mismo día), la tarjeta «Jornada»; con varios rivales o días, la grilla «Programación». Si ese fin de
-  semana no hay partidos, no publica nada.
-- **La previa o el resultado de un partido, a mano:** desde la ficha del partido, con «Publicar en Facebook»,
-  viendo antes la imagen y pudiendo cambiar el texto.
-- **La tarjeta de una jornada, a mano:** desde Partidos → «Jornadas próximas» (o al terminar «Programar
-  jornada»), eligiendo las series y las fotos. Cada jornada se publica una sola vez, y no si ya salió como la
-  programación del fin de semana.
-- **El resultado al finalizar un partido** (opcional): unos 10 minutos después de finalizarlo.
+- **Cada jornada o partido, programado o al momento:** desde la página de la jornada (Partidos → «Jornadas
+  próximas», o al terminar «Programar jornada») o desde la ficha de un partido → «Publicar o programar en
+  Facebook». Ahí eliges las series (solo jornada) y las 3 fotos, ves la tarjeta, revisas el texto y eliges
+  **Publicar ahora** o **Programar** (día y hora de Chile). Es la forma recomendada.
+- **El resultado de un partido:** desde su ficha, al momento (no se programa).
+- **El resultado al finalizar un partido** (opcional, en Ajustes): sale solo unos 10 minutos después de
+  finalizarlo.
+- **La publicación automática semanal** (opcional y **apagada por defecto**): un solo post con la programación
+  del fin de semana, el día y la hora que se elijan. **Solo cubre sábado y domingo.**
+
+Cada jornada o partido se publica una sola vez.
 
 La decisión técnica está en el [ADR 0009](../adr/0009-publicacion-en-redes-graph-api.md). Esta guía explica cómo
-conectar la página. Se hace una vez y la puede hacer cualquier persona que administre la página.
+conectar la página (se hace una vez y la puede hacer cualquier persona que administre la página) y cómo
+programar.
 
 > Revisado con la documentación oficial de Meta el 24 de octubre de 2026. Los nombres de los menús de Meta for
 > Developers cambian seguido: si algo no coincide, busca la opción equivalente.
@@ -143,31 +145,89 @@ prueba** (no la oficial) y `FACEBOOK_ALLOW_NON_PRODUCTION=true`; al terminar, vu
 
 ## 7. Activarlo en el panel
 
-1. **Configuración → Facebook → Probar conexión.** Debe decir «La conexión con la página de Facebook
-   funciona». No publica nada.
-2. Marca **Publicar en Facebook**, revisa el día y la hora, decide si se publican los resultados y guarda.
-3. Para probar sin esperar al viernes, abre un partido programado y usa **Publicar en Facebook**.
+1. **Facebook → Ajustes → Probar conexión.** Debe decir «La conexión con la página de Facebook funciona». No
+   publica nada.
+2. Marca **Publicar en Facebook** (el interruptor general: sin él no sale nada, ni lo publicado a mano ni lo
+   programado), elige la línea sobre «MATCHDAY» y las 3 fotos por defecto, decide si se publican los resultados
+   y guarda.
+3. Deja **apagada** la publicación automática semanal, salvo que el club la quiera además de lo programado:
+   solo cubre sábado y domingo.
 
-### Las fotos del «Próximo partido»
+## Programar una jornada o un partido
 
-La tarjeta matchday lleva tres fotos: la primera sale en blanco y negro, la segunda a color y la tercera con un
-velo naranjo. Elígelas en **Configuración → Facebook** desde la biblioteca de medios. Sin fotos, cada panel usa
-un fondo con los colores del club.
+1. Abre la jornada (Partidos → «Jornadas próximas») o la ficha del partido → «Publicar o programar en
+   Facebook».
+2. En la jornada, marca las series que van en la tarjeta. En los dos casos puedes cambiar las 3 fotos solo para
+   ese post.
+3. Revisa la tarjeta. Al abrir la página no se dibuja nada nuevo: si la tarjeta todavía no existe aparece
+   **Ver imagen**, que la dibuja al tocarla.
+4. Revisa el texto. **Si no lo cambias, se vuelve a armar al publicar** con los datos de ese momento (por
+   ejemplo, si cambió la hora de un partido). Si lo escribes a mano, sale tal cual.
+5. En **Cuándo**, elige **Programar** (o **Publicar ahora**). El día y la hora vienen sugeridos: el día anterior
+   a la jornada a las 10:00, hora de Chile; si esa hora ya pasó, la próxima hora en punto. La hora debe estar al
+   menos 5 minutos en el futuro y antes del primer partido. **Puede publicarse hasta 5 minutos después de la
+   hora elegida** (la tarea que publica corre cada 5 minutos).
+6. Ya programada, la página muestra «Se publicará el …» con **Cambiar fecha** y **Cancelar**. Lo mismo está en
+   **Facebook → Programadas**, con la miniatura de la tarjeta.
+
+Cancelar la borra: la jornada o el partido se puede volver a programar o publicar. La tarjeta y el texto
+sugerido se generan al publicar, con las series y fotos guardadas al programar y los datos vigentes.
+
+### Los seguros: cuándo una programada no sale
+
+Cada 5 minutos, y otra vez justo antes de publicar, el sitio compara lo programado con los partidos. Aunque
+Facebook esté apagado, revisa igual.
+
+| Si antes de la hora… | Qué pasa |
+|---|---|
+| Un partido se **cancela**, se **posterga** o se **suspende** | No sale: queda «Descartado» con el motivo |
+| Un partido (o su serie) se **elimina** | No sale |
+| Cambia el **rival** | No sale |
+| Cambia el **día** de un partido (la jornada pasa a ser otra) | No sale |
+| Cambia la **hora** el mismo día y el texto es el sugerido | **Sale**, con la hora nueva en la tarjeta y el texto |
+| Cambia la **hora** y el texto se había escrito a mano | No sale: el texto podría decir la hora vieja |
+| La nueva hora de inicio queda **antes de la hora programada** | No sale |
+| El partido **ya empezó** (por ejemplo, porque Facebook estaba apagado a la hora programada) | No sale. Nunca se publica tarde |
+
+Si una foto elegida se borra o se marca «contiene menores» después de programar, ese panel usa la foto por
+defecto de Ajustes en la misma posición (o queda en gris): la publicación sale igual, nunca con esa foto.
+
+Cuando un seguro descarta una programada:
+
+- El panel lo avisa en **Facebook → Programadas** y en **Inicio**, con el motivo y el enlace para volver a
+  programarla.
+- Se envía **un correo a los administradores** (una sola vez por publicación) con qué era, el motivo y el
+  enlace. Si el correo falla, se reintenta hasta 5 veces en 48 horas.
+- Si la descarta o la cancela una persona desde el panel, no se envía correo.
+
+### Con «Publicar en Facebook» apagado
+
+Se puede programar igual, pero nada sale: el formulario, **Programadas** e **Inicio** muestran «Facebook está
+desactivado: lo programado no saldrá hasta que lo actives». Al activarlo, lo que ya pasó su hora sale en los
+5 minutos siguientes si el partido todavía no empieza; si ya empezó, quedó descartado con su motivo.
+
+### Las fotos de las tarjetas
+
+La tarjeta matchday lleva tres fotos en blanco y negro. Las por defecto se eligen en **Facebook → Ajustes**
+desde la biblioteca de medios; sin fotos, cada panel usa un fondo con los colores del club.
 
 - Las fotos marcadas «contiene menores» no se pueden elegir, y si una foto se marca así después, deja de usarse
   sola.
-- Al publicar un partido a mano, en **Fotos de esta publicación** puedes cambiarlas solo para ese post: la
-  vista previa se actualiza antes de confirmar.
+- Al preparar una jornada o un partido puedes cambiarlas solo para ese post: la vista previa se actualiza
+  antes de confirmar.
 
-Lo que se publica aparece en **Configuración → Facebook → Publicaciones recientes**, con su estado:
+### Estados
+
+Lo programado está en **Facebook → Programadas**; lo demás, en **Facebook → Publicadas**:
 
 | Estado | Qué significa | Qué hacer |
 |---|---|---|
-| Publicado | Está en Facebook | «Ver en Facebook» lleva al post |
+| Programada | Sale sola a la hora elegida (hasta 5 minutos después) | «Cambiar fecha» o «Cancelar» |
 | Pendiente | Sale en los próximos 5 minutos | Nada |
+| Publicado | Está en Facebook | «Ver en Facebook» lleva al post |
 | Con error | Facebook la rechazó o se agotaron los 5 intentos | Lee el error, corrígelo y usa «Reintentar» |
 | Sin confirmar | Facebook no respondió: puede que sí se haya publicado | Revisa la página. Si no está, «Reintentar»; si está, «Descartar» |
-| Descartado | No se va a enviar | Se puede reintentar si cambias de opinión |
+| Descartado | No se va a enviar (a mano o por un seguro, con el motivo) | «Reintentar», o vuelve a programarla o publicarla desde su página |
 
 ## Renovar o cambiar el token
 
@@ -195,3 +255,7 @@ Repite los pasos 2 a 6 y reinicia la app. Hay que hacerlo si:
   Meta mantiene cada versión unos dos años: revísala al menos una vez al año.
 - Las pruebas nunca llaman a Facebook. Integración: `fetch` simulado y una URL que falla al instante. E2E:
   `tests/e2e/graph-mock.mjs`, que Playwright levanta en el puerto 3190.
+- Programadas: estado `programada` con `scheduled_at` y `scheduled_snapshot` (migración 0009). Las reglas puras
+  (hora válida, hora sugerida, seguros, fotos de respaldo) están en `lib/scheduling.ts`; los seguros del tick y
+  el correo de descarte, en `scheduled.ts`. Un descarte a mano marca `discard_notified_at` al descartar: así no
+  se envía correo ni aparece en el aviso del panel.
