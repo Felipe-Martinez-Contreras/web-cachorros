@@ -150,6 +150,23 @@
   text-transform: uppercase;
 }
 
+/*
+ * Título de la portada: el mismo display, más chico, para que una frase larga quede en 2 líneas en escritorio
+ * (1280–1920 px) y deje ver la foto y el botón en la primera pantalla. En el celular, 3 o 4 líneas sin cortar
+ * palabras. Usa la misma fuente de respaldo que el display: no hay salto al cargar la fuente (CLS = 0).
+ */
+@utility text-hero {
+  font-family: var(--font-tight);
+  font-size: clamp(3rem, 7.5vw, 6rem);
+  font-weight: 900;
+  font-stretch: 62.5%;
+  /* Algo más que el display: con 0,9 la tilde de una mayúscula («JAMÁS») toca la línea de arriba. */
+  line-height: 1;
+  text-transform: uppercase;
+  overflow-wrap: normal;
+  hyphens: manual;
+}
+
 @utility text-h1 {
   font-family: var(--font-display);
   font-size: clamp(2.25rem, 6vw, 4.5rem);

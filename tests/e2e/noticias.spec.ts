@@ -117,7 +117,10 @@ test('crear una noticia con foto desde el panel: se ve en el sitio en la carga s
   await expect(page.getByRole('heading', { name: `${title} corregida`, level: 1, exact: true })).toBeVisible()
 
   // Cambiar la dirección deja una redirección 301 desde la antigua.
+  // La dirección está en «Opciones avanzadas», cerrada por defecto.
   await page.goto(editUrl)
+  await expect(page.getByRole('textbox', { name: 'Título', exact: true })).toBeEnabled()
+  await page.getByText('Opciones avanzadas', { exact: true }).click()
   await page.getByRole('textbox', { name: /^Dirección en el sitio/ }).fill(`${slug}-nueva`)
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page.getByText('Noticia guardada.')).toBeVisible()
@@ -149,6 +152,37 @@ test('un borrador se guarda solo mientras se escribe', async ({ page }, testInfo
   await expect(page.getByRole('textbox', { name: /^Resumen/ })).toHaveValue(
     'Resumen escrito sin tocar Guardar.',
   )
+})
+
+test('las opciones avanzadas van cerradas al final y se abren solas si tienen un error', async ({ page }) => {
+  await login(page, ADMIN.email)
+  await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+  await page.goto('/admin/noticias/nueva')
+  const title = page.getByRole('textbox', { name: 'Título', exact: true })
+  await expect(title).toBeEnabled()
+
+  // Cerradas: sus campos no se ven.
+  const summary = page.getByText('Opciones avanzadas', { exact: true })
+  const seoTitle = page.getByRole('textbox', { name: /^Título para buscadores/ })
+  await expect(summary).toBeVisible()
+  await expect(seoTitle).toBeHidden()
+  await expect(page.getByRole('textbox', { name: /^Dirección en el sitio/ })).toBeHidden()
+  await expectAccessible(page)
+
+  // Un error en un campo avanzado: al guardar, el grupo se abre y el foco va a ese campo.
+  await title.fill('E2E noticia con error en opciones avanzadas')
+  await summary.click()
+  await seoTitle.fill('Un título para buscadores demasiado largo, con mucho más de setenta caracteres')
+  await summary.click()
+  await expect(seoTitle).toBeHidden()
+  await page.getByRole('button', { name: 'Guardar borrador' }).click()
+  await expect(seoTitle).toBeVisible()
+  await expect(seoTitle).toBeFocused()
+  await expect(page).toHaveURL(/\/admin\/noticias\/nueva$/)
+  await expect(page.getByText('Imagen al compartir').first()).toBeVisible()
+  await expect(
+    page.getByText('Normalmente déjala vacía: al compartir se usa la foto principal.'),
+  ).toBeVisible()
 })
 
 test('las categorías se administran desde el panel', async ({ page }, testInfo) => {

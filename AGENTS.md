@@ -299,7 +299,9 @@ se traducen con `constraints`. Los ids que llegan enlazados desde el cliente se 
   perderse ni enviarse como formulario nativo antes de la hidratación. Vale también para controles con estado
   fuera de un `<form>`. Lo cubre `tests/e2e/formularios.spec.ts`, que retiene los scripts de la página.
   `EntityForm` también trae los campos `richtext` (editor Tiptap, cargado con `import()` dinámico), `checkboxes`
-  y el autoguardado (`autosave`, solo para borradores).
+  y el autoguardado (`autosave`, solo para borradores). Los campos poco usados llevan `group`: van al final en
+  un `<details>` cerrado que se abre solo (y enfoca el campo) si uno tiene un error. `switchField` + `showIf`
+  muestran campos según una opción.
 - Texto enriquecido: el documento del editor se valida y se reduce a la lista blanca con `richTextField()`
   (`src/lib/rich-text/`); se dibuja con `<RichText>` (`src/components/site/rich-text.tsx`), nodo por nodo, sin
   `dangerouslySetInnerHTML`. Un nodo nuevo se agrega en los tres lugares: `document.ts`, el editor y el render.

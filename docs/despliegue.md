@@ -266,7 +266,8 @@ respaldo falló en el paso «copia de las imágenes» con «Killed». Hay dos ca
 
 - **rclone en modo de bajo consumo** (variables `RCLONE_*` del Dockerfile de `ops`, valen para el respaldo y la
   restauración): una transferencia y dos chequeos a la vez, sin búfer de lectura adelantada
-  (`--buffer-size 0`), una cola corta de archivos pendientes y el recolector de Go más frecuente (`GOGC=50`).
+  (`--buffer-size 0`), una cola corta de archivos pendientes y el recolector de Go más frecuente (`GOGC=50`), con un tope blando de 120 MiB
+  (`GOMEMLIMIT`) para que libere memoria antes de llegar al límite del contenedor.
   En Cloud Storage lista carpeta por carpeta (sin `--fast-list`) y no revisa el bucket. Así la memoria no
   crece con la cantidad de fotos; el respaldo tarda un poco más, de noche y sin apuro.
 - **192m por defecto** en `compose.yaml`, `.env.example` y `generar-env.sh`. Cabe en el presupuesto de la

@@ -20,7 +20,9 @@ RUN apk add --no-cache rclone age curl tzdata supercronic  && rm -f /usr/local/b
 # Bajo consumo de memoria (el contenedor tiene OPS_MEMORY_LIMIT, 192m): una transferencia y dos chequeos a la
 # vez, sin búfer de lectura adelantada, una cola de pendientes corta y el recolector de Go más frecuente. Así el
 # uso no crece con la cantidad de fotos. Sin --fast-list (lista carpeta por carpeta, con menos memoria) y sin
-# revisar el bucket (ya existe y la cuenta de servicio no necesita permisos sobre él).
+# revisar el bucket (ya existe y la cuenta de servicio no necesita permisos sobre él). GOMEMLIMIT es un tope
+# blando bajo el límite del contenedor: cerca de 120 MiB el recolector de Go libera memoria antes de que el
+# kernel corte el proceso («Killed»).
 ENV RCLONE_CONFIG_GCS_TYPE="google cloud storage" \
     RCLONE_CONFIG_GCS_ENV_AUTH=true \
     RCLONE_CONFIG_GCS_BUCKET_POLICY_ONLY=true \
@@ -31,6 +33,7 @@ ENV RCLONE_CONFIG_GCS_TYPE="google cloud storage" \
     RCLONE_USE_MMAP=true \
     RCLONE_MAX_BACKLOG=1000 \
     GOGC=50 \
+    GOMEMLIMIT=120MiB \
     APP_URL=http://app:3000 \
     OPS_DIR=/srv/ops \
     UPLOADS_SOURCE=/srv/app-data/uploads \
