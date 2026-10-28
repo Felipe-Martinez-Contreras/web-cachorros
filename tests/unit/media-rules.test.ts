@@ -1,6 +1,11 @@
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { createSerialQueue, fitWithin, sniffImageFormat } from '@/features/media/lib/upload-rules'
+import {
+  createSerialQueue,
+  fitWithin,
+  QueueAbortedError,
+  sniffImageFormat,
+} from '@/features/media/lib/upload-rules'
 
 const pixel = () => sharp({ create: { width: 4, height: 4, channels: 3, background: '#f27604' } })
 
@@ -70,5 +75,32 @@ describe('createSerialQueue', () => {
     const next = enqueue(async () => 'sigue')
     await expect(failed).rejects.toThrow('falló')
     await expect(next).resolves.toBe('sigue')
+  })
+
+  it('no ejecuta una tarea cancelada mientras esperaba su turno, y sigue con la siguiente', async () => {
+    const enqueue = createSerialQueue()
+    let release: (value: string) => void = () => {}
+    const gate = new Promise<string>((resolve) => {
+      release = resolve
+    })
+    const first = enqueue(() => gate)
+    const controller = new AbortController()
+    let ran = false
+    const abandoned = enqueue(
+      async () => {
+        ran = true
+        return 'no'
+      },
+      { signal: controller.signal },
+    )
+    const last = enqueue(async () => 'última')
+    expect(enqueue.pending()).toBe(3)
+    controller.abort()
+    release('primera')
+    await expect(first).resolves.toBe('primera')
+    await expect(abandoned).rejects.toBeInstanceOf(QueueAbortedError)
+    await expect(last).resolves.toBe('última')
+    expect(ran).toBe(false)
+    expect(enqueue.pending()).toBe(0)
   })
 })

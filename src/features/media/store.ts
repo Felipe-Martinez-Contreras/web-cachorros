@@ -96,12 +96,13 @@ export async function storeUploadedImage(input: StoreInput): Promise<MediaThumbD
     throw new UploadError(415, 'Ese archivo no es una imagen que podamos usar. Sube un JPG, PNG, WebP o SVG.')
   }
 
-  return runHeavy(async () => {
+  // En la cola solo se procesa la imagen; el registro en la BD va después, ya fuera de ella: ninguna consulta
+  // corre dentro de la cola ni la detiene si la base está lenta.
+  const processed = await runHeavy(async () => {
     // sharp se carga recién al procesar una imagen: subir un PDF no lo necesita.
     const { processImage } = await import('@/lib/images/process')
-    let processed: Awaited<ReturnType<typeof processImage>>
     try {
-      processed = await processImage(input.bytes, { uploadsDir: uploadsDir(), kind: input.kind })
+      return await processImage(input.bytes, { uploadsDir: uploadsDir(), kind: input.kind })
     } catch (error) {
       // Casi siempre es una imagen dañada, pero también puede ser el disco o los permisos de la carpeta:
       // la causa queda en el log para poder distinguirlo.
@@ -111,42 +112,42 @@ export async function storeUploadedImage(input: StoreInput): Promise<MediaThumbD
       )
       throw new UploadError(400, 'No pudimos leer la imagen. Puede estar dañada: prueba con otra.')
     }
-    try {
-      return await db.transaction(async (tx) => {
-        const [row] = await tx
-          .insert(mediaAssets)
-          .values({
-            kind: 'imagen',
-            storageKey: processed.storageKey,
-            originalFilename: input.filename?.slice(0, 200) ?? null,
-            mime: processed.mime,
-            bytes: processed.bytes,
-            width: processed.width,
-            height: processed.height,
-            variants: processed.variants,
-            lqip: processed.lqip,
-            altText: input.altText,
-            credit: input.credit,
-            uploadedBy: input.userId,
-          })
-          .returning({
-            id: mediaAssets.id,
-            variants: mediaAssets.variants,
-            altText: mediaAssets.altText,
-            containsMinors: mediaAssets.containsMinors,
-          })
-        if (!row) throw new Error('La biblioteca no devolvió el archivo creado.')
-        await audit(tx, { id: input.userId }, 'media.create', {
-          entityType: 'media_asset',
-          entityId: row.id,
-          summary: `Subió la imagen «${input.altText.slice(0, 80)}»`,
-          meta: { width: processed.width, height: processed.height, format },
-        })
-        return toMediaThumbDTO(row)
-      })
-    } catch (error) {
-      await removeMediaFiles(processed.storageKey)
-      throw error
-    }
   })
+  try {
+    return await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(mediaAssets)
+        .values({
+          kind: 'imagen',
+          storageKey: processed.storageKey,
+          originalFilename: input.filename?.slice(0, 200) ?? null,
+          mime: processed.mime,
+          bytes: processed.bytes,
+          width: processed.width,
+          height: processed.height,
+          variants: processed.variants,
+          lqip: processed.lqip,
+          altText: input.altText,
+          credit: input.credit,
+          uploadedBy: input.userId,
+        })
+        .returning({
+          id: mediaAssets.id,
+          variants: mediaAssets.variants,
+          altText: mediaAssets.altText,
+          containsMinors: mediaAssets.containsMinors,
+        })
+      if (!row) throw new Error('La biblioteca no devolvió el archivo creado.')
+      await audit(tx, { id: input.userId }, 'media.create', {
+        entityType: 'media_asset',
+        entityId: row.id,
+        summary: `Subió la imagen «${input.altText.slice(0, 80)}»`,
+        meta: { width: processed.width, height: processed.height, format },
+      })
+      return toMediaThumbDTO(row)
+    })
+  } catch (error) {
+    await removeMediaFiles(processed.storageKey)
+    throw error
+  }
 }

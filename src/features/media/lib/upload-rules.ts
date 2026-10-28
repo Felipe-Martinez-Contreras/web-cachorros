@@ -41,15 +41,35 @@ export function fitWithin(width: number, height: number, max: number): { width: 
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) }
 }
 
+/** La tarea se descartó sin ejecutarse: quien la pidió ya no la espera (el cliente cerró la conexión). */
+export class QueueAbortedError extends Error {
+  constructor() {
+    super('La tarea se canceló antes de empezar.')
+    this.name = 'QueueAbortedError'
+  }
+}
+
 /**
  * Cola de concurrencia 1: cada tarea empieza cuando terminó la anterior, aunque esa haya fallado.
- * Mantiene acotada la memoria de sharp en la VM (especificación 2.7).
+ * Mantiene acotada la memoria de sharp en la VM (especificación 2.7). Con `signal`, una tarea cuyo pedido
+ * se canceló mientras esperaba su turno no se ejecuta: en la VM, el trabajo de quien ya se fue le quita la
+ * CPU a todo el sitio. `pending()` dice cuántas hay en la cola (incluida la que corre).
  */
 export function createSerialQueue() {
   let tail: Promise<unknown> = Promise.resolve()
-  return function enqueue<T>(task: () => Promise<T>): Promise<T> {
-    const result = tail.then(task, task)
+  let waiting = 0
+  function enqueue<T>(task: () => Promise<T>, options: { signal?: AbortSignal } = {}): Promise<T> {
+    waiting++
+    const run = () => {
+      if (options.signal?.aborted) return Promise.reject(new QueueAbortedError())
+      return task()
+    }
+    const result = tail.then(run, run).finally(() => {
+      waiting--
+    })
     tail = result.catch(() => undefined)
     return result
   }
+  enqueue.pending = () => waiting
+  return enqueue
 }

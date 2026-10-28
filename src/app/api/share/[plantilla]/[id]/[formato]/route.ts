@@ -1,3 +1,4 @@
+import { QueueAbortedError } from '@/features/media/lib/upload-rules'
 import { getShareImage } from '@/features/share/images'
 import {
   isValidVersion,
@@ -37,7 +38,7 @@ export async function GET(request: Request, { params }: Params) {
       return new Response(null, { status: 302, headers: { Location: target, 'Cache-Control': 'no-store' } })
     }
 
-    const image = await getShareImage(card, current.version)
+    const image = await getShareImage(card, current.version, request.signal)
     if (!image) return new Response(null, { status: 404, headers: { 'Cache-Control': 'no-store' } })
     const { ext } = SHARE_FORMATS[card.format]
     return new Response(new Uint8Array(image.bytes), {
@@ -50,6 +51,8 @@ export async function GET(request: Request, { params }: Params) {
       },
     })
   } catch (error) {
+    // Quien la pidió se fue antes de su turno en la cola: no se dibujó (y nadie lee la respuesta).
+    if (error instanceof QueueAbortedError) return new Response(null, { status: 499 })
     requestLogger(request.headers).error(
       { err: error, template: card.template },
       'no se pudo generar una tarjeta',

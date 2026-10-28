@@ -324,6 +324,32 @@ docker compose up -d ops
 Prueba la alerta: `docker compose stop app`, espera el aviso de UptimeRobot y vuelve con
 `docker compose up -d`.
 
+### 7.1 Si la app queda «unhealthy»
+
+Docker marca la app `unhealthy` cuando `/api/health` falla, pero **no la reinicia** (eso solo lo hace Swarm, y
+un contenedor que la reinicie necesitaría el socket de Docker en la VM). Por eso la app se cuida sola: si
+`/api/health` no llega a la base durante 3 minutos seguidos, termina con código 1 y `restart: unless-stopped`
+la vuelve a levantar. Queda en el log como `health: la base de datos no responde hace demasiado`. El plazo se
+cambia con `HEALTH_RESTART_AFTER_S` en `.env` (`0` lo desactiva).
+
+Para revisar qué pasa antes de reiniciar a mano:
+
+```bash
+cd /opt/cachorros
+docker compose ps                                   # estado (healthy / unhealthy) de cada servicio
+docker stats --no-stream                            # CPU y memoria: ¿la app está al tope de CPU?
+docker compose logs --since 10m app | grep -E 'CONNECT_TIMEOUT|health'
+# Conexiones de la app en la base: deberían ser ≤ DB_POOL_MAX y ninguna «idle in transaction».
+docker compose exec db psql -U "$(grep ^POSTGRES_USER= .env | cut -d= -f2)" -d "$(grep ^POSTGRES_DB= .env | cut -d= -f2)"   -c "select state, wait_event, now() - state_change as hace from pg_stat_activity where application_name = 'cachorros-web'"
+docker compose restart app                          # si hace falta, a mano
+```
+
+Un `CONNECT_TIMEOUT` con la base sana suele ser **falta de CPU en la app** (la e2-micro tiene ~0,25 vCPU
+sostenidos): con el proceso ocupado, la conexión no alcanza a completar su saludo en 15 s. El incidente de
+sha-8191eed fue eso: las vistas previas de «Escudos en las tarjetas» se dibujaban de nuevo en cada visita, ~45
+a la vez y aunque el navegador ya se hubiera ido. Desde fix-conexiones-bd se dibujan una sola vez (caché en
+`SHARE_CACHE_DIR/escudos/`), se piden de a dos y no se procesa lo abandonado.
+
 ## 8. Opcional: desplegar y actualizar el firewall desde GitHub (Workload Identity Federation)
 
 Sin llaves JSON: GitHub obtiene credenciales de corta duración solo para este repositorio. Son dos cuentas de
