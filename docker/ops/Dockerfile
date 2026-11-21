@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.29
 # Imagen ops (especificación 12.2 y 12.8): tareas programadas, respaldos y restauración. Parte de
 # postgres:18-alpine para que pg_dump y pg_restore sean de la misma versión mayor que el servidor (trampa 12).
 # Se construye con este directorio como contexto: `docker build docker/ops`.
