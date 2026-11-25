@@ -79,8 +79,8 @@ export default async function BoardPage() {
                     )}
                   </div>
                   <div className="grid min-w-0 content-start gap-1">
-                    <p className="text-eyebrow text-accent-strong">{member.roleTitle}</p>
                     <h2 className="text-lg leading-snug font-bold">{member.fullName}</h2>
+                    <p className="font-semibold">{member.roleTitle}</p>
                     {period && <p className="text-meta text-(--muted)">{period}</p>}
                     {member.publicEmail && !isContentMarker(member.publicEmail) && (
                       <a

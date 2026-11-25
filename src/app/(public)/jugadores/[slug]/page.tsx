@@ -80,11 +80,11 @@ export default async function PlayerPage({ params }: Props) {
             )}
           </div>
           <div className="grid gap-2">
-            <p className="text-eyebrow text-accent">
-              {playerPositionLabels[profile.position]}
-              {profile.positionDetail && ` · ${positionDetailLabels[profile.positionDetail]}`}
-            </p>
             <h1 className="text-h1">{profile.name}</h1>
+            <p className="text-lg font-semibold">
+              {playerPositionLabels[profile.position]}
+              {profile.positionDetail && `, ${positionDetailLabels[profile.positionDetail].toLowerCase()}`}
+            </p>
             {profile.nickname && <p className="text-xl text-(--muted)">«{profile.nickname}»</p>}
             {profile.current.length > 0 && (
               <ul className="mt-2 flex flex-wrap gap-2">
@@ -96,9 +96,11 @@ export default async function PlayerPage({ params }: Props) {
                     >
                       {item.seriesName}
                       {item.shirtNumber !== null && (
-                        <span className="tabular-nums">· N.º {item.shirtNumber}</span>
+                        <span className="font-normal text-(--muted) tabular-nums">
+                          N.º {item.shirtNumber}
+                        </span>
                       )}
-                      {item.isCaptain && <span>· Capitán</span>}
+                      {item.isCaptain && <span className="font-normal text-(--muted)">Capitán</span>}
                     </Link>
                   </li>
                 ))}

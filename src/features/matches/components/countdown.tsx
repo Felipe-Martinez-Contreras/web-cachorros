@@ -43,9 +43,7 @@ export function Countdown({ target, label, className }: CountdownProps) {
             <span className="font-tight text-3xl font-black tabular-nums [font-stretch:62.5%] md:text-4xl">
               {parts ? String(parts[unit]).padStart(2, '0') : '--'}
             </span>
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-(--muted) uppercase">
-              {name}
-            </span>
+            <span className="text-xs font-medium text-(--muted)">{name}</span>
           </div>
         ))}
       </div>

@@ -58,7 +58,7 @@ export default async function StandingsPage({ searchParams }: Props) {
                 >
                   <h2 className="text-h3">
                     {table.competitionName}
-                    {table.groupLabel && ` · ${table.groupLabel}`}
+                    {table.groupLabel && `, ${table.groupLabel}`}
                   </h2>
                   <StandingsTable standings={table} />
                 </section>

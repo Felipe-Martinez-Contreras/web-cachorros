@@ -24,12 +24,11 @@ test.describe('portada', () => {
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'es-CL')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Los Cachorros')
-    await expect(page.getByText('Club Deportivo Los Cachorros · Desde 1934')).toBeVisible()
 
     // Franja matchday: próximo partido de Honor, con la cuenta regresiva ya calculada en el cliente.
     const matchday = page.getByRole('region', { name: 'Próximo partido' })
     await expect(matchday.getByText('Próximo partido')).toBeVisible()
-    await expect(matchday.getByText(/^Honor · /)).toBeVisible()
+    await expect(matchday.getByText(/^Honor, /)).toBeVisible()
     // `\p{L}`: los días y meses llevan tildes («sábado», «miércoles») que `\w` no reconoce.
     await expect(
       matchday.getByText(/^Comienza el \p{L}+ \d+ de \p{L}+ de \d{4}, \d{2}:\d{2} h\.$/u),

@@ -35,9 +35,7 @@ export function SiteHeader({ site }: { site: Brand }) {
             <span className="font-display text-xl font-extrabold uppercase [font-stretch:75%]">
               {site.shortName}
             </span>
-            <span className="text-[0.6875rem] font-semibold tracking-[0.14em] text-(--muted) uppercase">
-              Desde {site.foundedYear}
-            </span>
+            <span className="text-xs font-medium text-(--muted)">Desde {site.foundedYear}</span>
             <span className="sr-only">, ir al inicio</span>
           </span>
         </Link>

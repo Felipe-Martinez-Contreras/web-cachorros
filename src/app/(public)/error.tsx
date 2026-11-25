@@ -6,7 +6,6 @@ export default function PublicError({ reset }: { error: Error & { digest?: strin
   return (
     <section className="grid min-h-[70svh] place-items-center">
       <div className="container-site section-y grid justify-items-center gap-3 text-center">
-        <p className="text-eyebrow text-(--link)">Tarjeta amarilla para el sitio</p>
         <h1 className="text-h2">No pudimos cargar esta página</h1>
         <p className="max-w-md text-(--muted)">
           Fue un problema nuestro, no tuyo. Inténtalo de nuevo en unos segundos.

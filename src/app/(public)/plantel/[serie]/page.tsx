@@ -53,9 +53,9 @@ export default async function SquadPage(props: Props) {
     <>
       <PageHero
         crumbs={[{ href: '/', label: 'Inicio' }, { label: 'Plantel' }]}
-        eyebrow={squad.seasonName}
         title={`Plantel ${squad.series.name}`}
       >
+        <p className="text-lg font-semibold">{squad.seasonName}</p>
         {squad.series.description && (
           <p className="max-w-2xl text-lg text-(--muted)">{squad.series.description}</p>
         )}

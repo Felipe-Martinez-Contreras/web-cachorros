@@ -74,8 +74,8 @@ export default async function NewsListPage({ searchParams }: Props) {
           <>
             <h2 className="sr-only">
               {category?.name ?? 'Todas las noticias'}
-              {series && ` · ${series.name}`}
-              {page > 1 && ` · página ${page}`}
+              {series && `, ${series.name}`}
+              {page > 1 && `, página ${page}`}
             </h2>
             <ul className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((item, index) => (

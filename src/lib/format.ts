@@ -56,6 +56,11 @@ export function formatDayMonth(value: DateInput): string {
 }
 
 /** «sáb 10 oct · 16:00» */
+/** «sáb 10 oct, 16:00»: fecha y hora de un partido en el sitio público (sin punto medio). */
+export function formatKickoff(value: DateInput): string {
+  return `${formatDayMonth(value)}, ${formatTime(value)}`
+}
+
 export function formatMatchDate(value: DateInput): string {
   return `${formatDayMonth(value)} · ${formatTime(value)}`
 }

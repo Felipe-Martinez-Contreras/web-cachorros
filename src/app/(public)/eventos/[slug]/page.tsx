@@ -151,7 +151,7 @@ export default async function EventPage({ params }: Props) {
                   {event.venue?.address && `, ${event.venue.address}`}
                   {event.mapUrl && (
                     <>
-                      {' · '}
+                      {'. '}
                       <a
                         href={event.mapUrl}
                         target="_blank"

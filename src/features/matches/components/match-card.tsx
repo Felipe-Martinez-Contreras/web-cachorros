@@ -2,7 +2,7 @@ import { MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
-import { formatMatchDate } from '@/lib/format'
+import { formatKickoff, formatTime } from '@/lib/format'
 import { hasScore, type MatchDTO } from '../dto'
 import { LiveBadge, Scoreboard, TeamCrest } from './scoreboard'
 
@@ -36,9 +36,7 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
           <TeamCrest team={match.away} size="sm" />
         </span>
         <span className="text-right font-tight text-xl font-black tabular-nums [font-stretch:62.5%]">
-          {hasScore(match)
-            ? `${match.homeScore}-${match.awayScore}`
-            : formatMatchDate(match.kickoffAt).split(' · ')[1]}
+          {hasScore(match) ? `${match.homeScore}-${match.awayScore}` : formatTime(match.kickoffAt)}
         </span>
       </Link>
     )
@@ -47,15 +45,11 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
   return (
     <Card interactive className={cn('relative', className)}>
       <div className="flex items-center justify-between gap-2 px-4 pt-4">
-        <p className="text-eyebrow">
-          {match.seriesName}
-          {match.roundLabel && <span className="text-(--muted)"> · {match.roundLabel}</span>}
+        <p className="text-meta">
+          <span className="font-bold">{match.seriesName}</span>
+          {match.roundLabel && <span className="text-(--muted)">, {match.roundLabel}</span>}
         </p>
-        {live ? (
-          <LiveBadge />
-        ) : (
-          <p className="text-meta text-(--muted)">{formatMatchDate(match.kickoffAt)}</p>
-        )}
+        {live ? <LiveBadge /> : <p className="text-meta text-(--muted)">{formatKickoff(match.kickoffAt)}</p>}
       </div>
       <Link href={href} className="block p-4 after:absolute after:inset-0 after:rounded-lg">
         <Scoreboard match={match} />

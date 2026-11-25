@@ -12,7 +12,6 @@ export function ComingSoon({ title }: { title: string }) {
   return (
     <section className="theme-dark grid min-h-[70svh] place-items-center">
       <div className="container-site section-y grid justify-items-center gap-4 text-center">
-        <p className="text-eyebrow text-accent">Próximamente</p>
         <h1 className="text-h1">{title}</h1>
         <p className="max-w-md text-lg text-(--muted)">
           Estamos preparando esta sección del sitio. Mientras tanto, revisa los partidos y las noticias en la

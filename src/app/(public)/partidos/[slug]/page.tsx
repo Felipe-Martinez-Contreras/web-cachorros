@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { match, shareVersion } = await loadMatch((await params).slug)
   const versus = `${match.home.shortName} vs ${match.away.shortName}`
   return pageMetadata({
-    title: `${versus} · ${match.seriesName}`,
+    title: `${versus}, ${match.seriesName}`,
     description: hasScore(match)
       ? `${scoreText(match)}. ${match.seriesName}, ${match.competitionName}.`
       : `${versus}: ${formatLongDateTime(match.kickoffAt)}. ${match.seriesName}, ${match.competitionName}.`,
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ogImage: matchOgImage(
       match,
       shareVersion,
-      `${versus} · ${match.seriesName}`,
+      `${versus}, ${match.seriesName}`,
       // Solo la previa lleva fotos y auspiciador: el resultado no consulta nada más.
       matchOgTemplate(match.status) === 'proximo' ? await matchdayRevision() : '',
     ),
@@ -60,7 +60,7 @@ function PlayerList({ title, players }: { title: string; players: (LineupPlayerD
   if (players.length === 0) return null
   return (
     <div className="grid content-start gap-2">
-      <h3 className="text-eyebrow text-(--muted)">{title}</h3>
+      <h3 className="text-lg font-bold">{title}</h3>
       <ul className="grid gap-1">
         {players.map((player) => (
           <li key={`${player.shirtNumber}:${player.name}`} className="flex min-h-11 items-center gap-3">
@@ -108,17 +108,22 @@ export default async function MatchPage({ params }: Props) {
               ]}
             />
             <div className="grid justify-items-center gap-2 text-center">
-              <p className="text-eyebrow text-accent">
-                {match.seriesName} · {match.competitionName}
-                {match.roundLabel && ` · ${match.roundLabel}`}
+              <p>
+                <span className="font-semibold">{match.seriesName}</span>
+                <span className="text-(--muted)">
+                  , {match.competitionName}
+                  {match.roundLabel && `, ${match.roundLabel}`}
+                </span>
               </p>
               <h1 className="sr-only">{title}</h1>
             </div>
             <LiveMatchScore />
-            <p className="text-center text-(--muted)">
-              <time dateTime={match.kickoffAt}>{formatLongDateTime(match.kickoffAt)}</time>
-              {match.venue && ` · ${match.venue.name}`}
-            </p>
+            <div className="grid justify-items-center text-center text-(--muted)">
+              <time dateTime={match.kickoffAt} className="first-letter:uppercase">
+                {formatLongDateTime(match.kickoffAt)}
+              </time>
+              {match.venue && <p>{match.venue.name}</p>}
+            </div>
           </div>
         </header>
 
@@ -200,9 +205,7 @@ export default async function MatchPage({ params }: Props) {
             <ShareBar
               url={`${env.SITE_URL}/partidos/${match.slug}`}
               title={
-                hasScore(match)
-                  ? `${scoreText(match)} · ${match.seriesName}`
-                  : `${title} · ${match.seriesName}`
+                hasScore(match) ? `${scoreText(match)}, ${match.seriesName}` : `${title}, ${match.seriesName}`
               }
             />
           </section>

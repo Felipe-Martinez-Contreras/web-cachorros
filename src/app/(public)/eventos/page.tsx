@@ -59,7 +59,7 @@ export default async function EventsPage({ searchParams }: Props) {
         {past.length > 0 && (
           <section aria-labelledby="pasados" className="grid gap-5">
             <h2 id="pasados" className="text-h2 uppercase">
-              Eventos pasados{page > 1 && ` · página ${page}`}
+              Eventos pasados{page > 1 && `, página ${page}`}
             </h2>
             <ul className={gridClass}>
               {past.map((event) => (

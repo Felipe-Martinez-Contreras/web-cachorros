@@ -84,7 +84,7 @@ export default async function TransparencyPage({ searchParams }: Props) {
           <>
             <h2 className="sr-only">
               {category ? documentCategoryLabels[category] : 'Todos los documentos'}
-              {year && ` · ${year}`}
+              {year && `, ${year}`}
             </h2>
             <ul className="grid gap-3">
               {documents.map((document) => (
@@ -101,7 +101,7 @@ export default async function TransparencyPage({ searchParams }: Props) {
                       {document.date && (
                         <time dateTime={document.date}>{formatShortDate(fromIsoDate(document.date))}</time>
                       )}
-                      <span>PDF · {formatFileSize(document.bytes)}</span>
+                      <span>PDF de {formatFileSize(document.bytes)}</span>
                     </p>
                     {document.description && <p className="text-(--muted)">{document.description}</p>}
                   </div>

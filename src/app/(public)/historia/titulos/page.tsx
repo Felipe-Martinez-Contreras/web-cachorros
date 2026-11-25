@@ -57,7 +57,7 @@ export default async function HonoursPage() {
                 <h2 className="text-h3">{honour.name}</h2>
                 {(honour.competitionName || honour.seriesName) && (
                   <p className="text-meta text-(--muted)">
-                    {[honour.competitionName, honour.seriesName].filter(Boolean).join(' · ')}
+                    {[honour.competitionName, honour.seriesName].filter(Boolean).join(', ')}
                   </p>
                 )}
                 {honour.description && <p className="whitespace-pre-line">{honour.description}</p>}

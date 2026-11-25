@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, ShoppingBag, UserPlus } from 'lucide-react'
+import { CalendarDays, ShoppingBag, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { connection } from 'next/server'
 import type { ReactNode } from 'react'
@@ -34,7 +34,6 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href?: strin
           className="inline-flex min-h-11 items-center gap-1 font-semibold text-(--link) hover:underline hover:underline-offset-4"
         >
           {linkLabel}
-          <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       )}
     </div>
@@ -74,7 +73,7 @@ export async function HeroSection() {
             image={image}
             sizes="100vw"
             priority
-            className="absolute inset-0 -z-20 size-full object-cover"
+            className="absolute inset-0 -z-20 size-full object-cover photo-mono"
           />
         )}
         {image && mobile && (
@@ -85,7 +84,7 @@ export async function HeroSection() {
               image={image}
               sizes="100vw"
               priority
-              className="absolute inset-0 -z-20 size-full object-cover"
+              className="absolute inset-0 -z-20 size-full object-cover photo-mono"
             />
           </picture>
         )}
@@ -93,9 +92,6 @@ export async function HeroSection() {
         <div className="absolute inset-0 -z-10 bg-linear-to-t from-ink via-ink/70 to-ink/20" />
 
         <div className="container-site grid gap-5 pt-24 pb-28 md:pb-36">
-          <p className="text-eyebrow text-accent">
-            {site?.clubName} · Desde {site?.foundedYear}
-          </p>
           {/* Sin el escudo grande: el de la barra de navegación ya identifica al club. */}
           <h1 className="text-hero max-w-5xl text-balance">{hero?.title ?? site?.shortName}</h1>
           {hero?.subtitle && <p className="max-w-xl text-lg text-paper/90 md:text-xl">{hero.subtitle}</p>}
@@ -198,7 +194,7 @@ export async function QuickAccessSection() {
       icon: CalendarDays,
       title: 'Próximos eventos',
       text: nextEvent
-        ? `${nextEvent.title} · ${formatDayMonth(nextEvent.startsAt)}`
+        ? `${nextEvent.title}, ${formatDayMonth(nextEvent.startsAt)}`
         : 'Completadas, bingos y actividades del club.',
     },
   ]
@@ -213,12 +209,8 @@ export async function QuickAccessSection() {
             >
               <Icon aria-hidden="true" className="size-8 text-accent" />
               <span className="grid gap-1">
-                <span className="flex items-center gap-2 font-display text-3xl font-extrabold uppercase [font-stretch:75%]">
+                <span className="font-display text-3xl font-extrabold uppercase [font-stretch:75%]">
                   {title}
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-6 transition-transform duration-200 ease-out group-hover:translate-x-1"
-                  />
                 </span>
                 <span className="text-(--muted)">{text}</span>
               </span>
@@ -240,7 +232,7 @@ export async function StandingsSection() {
     <Section label="Tabla de posiciones">
       <div className="mx-auto max-w-3xl">
         <SectionHeader
-          title={`Tabla · ${standings.seriesName}`}
+          title={`Tabla de la serie ${standings.seriesName}`}
           href={`/partidos/posiciones?serie=${standings.seriesSlug}`}
           linkLabel="Tabla completa"
         />

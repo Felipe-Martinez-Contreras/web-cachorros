@@ -29,7 +29,7 @@ function Meta({ news }: { news: NewsCardDTO }) {
       {news.type === 'comunicado' ? (
         <Badge variant="dark">{newsTypeLabels.comunicado}</Badge>
       ) : (
-        news.categoryName && <span className="font-bold text-(--link) uppercase">{news.categoryName}</span>
+        news.categoryName && <span className="font-semibold text-(--fg)">{news.categoryName}</span>
       )}
       <time dateTime={news.publishedAt}>{formatShortDate(news.publishedAt)}</time>
     </p>
@@ -56,7 +56,12 @@ export function NewsCard({
       <article className={cn('relative grid grid-cols-[7rem_1fr] items-center gap-4', className)}>
         <div className="aspect-[4/3] overflow-hidden rounded-md bg-(--surface)">
           {news.cover && (
-            <ClubImage image={news.cover} alt="" sizes={SIZES.compact} className="size-full object-cover" />
+            <ClubImage
+              image={news.cover}
+              alt=""
+              sizes={SIZES.compact}
+              className="size-full object-cover photo-mono"
+            />
           )}
         </div>
         <div className="grid gap-1">
@@ -82,7 +87,7 @@ export function NewsCard({
             alt=""
             sizes={SIZES[variant]}
             priority={priority}
-            className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+            className="size-full object-cover photo-mono transition-transform duration-300 ease-out group-hover:scale-[1.03]"
           />
         )}
       </div>
