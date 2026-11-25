@@ -19,7 +19,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: '/',
     display: 'standalone',
     // Tokens de marca (src/styles/tokens.css): negro base y blanco base.
-    theme_color: '#0b0b0c',
+    theme_color: '#000000',
     background_color: '#ffffff',
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

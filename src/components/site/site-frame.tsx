@@ -40,10 +40,13 @@ export async function loadSiteOrFallback(): Promise<SiteDTO> {
   }
 }
 
-/** Marco del sitio público: enlace de salto, encabezado, contenido, pie y barra inferior. */
+/**
+ * Marco del sitio público: enlace de salto, encabezado, contenido, pie y barra inferior. `.site-public` aplica
+ * los tokens del sitio (esquinas rectas, escala tipográfica, bordes) sin tocar el panel.
+ */
 export function SiteFrame({ site, children }: { site: SiteDTO; children: ReactNode }) {
   return (
-    <>
+    <div className="site-public">
       <a
         href="#contenido"
         className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-paper focus-visible:px-4 focus-visible:py-3 focus-visible:font-semibold focus-visible:text-ink"
@@ -56,6 +59,6 @@ export function SiteFrame({ site, children }: { site: SiteDTO; children: ReactNo
       </main>
       <SiteFooter site={site} />
       <BottomNav site={site} />
-    </>
+    </div>
   )
 }

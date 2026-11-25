@@ -157,7 +157,7 @@
  */
 @utility text-hero {
   font-family: var(--font-tight);
-  font-size: clamp(3rem, 7.5vw, 6rem);
+  font-size: var(--type-hero);
   font-weight: 900;
   font-stretch: 62.5%;
   /* Algo más que el display: con 0,9 la tilde de una mayúscula («JAMÁS») toca la línea de arriba. */
@@ -169,7 +169,7 @@
 
 @utility text-h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.25rem, 6vw, 4.5rem);
+  font-size: var(--type-h1);
   font-weight: 800;
   font-stretch: 75%;
   line-height: 0.95;
@@ -178,25 +178,25 @@
 
 @utility text-h2 {
   font-family: var(--font-display);
-  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-size: var(--type-h2);
   font-weight: 800;
   font-stretch: 75%;
   line-height: 1;
 }
 
 @utility text-h3 {
-  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-size: var(--type-h3);
   font-weight: 700;
   line-height: 1.2;
 }
 
 @utility text-meta {
-  font-size: 0.875rem;
+  font-size: var(--type-meta);
   font-weight: 500;
   line-height: 1.4;
 }
 
-/* Rótulo pequeño en mayúsculas («Desde 1934», «Próximo partido»). */
+/* Rótulo pequeño en mayúsculas: solo en el panel. El sitio público no usa rótulos sobre los títulos. */
 @utility text-eyebrow {
   font-size: 0.8125rem;
   font-weight: 700;
@@ -207,11 +207,16 @@
 
 @utility text-score {
   font-family: var(--font-tight);
-  font-size: clamp(3rem, 14vw, 7rem);
+  font-size: var(--type-score);
   font-weight: 900;
   font-stretch: 62.5%;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+/* Fotos de partido y de noticias en blanco y negro (nunca escudos ni logos). */
+@utility photo-mono {
+  filter: grayscale(1) contrast(1.08);
 }
 
 /* Layout (especificación 4.4): contenedor de 1280 px con márgenes de 16 / 24 / 32 px. */
