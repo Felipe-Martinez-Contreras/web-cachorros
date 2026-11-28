@@ -1,9 +1,15 @@
-'use client' // Cliente: la cuenta regresiva depende de la hora del dispositivo y se actualiza cada segundo.
+'use client' // Cliente: la cuenta regresiva depende de la hora del dispositivo y se actualiza cada minuto.
 
 import { useEffect, useState } from 'react'
 import { Plate } from '@/components/site/plate'
 import { cn } from '@/lib/cn'
-import { COUNTDOWN_UNITS, type CountdownParts, countdownParts, countdownPlates } from '../lib/countdown'
+import {
+  COUNTDOWN_UNITS,
+  type CountdownParts,
+  countdownParts,
+  countdownPlates,
+  msUntilNextMinute,
+} from '../lib/countdown'
 
 type CountdownProps = {
   /** Inicio del partido (ISO 8601). */
@@ -14,19 +20,25 @@ type CountdownProps = {
 }
 
 /**
- * Cuenta regresiva al inicio del partido, en placas del marcador. El servidor dibuja las placas con «--» y
- * el mismo ancho final; el valor real se calcula después de montar: así no hay errores de hidratación ni
- * CLS (especificación 3.3). Cada placa gira cuando cambia su número. No se anuncia a lectores de pantalla:
- * en su lugar va la fecha como texto.
+ * Cuenta regresiva al inicio del partido en placas del marcador: días, horas y minutos. El servidor dibuja
+ * las placas con «--» y el mismo ancho final; el valor real se calcula después de montar: así no hay errores
+ * de hidratación ni CLS (especificación 3.3). Cada placa gira cuando cambia su número. No se anuncia a
+ * lectores de pantalla: en su lugar va la fecha como texto.
  */
 export function Countdown({ target, label, className }: CountdownProps) {
   const [parts, setParts] = useState<CountdownParts | null>(null)
 
   useEffect(() => {
-    const update = () => setParts(countdownParts(target, new Date()))
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const update = () => {
+      const now = new Date()
+      setParts(countdownParts(target, now))
+      const wait = msUntilNextMinute(target, now)
+      // Un margen pequeño: el temporizador puede adelantarse unos milisegundos.
+      if (wait !== null) timer = setTimeout(update, wait + 50)
+    }
     update()
-    const timer = setInterval(update, 1000)
-    return () => clearInterval(timer)
+    return () => clearTimeout(timer)
   }, [target])
 
   const plates = countdownPlates(parts)

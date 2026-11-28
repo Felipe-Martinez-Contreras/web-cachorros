@@ -3,6 +3,7 @@ import {
   calendarDaysUntil,
   countdownParts,
   countdownPlates,
+  msUntilNextMinute,
   relativeDayLabel,
   santiagoDateTime,
   startOfSantiagoDay,
@@ -265,16 +266,23 @@ describe('cuenta regresiva en America/Santiago', () => {
   })
 
   it('da dos cifras por placa y «--» antes de calcularla en el cliente', () => {
-    expect(countdownPlates(null)).toEqual({ days: '--', hours: '--', minutes: '--', seconds: '--' })
+    expect(countdownPlates(null)).toEqual({ days: '--', hours: '--', minutes: '--' })
     expect(countdownPlates(countdownParts('2026-10-10T19:00:00Z', new Date('2026-10-08T15:29:30Z')))).toEqual(
-      { days: '02', hours: '03', minutes: '30', seconds: '30' },
+      { days: '02', hours: '03', minutes: '30' },
     )
     expect(countdownPlates({ days: 120, hours: 0, minutes: 5, seconds: 9, isPast: false })).toEqual({
       days: '120',
       hours: '00',
       minutes: '05',
-      seconds: '09',
     })
+  })
+
+  it('se recalcula justo cuando cambia el minuto que falta', () => {
+    // Faltan 2 min 30 s: el «02» pasa a «01» en 30 s.
+    expect(msUntilNextMinute('2026-10-10T19:00:00Z', new Date('2026-10-10T18:57:30Z'))).toBe(30_000)
+    // Faltan minutos exactos: el siguiente cambio es en un minuto completo.
+    expect(msUntilNextMinute('2026-10-10T19:00:00Z', new Date('2026-10-10T18:58:00Z'))).toBe(60_000)
+    expect(msUntilNextMinute('2026-10-10T19:00:00Z', new Date('2026-10-10T19:00:00Z'))).toBeNull()
   })
 
   // Chile atrasa el reloj la noche del primer sábado de abril (UTC−3 → UTC−4)…
