@@ -3,7 +3,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
-import { formatKickoff, formatLongDateTime } from '@/lib/format'
+import { formatKickoff, formatLongDateTimeShown } from '@/lib/format'
 import type { MatchDTO, MatchdayDTO } from '../dto'
 import { MatchCard } from './match-card'
 import { LiveBadge, Scoreboard } from './scoreboard'
@@ -60,7 +60,7 @@ function NextMatch({ match, alsoToday }: { match: MatchDTO; alsoToday: MatchDTO[
       <Scoreboard match={match} size="lg" />
       <div className="grid justify-items-center gap-3">
         <p className="text-center font-medium first-letter:uppercase">
-          {formatLongDateTime(match.kickoffAt)}
+          {formatLongDateTimeShown(match.kickoffAt)}
         </p>
         <Venue match={match} />
       </div>

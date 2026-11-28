@@ -21,7 +21,7 @@ import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
 import { matchOgImage, matchOgTemplate } from '@/features/share/lib/cards'
 import { matchdayRevision } from '@/features/share/matchday'
 import { env } from '@/lib/env'
-import { formatLongDateTime } from '@/lib/format'
+import { formatLongDateTime, formatLongDateTimeShown } from '@/lib/format'
 import { matchStatusLabels } from '@/lib/labels'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -120,7 +120,7 @@ export default async function MatchPage({ params }: Props) {
             <LiveMatchScore />
             <div className="grid justify-items-center text-center text-(--muted)">
               <time dateTime={match.kickoffAt} className="first-letter:uppercase">
-                {formatLongDateTime(match.kickoffAt)}
+                {formatLongDateTimeShown(match.kickoffAt)}
               </time>
               {match.venue && <p>{match.venue.name}</p>}
             </div>
