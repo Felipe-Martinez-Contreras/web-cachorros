@@ -1,7 +1,9 @@
 'use client' // Cliente: lee el estado del polling de la franja (marcador en vivo) y gira las placas al cambiar.
 
+import Link from 'next/link'
 import { Plate } from '@/components/site/plate'
-import { formatLongDateTime } from '@/lib/format'
+import { buttonVariants } from '@/components/ui/button'
+import { formatLongDateTime, formatLongDateTimeShown } from '@/lib/format'
 import { type MatchDTO, type MatchdayDTO, scoreText } from '../dto'
 import { Countdown } from './countdown'
 import { useLiveMatchday } from './live-matchday'
@@ -33,11 +35,22 @@ function ScorePlates({ match, initial }: { match: MatchDTO; initial: MatchDTO | 
       <div aria-hidden="true" className="grid w-fit grid-cols-2 gap-x-1.5 gap-y-2 md:gap-x-2">
         <Plate value={home} flip={initial !== undefined && home !== String(initial.homeScore)} />
         <Plate value={away} flip={initial !== undefined && away !== String(initial.awayScore)} />
-        <span className="max-w-36 truncate text-meta">{match.home.shortName}</span>
-        <span className="max-w-36 truncate text-meta">{match.away.shortName}</span>
+        <span className="max-w-36 text-meta text-pretty">{match.home.shortName}</span>
+        <span className="max-w-36 text-meta text-pretty">{match.away.shortName}</span>
       </div>
       {note && <p className="text-meta text-(--muted)">{note}</p>}
     </>
+  )
+}
+
+/** El botón de la portada lleva al partido de las placas (el encabezado ya tiene «Hazte socio»). */
+function MatchLink({ match }: { match: MatchDTO }) {
+  return (
+    <div className="mt-2">
+      <Link href={`/partidos/${match.slug}`} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
+        Ver el partido
+      </Link>
+    </div>
   )
 }
 
@@ -50,14 +63,14 @@ export function HeroMatchday() {
 
   if (view.kind === 'next') {
     const { match } = view
-    const when = formatLongDateTime(match.kickoffAt)
     return (
       <div className="grid gap-3">
         <Heading title="Próximo partido" match={match} />
-        <Countdown target={match.kickoffAt} label={when} />
+        <Countdown target={match.kickoffAt} label={formatLongDateTime(match.kickoffAt)} />
         <p className="text-meta text-(--muted) first-letter:uppercase">
-          {match.home.shortName} contra {match.away.shortName}, {when}
+          {match.home.shortName} contra {match.away.shortName}, {formatLongDateTimeShown(match.kickoffAt)}
         </p>
+        <MatchLink match={match} />
       </div>
     )
   }
@@ -78,6 +91,7 @@ export function HeroMatchday() {
         <Heading title="Último resultado" match={match} />
       )}
       <ScorePlates match={match} initial={initialOf(initial, match.id)} />
+      <MatchLink match={match} />
     </div>
   )
 }

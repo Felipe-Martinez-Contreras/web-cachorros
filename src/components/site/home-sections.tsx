@@ -102,7 +102,8 @@ export async function HeroSection() {
               <HeroMatchday />
             </div>
           )}
-          {hero?.ctaLabel && hero.ctaHref && (
+          {/* Con partido, el botón es «Ver el partido» (va con las placas); sin partido, el de Configuración. */}
+          {!matchday && hero?.ctaLabel && hero.ctaHref && (
             <div className="mt-2">
               <Link href={hero.ctaHref} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
                 {hero.ctaLabel}
