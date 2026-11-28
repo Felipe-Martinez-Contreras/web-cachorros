@@ -71,7 +71,7 @@ export function NewsArticle({
               image={news.cover}
               sizes="(min-width: 768px) 720px, 100vw"
               priority
-              className="aspect-[16/9] w-full rounded-lg object-cover photo-mono"
+              className="aspect-[16/9] w-full rounded-lg object-cover"
             />
             {news.cover.credit && (
               <figcaption className="text-meta text-(--muted)">Foto: {news.cover.credit}</figcaption>

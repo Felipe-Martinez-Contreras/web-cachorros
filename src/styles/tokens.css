@@ -92,10 +92,6 @@
   --link: var(--color-accent-strong);
   --focus: var(--color-accent-strong);
 }
-.site-public,
-.site-public .theme-light {
-  --border: var(--color-concrete);
-}
 .theme-dark {
   --bg: var(--color-ink);
   --fg: var(--color-paper);
@@ -104,4 +100,31 @@
   --surface: var(--color-neutral-900);
   --link: var(--color-accent);
   --focus: var(--color-accent);
+}
+
+/*
+ * Sitio público (rediseño 3a): blanco y negro, como la camiseta. La base es negra; los bloques
+ * `.theme-light` son blancos con texto negro. El naranjo queda solo como acento («Hazte socio», la
+ * pestaña activa, EN VIVO y el relleno de los botones al pasar el cursor). El borde oscuro usa
+ * neutral-600: alcanza 3:1 sobre negro, lo que pide un control de formulario (WCAG 1.4.11).
+ */
+.site-public,
+.site-public .theme-dark {
+  --bg: var(--color-ink);
+  --fg: var(--color-paper);
+  --muted: var(--color-neutral-400);
+  --border: var(--color-neutral-600);
+  --surface: var(--color-neutral-900);
+  /* Los enlaces van en el color del texto (con subrayado): el naranjo queda para los acentos. */
+  --link: var(--color-paper);
+  --focus: var(--color-accent);
+}
+.site-public .theme-light {
+  --bg: var(--color-paper);
+  --fg: var(--color-ink);
+  --muted: var(--color-neutral-600);
+  --border: var(--color-concrete);
+  --surface: var(--color-neutral-50);
+  --link: var(--color-ink);
+  --focus: var(--color-accent-strong);
 }

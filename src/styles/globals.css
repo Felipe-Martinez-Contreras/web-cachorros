@@ -11,10 +11,15 @@
     scroll-padding-top: 5rem;
   }
 
+  .site-public,
   .theme-dark,
   .theme-light {
     background-color: var(--bg);
     color: var(--fg);
+  }
+  /* Sin destellos blancos al rebotar el desplazamiento: el sitio público es negro. */
+  html:has(.site-public) {
+    background-color: var(--color-ink);
   }
 
   /*
@@ -277,11 +282,6 @@
   }
 }
 
-/* Fotos de partido y de noticias en blanco y negro (nunca escudos ni logos). */
-@utility photo-mono {
-  filter: grayscale(1) contrast(1.08);
-}
-
 /* Layout (especificación 4.4): contenedor de 1280 px con márgenes de 16 / 24 / 32 px. */
 @utility container-site {
   width: 100%;
@@ -310,4 +310,144 @@
 @utility tap-target {
   min-height: 44px;
   min-width: 44px;
+}
+
+/*
+ * Botones del sitio público (rediseño 3a): rectangulares, en mayúsculas y con flecha. Al pasar el cursor,
+ * un relleno barre de izquierda a derecha (naranjo; blanco en el botón naranjo) y la flecha avanza 4 px, en
+ * 200 ms con curva de salida. Al salir, el relleno se retira hacia la derecha: el gesto sigue al cursor.
+ * Solo se anima `transform` (sin reflujo). Va fuera de las capas para ganarle a las utilidades de
+ * `buttonVariants`, que comparte el panel: el panel no cambia.
+ */
+.site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition:
+    color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+/* Principal: blanco sobre la base negra (negro dentro de un bloque blanco). Secundario: borde. */
+.site-public .btn-primary {
+  background-color: var(--fg);
+  color: var(--bg);
+}
+.site-public .btn-outline {
+  border: 2px solid var(--fg);
+  background-color: transparent;
+  color: var(--fg);
+}
+/* «Hazte socio»: el acento naranjo del sitio, con texto negro (7,6:1). */
+.site-public .btn-accent {
+  background-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+.site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 200ms var(--ease-out);
+}
+.site-public .btn-accent::before {
+  background-color: var(--color-paper);
+}
+
+/* La flecha es una máscara, no texto: los lectores de pantalla no la leen. Un botón con ícono no la lleva. */
+.site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light):not(:has(svg))::after {
+  content: "";
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.5%22 stroke-linecap=%22square%22%3E%3Cpath d=%22M4 12h15M13 6l6 6-6 6%22/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transition: transform 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light):hover {
+    border-color: var(--color-accent);
+    color: var(--color-ink);
+  }
+  .site-public .btn-accent:hover {
+    border-color: var(--color-paper);
+  }
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light):hover::before {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light):hover::after {
+    transform: translateX(4px);
+  }
+}
+
+/* Al presionar, el botón cede un poco: confirma el toque también en el celular. */
+.site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light):active {
+  transform: scale(0.97);
+}
+
+/* EN VIVO en el sitio público: el acento naranjo con texto negro. */
+.site-public .badge-live {
+  background-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+/*
+ * Pestañas del sitio (centro de partidos, galería): una línea bajo el texto. La activa es naranja; al pasar
+ * el cursor crece una línea tenue desde la izquierda. Son enlaces: funcionan con Tab y Enter, sin JavaScript.
+ */
+.tab-link {
+  position: relative;
+  transition:
+    color 200ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+.tab-link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background-color: color-mix(in srgb, var(--fg) 40%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 200ms var(--ease-out);
+}
+.tab-link[aria-current="page"]::after {
+  background-color: var(--color-accent);
+  transform: scaleX(1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tab-link:hover::after {
+    transform: scaleX(1);
+  }
+}
+.tab-link:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light),
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light)::before,
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light)::after,
+  .tab-link,
+  .tab-link::after {
+    transition: none;
+  }
+  .site-public :is(.btn-primary, .btn-accent, .btn-outline, .btn-dark, .btn-light):active,
+  .tab-link:active {
+    transform: none;
+  }
 }

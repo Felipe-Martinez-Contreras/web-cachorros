@@ -43,10 +43,9 @@ function GalleryTabs({ current }: { current: 'fotos' | 'videos' }) {
               href={galleryViewHref(tab.view)}
               aria-current={tab.view === current ? 'page' : undefined}
               className={cn(
-                '-mb-px inline-flex min-h-11 items-center border-b-2 px-4 font-semibold',
-                tab.view === current
-                  ? 'border-accent'
-                  : 'border-transparent text-(--muted) hover:text-(--fg)',
+                // `tab-link` (globals.css): la línea bajo la pestaña, naranja en la activa.
+                'tab-link inline-flex min-h-11 items-center px-4 font-semibold',
+                tab.view !== current && 'text-(--muted) hover:text-(--fg)',
               )}
             >
               {tab.label}

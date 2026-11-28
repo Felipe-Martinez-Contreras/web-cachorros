@@ -83,7 +83,7 @@ export function BottomNav({ site, nav }: { site: Contact; nav: NavState }) {
           )}
         </ul>
         <div className="mt-4 grid gap-3">
-          <Link href={MEMBERSHIP_NAV.href} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
+          <Link href={MEMBERSHIP_NAV.href} className={buttonVariants({ variant: 'accent', size: 'lg' })}>
             {MEMBERSHIP_NAV.label}
           </Link>
           {site.whatsapp && <WhatsAppButton phone={site.whatsapp} />}

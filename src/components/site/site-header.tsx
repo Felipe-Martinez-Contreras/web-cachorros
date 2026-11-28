@@ -89,7 +89,7 @@ export function SiteHeader({ site, nav }: { site: Brand; nav: NavState }) {
           </ul>
         </nav>
 
-        <Link href={MEMBERSHIP_NAV.href} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+        <Link href={MEMBERSHIP_NAV.href} className={buttonVariants({ variant: 'accent', size: 'sm' })}>
           {MEMBERSHIP_NAV.label}
         </Link>
       </div>

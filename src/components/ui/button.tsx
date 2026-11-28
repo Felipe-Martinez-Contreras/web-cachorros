@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn'
  */
 export const buttonVariants = cva(
   [
+    // `btn-<variante>`: ganchos para el estilo del sitio público (globals.css); el panel no los usa.
     'inline-flex items-center justify-center gap-2 rounded-button font-semibold whitespace-nowrap',
     'transition-[background-color,color,border-color,transform] duration-150 ease-out',
     'active:translate-y-px disabled:pointer-events-none disabled:opacity-50',
@@ -18,10 +19,12 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         // Texto negro sobre el naranja del escudo (contraste AA en cualquier tamaño).
-        primary: 'bg-accent text-ink hover:bg-[#ff8a1f]',
-        dark: 'bg-ink text-paper hover:bg-neutral-800',
-        light: 'bg-paper text-ink hover:bg-neutral-100',
-        outline: 'border border-current bg-transparent hover:bg-(--fg)/8',
+        primary: 'btn-primary bg-accent text-ink hover:bg-[#ff8a1f]',
+        // Naranjo también en el sitio público («Hazte socio»), donde `primary` es blanco sobre negro.
+        accent: 'btn-accent bg-accent text-ink hover:bg-[#ff8a1f]',
+        dark: 'btn-dark bg-ink text-paper hover:bg-neutral-800',
+        light: 'btn-light bg-paper text-ink hover:bg-neutral-100',
+        outline: 'btn-outline border border-current bg-transparent hover:bg-(--fg)/8',
         ghost: 'bg-transparent hover:bg-(--fg)/8',
         danger: 'bg-danger text-paper hover:bg-[#971c12]',
         link: 'h-auto min-h-0 rounded-none p-0 text-(--link) underline underline-offset-4 hover:no-underline',

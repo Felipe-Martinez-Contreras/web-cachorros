@@ -183,6 +183,11 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   proceso, sube `LOGO_PIPELINE_VERSION` y corre `reprocess-logos` en la VM.
 - Sobre fondo claro, el naranja `accent` no alcanza contraste: para texto, enlaces e indicadores usa
   `accent-strong` (o los tokens `--link` / `--focus`). Lo verifica `tests/unit/tokens-contrast.test.ts`.
+- **Sitio público en blanco y negro (rediseño 3a):** la base de `.site-public` es negra y `.theme-light` es un
+  bloque blanco (tokens en `tokens.css`); el panel no cambia. El naranjo va solo en «Hazte socio» (variante
+  `accent` de `buttonVariants`), la pestaña activa, EN VIVO y el relleno de los botones al pasar el cursor; los
+  enlaces van en el color del texto. Los botones del sitio (`btn-primary`, `btn-outline`, `btn-accent`…) y las
+  pestañas (`tab-link`) toman su forma y su movimiento de `globals.css`. Las fotos van a color.
 
 ### Datos y caché (3.4)
 
