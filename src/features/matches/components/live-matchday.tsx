@@ -1,7 +1,7 @@
-'use client' // Cliente: actualiza la franja de la portada con el polling de /api/live/current.
+'use client' // Cliente: mantiene al día la franja y las placas de la portada con el polling de /api/live/current.
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, type ReactNode, use, useEffect, useMemo, useRef, useState } from 'react'
 import {
   type LiveCurrentResponse,
   type LiveMatchStateDTO,
@@ -50,19 +50,38 @@ function patchMatchday(matchday: MatchdayDTO, byId: Map<string, LiveMatchStateDT
   return matchday
 }
 
+type LiveMatchdayState = {
+  /** La franja tal como llegó del servidor (las placas no giran con ese valor). */
+  initial: MatchdayDTO
+  /** La franja al día. */
+  view: MatchdayDTO
+  /** Desfase del reloj del dispositivo respecto del servidor. */
+  offset: number
+}
+
+const LiveMatchdayContext = createContext<LiveMatchdayState | null>(null)
+
+/** Estado de la franja para las islas que la muestran (las placas del hero y la tarjeta de abajo). */
+export function useLiveMatchday(): LiveMatchdayState {
+  const state = use(LiveMatchdayContext)
+  if (!state) throw new Error('useLiveMatchday va dentro de <LiveMatchdayProvider>')
+  return state
+}
+
 /**
- * Franja matchday con polling (especificación 2.6): el servidor la dibuja con el último estado y esta isla
- * la mantiene al día sin recargar. Si un partido empieza o termina, la franja cambia de forma (en vivo ↔
- * próximo ↔ último resultado): se pide al servidor de nuevo con `router.refresh()`.
+ * Polling de la franja matchday (especificación 2.6): el servidor la dibuja con el último estado y este
+ * proveedor la mantiene al día sin recargar, con una sola consulta para el hero y la tarjeta. Si un partido
+ * empieza o termina, la franja cambia de forma (en vivo ↔ próximo ↔ último resultado): se pide al servidor
+ * de nuevo con `router.refresh()`. El contenido que envuelve puede ser de servidor.
  */
-export function LiveMatchday({
+export function LiveMatchdayProvider({
   matchday,
   pollBaseMs,
-  className,
+  children,
 }: {
   matchday: MatchdayDTO
   pollBaseMs: number
-  className?: string
+  children: ReactNode
 }) {
   const router = useRouter()
   const [view, setView] = useState(matchday)
@@ -114,16 +133,25 @@ export function LiveMatchday({
     },
   })
 
+  const state = useMemo(() => ({ initial: matchday, view, offset }), [matchday, view, offset])
   return (
-    <>
-      <MatchdayStrip
-        matchday={view}
-        className={className}
-        renderMinute={(match) => <LiveMinute match={match} serverOffsetMs={offset} />}
-      />
+    <LiveMatchdayContext value={state}>
+      {children}
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
-    </>
+    </LiveMatchdayContext>
+  )
+}
+
+/** Tarjeta de la franja, al día con el polling del proveedor. */
+export function LiveMatchday({ className }: { className?: string }) {
+  const { view, offset } = useLiveMatchday()
+  return (
+    <MatchdayStrip
+      matchday={view}
+      className={className}
+      renderMinute={(match) => <LiveMinute match={match} serverOffsetMs={offset} />}
+    />
   )
 }

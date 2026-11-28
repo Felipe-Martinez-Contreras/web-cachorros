@@ -5,7 +5,6 @@ import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 import { formatKickoff, formatLongDateTime } from '@/lib/format'
 import type { MatchDTO, MatchdayDTO } from '../dto'
-import { Countdown } from './countdown'
 import { MatchCard } from './match-card'
 import { LiveBadge, Scoreboard } from './scoreboard'
 
@@ -63,7 +62,6 @@ function NextMatch({ match, alsoToday }: { match: MatchDTO; alsoToday: MatchDTO[
         <p className="text-center font-medium first-letter:uppercase">
           {formatLongDateTime(match.kickoffAt)}
         </p>
-        <Countdown target={match.kickoffAt} label={formatLongDateTime(match.kickoffAt)} />
         <Venue match={match} />
       </div>
       <div className="flex flex-wrap justify-center gap-3">
@@ -115,7 +113,8 @@ function LastMatch({ match }: { match: MatchDTO }) {
 
 /**
  * Franja matchday de la portada (especificación 5.3): en vivo → próximo partido → último resultado.
- * Se renderiza en el servidor con el último estado; `LiveMatchday` la actualiza con el polling (2.6).
+ * Se renderiza en el servidor con el último estado; `LiveMatchday` la actualiza con el polling (2.6). La
+ * cuenta regresiva no va aquí: está en las placas del hero (`HeroMatchday`).
  */
 export function MatchdayStrip({
   matchday,

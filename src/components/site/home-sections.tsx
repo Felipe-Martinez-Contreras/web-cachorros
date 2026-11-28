@@ -5,7 +5,8 @@ import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/feedback'
 import { getUpcomingEvents } from '@/features/events/queries'
-import { LiveMatchday } from '@/features/matches/components/live-matchday'
+import { HeroMatchday } from '@/features/matches/components/hero-matchday'
+import { LiveMatchday, LiveMatchdayProvider } from '@/features/matches/components/live-matchday'
 import { MatchCard } from '@/features/matches/components/match-card'
 import { StandingsTable } from '@/features/matches/components/standings-table'
 import { livePollBaseMs } from '@/features/matches/live-queries'
@@ -50,9 +51,10 @@ function Section({ className, children, label }: { className?: string; children:
   )
 }
 
-// ── 1 y 2. Hero + franja matchday ────────────────────────────────────────────────────────────────
+// ── 1 y 2. Hero con las placas + franja matchday ─────────────────────────────────────────────────
 
-const HERO_HEIGHT = 'min-h-[78svh] lg:min-h-[82svh]'
+// En el celular la portada ocupa el 70 % de la pantalla y las placas quedan en ese espacio, sin desplazarse.
+const HERO_HEIGHT = 'min-h-[70svh] lg:min-h-[82svh]'
 
 export async function HeroSection() {
   await connection()
@@ -61,7 +63,7 @@ export async function HeroSection() {
   const image = hero?.image
   const mobile = hero?.mobileImage
 
-  return (
+  const content = (
     <>
       <section
         aria-label="Presentación"
@@ -89,14 +91,19 @@ export async function HeroSection() {
           </picture>
         )}
         {/* Degradado que asegura el contraste del texto sobre cualquier foto. */}
-        <div className="absolute inset-0 -z-10 bg-linear-to-t from-ink via-ink/70 to-ink/20" />
+        <div className="absolute inset-0 -z-10 bg-linear-to-t from-ink via-ink/75 to-ink/20" />
 
-        <div className="container-site grid gap-5 pt-24 pb-28 md:pb-36">
+        <div className="container-site grid gap-4 pt-12 pb-8 md:gap-5 md:pt-24 md:pb-16">
           {/* Sin el escudo grande: el de la barra de navegación ya identifica al club. */}
           <h1 className="text-hero max-w-5xl text-balance">{hero?.title ?? site?.shortName}</h1>
           {hero?.subtitle && <p className="max-w-xl text-lg text-paper/90 md:text-xl">{hero.subtitle}</p>}
+          {matchday && (
+            <div className="mt-2 md:mt-4">
+              <HeroMatchday />
+            </div>
+          )}
           {hero?.ctaLabel && hero.ctaHref && (
-            <div>
+            <div className="mt-2">
               <Link href={hero.ctaHref} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
                 {hero.ctaLabel}
               </Link>
@@ -106,22 +113,20 @@ export async function HeroSection() {
       </section>
 
       {matchday && (
-        <div className="container-site relative z-10 -mt-20 md:-mt-28">
-          <LiveMatchday matchday={matchday} pollBaseMs={livePollBaseMs()} className="mx-auto max-w-3xl" />
+        <div className="container-site pt-8 md:pt-12">
+          <LiveMatchday className="mx-auto max-w-3xl" />
         </div>
       )}
     </>
   )
-}
 
-export function HeroSkeleton() {
-  return (
-    <>
-      <div className={cn('theme-dark', HERO_HEIGHT)} />
-      <div className="container-site relative z-10 -mt-20 md:-mt-28">
-        <Skeleton className="mx-auto h-[26rem] max-w-3xl bg-neutral-100" />
-      </div>
-    </>
+  // Un solo polling para las placas del hero y la tarjeta de la franja.
+  return matchday ? (
+    <LiveMatchdayProvider matchday={matchday} pollBaseMs={livePollBaseMs()}>
+      {content}
+    </LiveMatchdayProvider>
+  ) : (
+    content
   )
 }
 

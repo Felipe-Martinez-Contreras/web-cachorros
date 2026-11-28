@@ -25,15 +25,22 @@ test.describe('portada', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'es-CL')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Los Cachorros')
 
-    // Franja matchday: próximo partido de Honor, con la cuenta regresiva ya calculada en el cliente.
+    // Placas del hero: la cuenta regresiva al próximo partido, ya calculada en el cliente y visible sin
+    // desplazarse (en el celular la portada ocupa el 70 % de la pantalla).
+    const hero = page.getByRole('region', { name: 'Presentación' })
+    await expect(hero.getByText('Próximo partido')).toBeVisible()
+    // `\p{L}`: los días y meses llevan tildes («sábado», «miércoles») que `\w` no reconoce.
+    await expect(
+      hero.getByText(/^Comienza el \p{L}+ \d+ de \p{L}+ de \d{4}, \d{2}:\d{2} h\.$/u),
+    ).toBeAttached()
+    const plate = hero.locator('.plate >> text=/^\\d{2,3}$/').first()
+    await expect(plate).toBeVisible()
+    await expect(plate).toBeInViewport({ ratio: 1 })
+
+    // Franja matchday: el detalle del próximo partido de Honor.
     const matchday = page.getByRole('region', { name: 'Próximo partido' })
     await expect(matchday.getByText('Próximo partido')).toBeVisible()
     await expect(matchday.getByText(/^Honor, /)).toBeVisible()
-    // `\p{L}`: los días y meses llevan tildes («sábado», «miércoles») que `\w` no reconoce.
-    await expect(
-      matchday.getByText(/^Comienza el \p{L}+ \d+ de \p{L}+ de \d{4}, \d{2}:\d{2} h\.$/u),
-    ).toBeAttached()
-    await expect(matchday.locator('[aria-hidden="true"] >> text=/^\\d{2}$/').first()).toBeVisible()
     await expect(matchday.getByText(/^Cancha /)).toBeVisible()
     // «Cómo llegar» solo aparece si la cancha del partido tiene coordenadas (la del club las tiene).
     for (const link of await matchday.getByRole('link', { name: /Cómo llegar/ }).all()) {
@@ -283,5 +290,11 @@ test.describe('portada con un partido en vivo', () => {
     await expect(live.getByText('1.er tiempo')).toBeVisible()
     await expect(live.getByText(/Cachorros 1, .+ 0|.+ 0, Cachorros 1/)).toBeAttached()
     await expect(live.getByRole('link', { name: 'Seguir el partido' })).toBeVisible()
+
+    // Las placas del hero muestran el mismo marcador, con el texto equivalente para lectores de pantalla.
+    const hero = page.getByRole('region', { name: 'Presentación' })
+    await expect(hero.getByText('En vivo', { exact: true })).toBeVisible()
+    await expect(hero.getByText(/Cachorros 1, .+ 0\.|.+ 0, Cachorros 1\./)).toBeAttached()
+    await expect(hero.locator('.plate').first()).toBeInViewport({ ratio: 1 })
   })
 })
