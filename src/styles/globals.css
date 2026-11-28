@@ -214,6 +214,69 @@
   line-height: 1;
 }
 
+/* Placas de la cuenta regresiva (`Plate size="countdown"`): cuatro de dos cifras caben en 360 px. */
+@utility text-plate-countdown {
+  font-size: clamp(3.5rem, 2rem + 6.5vw, 6rem);
+}
+
+/*
+ * Placa del marcador de la cancha (`Plate`): número blanco sobre negro puro, sin radio. El filete interior
+ * la separa del negro del hero y la línea del centro es la bisagra sobre la que gira.
+ */
+@layer components {
+  .plate {
+    display: inline-grid;
+    place-items: center;
+    padding-block: 0.1em;
+    border-radius: 0;
+    background-color: var(--color-ink);
+    background-image: linear-gradient(
+      to bottom,
+      transparent calc(50% - 0.5px),
+      rgb(255 255 255 / 0.12) calc(50% - 0.5px),
+      rgb(255 255 255 / 0.12) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+    color: var(--color-paper);
+    font-family: var(--font-tight);
+    font-weight: 900;
+    font-stretch: 62.5%;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    /* La profundidad del giro: en la placa, para que el número rote dentro de su propio espacio. */
+    perspective: 16em;
+  }
+
+  /*
+   * Giro de placa al cambiar el número: entra desde el canto (‑90°) y se asienta con una curva de salida
+   * rápida, como una paleta que cae. Solo `transform` y `opacity` (sin reflujo); 300 ms.
+   */
+  .plate-flip {
+    animation: plate-flip 300ms var(--ease-out) both;
+    transform-origin: 50% 50%;
+    backface-visibility: hidden;
+  }
+
+  @keyframes plate-flip {
+    from {
+      transform: rotateX(-90deg);
+      opacity: 0.6;
+    }
+    to {
+      transform: rotateX(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* Con movimiento reducido no hay giro: el número cambia en el acto. */
+  @media (prefers-reduced-motion: reduce) {
+    .plate-flip {
+      animation: none;
+    }
+  }
+}
+
 /* Fotos de partido y de noticias en blanco y negro (nunca escudos ni logos). */
 @utility photo-mono {
   filter: grayscale(1) contrast(1.08);

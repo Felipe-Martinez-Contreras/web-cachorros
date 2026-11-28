@@ -32,6 +32,29 @@ export function countdownParts(target: Date | string, now: Date): CountdownParts
   }
 }
 
+export const COUNTDOWN_UNITS = [
+  ['days', 'días'],
+  ['hours', 'horas'],
+  ['minutes', 'min'],
+  ['seconds', 'seg'],
+] as const
+
+/**
+ * Cifras de cada placa de la cuenta regresiva, con dos dígitos («03»). Sin `parts` (antes de montar, en el
+ * servidor) cada placa muestra «--» con el mismo ancho. Más de 99 días se muestran completos.
+ */
+export function countdownPlates(parts: CountdownParts | null): Record<CountdownUnit, string> {
+  const plate = (value: number | undefined) => (value === undefined ? '--' : String(value).padStart(2, '0'))
+  return {
+    days: plate(parts?.days),
+    hours: plate(parts?.hours),
+    minutes: plate(parts?.minutes),
+    seconds: plate(parts?.seconds),
+  }
+}
+
+export type CountdownUnit = (typeof COUNTDOWN_UNITS)[number][0]
+
 /** Días de calendario en Santiago entre hoy y la fecha (0 = hoy, 1 = mañana, negativos = pasado). */
 export function calendarDaysUntil(target: Date | string, now: Date): number {
   return differenceInCalendarDays(

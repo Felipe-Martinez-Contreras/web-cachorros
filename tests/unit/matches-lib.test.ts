@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   calendarDaysUntil,
   countdownParts,
+  countdownPlates,
   relativeDayLabel,
   santiagoDateTime,
   startOfSantiagoDay,
@@ -260,6 +261,19 @@ describe('cuenta regresiva en America/Santiago', () => {
       minutes: 0,
       seconds: 0,
       isPast: true,
+    })
+  })
+
+  it('da dos cifras por placa y «--» antes de calcularla en el cliente', () => {
+    expect(countdownPlates(null)).toEqual({ days: '--', hours: '--', minutes: '--', seconds: '--' })
+    expect(countdownPlates(countdownParts('2026-10-10T19:00:00Z', new Date('2026-10-08T15:29:30Z')))).toEqual(
+      { days: '02', hours: '03', minutes: '30', seconds: '30' },
+    )
+    expect(countdownPlates({ days: 120, hours: 0, minutes: 5, seconds: 9, isPast: false })).toEqual({
+      days: '120',
+      hours: '00',
+      minutes: '05',
+      seconds: '09',
     })
   })
 
