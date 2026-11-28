@@ -2,9 +2,11 @@ import type { ReactNode } from 'react'
 import { BottomNav } from '@/components/site/bottom-nav'
 import { SiteFooter } from '@/components/site/site-footer'
 import { SiteHeader } from '@/components/site/site-header'
+import { hasUpcomingEvent } from '@/features/events/queries'
 import type { SiteDTO } from '@/features/settings/dto'
 import { getSite } from '@/features/settings/queries'
 import { logger } from '@/lib/logger'
+import type { NavState } from './nav'
 
 /** Respaldo si aún no existe la fila de configuración (base recién creada, sin migrar ni sembrar). */
 const FALLBACK_SITE: SiteDTO = {
@@ -40,11 +42,21 @@ export async function loadSiteOrFallback(): Promise<SiteDTO> {
   }
 }
 
+/** Lo que el menú necesita de los datos. Si la base falla, el menú sale sin las entradas opcionales. */
+export async function loadNavState(): Promise<NavState> {
+  try {
+    return { hasUpcomingEvent: await hasUpcomingEvent() }
+  } catch (error) {
+    logger.warn({ err: error }, 'no se pudo leer si hay eventos próximos; el menú sale sin «Eventos»')
+    return { hasUpcomingEvent: false }
+  }
+}
+
 /**
  * Marco del sitio público: enlace de salto, encabezado, contenido, pie y barra inferior. `.site-public` aplica
  * los tokens del sitio (esquinas rectas, escala tipográfica, bordes) sin tocar el panel.
  */
-export function SiteFrame({ site, children }: { site: SiteDTO; children: ReactNode }) {
+export function SiteFrame({ site, nav, children }: { site: SiteDTO; nav: NavState; children: ReactNode }) {
   return (
     <div className="site-public">
       <a
@@ -53,12 +65,12 @@ export function SiteFrame({ site, children }: { site: SiteDTO; children: ReactNo
       >
         Saltar al contenido
       </a>
-      <SiteHeader site={site} />
+      <SiteHeader site={site} nav={nav} />
       <main id="contenido" tabIndex={-1} className="min-h-[70svh] outline-none">
         {children}
       </main>
-      <SiteFooter site={site} />
-      <BottomNav site={site} />
+      <SiteFooter site={site} nav={nav} />
+      <BottomNav site={site} nav={nav} />
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
+import { isSectionHidden } from '../../src/config/secciones'
 import { adminSql } from './db'
 import { ADMIN, expectAccessible, login } from './support'
 
@@ -141,17 +142,28 @@ test.describe('partidos', () => {
     await expectNoHorizontalScroll(page)
     await expectAccessible(page)
 
-    await page.getByRole('link', { name: 'Goleadores', exact: true }).click()
-    await expect(page).toHaveURL(/\/partidos\/goleadores\?serie=honor$/)
-    const scorers = page.getByRole('table')
-    await expect(scorers.getByRole('row')).not.toHaveCount(1)
-    await expect(scorers.getByRole('row').nth(1).getByRole('cell').first()).toHaveText('1')
-    await expectAccessible(page)
+    // Goleadores puede estar oculta (`src/config/secciones.ts`): entonces no hay enlace a la sección y la
+    // ficha del jugador se abre desde el plantel.
+    const scorersLink = page.getByRole('link', { name: 'Goleadores', exact: true })
+    if (isSectionHidden('goleadores')) {
+      await expect(scorersLink).toHaveCount(0)
+      await page.goto('/plantel/honor')
+      await page.getByRole('region', { name: 'Delanteros' }).getByRole('link').first().click()
+      await expect(page).toHaveURL(/\/jugadores\/[a-z0-9-]+$/)
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    } else {
+      await scorersLink.click()
+      await expect(page).toHaveURL(/\/partidos\/goleadores\?serie=honor$/)
+      const scorers = page.getByRole('table')
+      await expect(scorers.getByRole('row')).not.toHaveCount(1)
+      await expect(scorers.getByRole('row').nth(1).getByRole('cell').first()).toHaveText('1')
+      await expectAccessible(page)
 
-    const name = await scorers.getByRole('row').nth(1).getByRole('link').innerText()
-    await scorers.getByRole('row').nth(1).getByRole('link').click()
-    await expect(page).toHaveURL(/\/jugadores\/[a-z0-9-]+$/)
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
+      const name = await scorers.getByRole('row').nth(1).getByRole('link').innerText()
+      await scorers.getByRole('row').nth(1).getByRole('link').click()
+      await expect(page).toHaveURL(/\/jugadores\/[a-z0-9-]+$/)
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
+    }
     await expect(page.getByRole('heading', { name: 'Estadísticas' })).toBeVisible()
     await expect(page.getByRole('table').getByRole('columnheader', { name: /Temporada/ })).toBeVisible()
     await expectNoHorizontalScroll(page)
@@ -250,8 +262,10 @@ test.describe('sin JavaScript', () => {
 
     await page.goto('/partidos/posiciones?serie=honor')
     await expect(page.getByRole('table').getByRole('row', { name: /Cachorros/ })).toBeVisible()
-    await page.goto('/partidos/goleadores?serie=honor')
-    await expect(page.getByRole('table').getByRole('row').nth(1)).toBeVisible()
+    if (!isSectionHidden('goleadores')) {
+      await page.goto('/partidos/goleadores?serie=honor')
+      await expect(page.getByRole('table').getByRole('row').nth(1)).toBeVisible()
+    }
 
     await page.goto('/partidos?serie=honor')
     await page.getByRole('region', { name: 'Resultados' }).getByRole('link').first().click()
@@ -280,7 +294,10 @@ test.describe('sin JavaScript', () => {
     expect(await page.content()).not.toContain(`${juvenile.first_name} ${juvenile.last_name}`)
 
     // Las rutas fijas que comparten el prefijo siguen respondiendo.
-    for (const path of ['/partidos/posiciones', '/partidos/goleadores', '/plantel/honor']) {
+    const fixed = ['/partidos/posiciones', '/partidos/goleadores', '/plantel/honor'].filter(
+      (path) => path !== '/partidos/goleadores' || !isSectionHidden('goleadores'),
+    )
+    for (const path of fixed) {
       expect((await page.goto(path))?.status(), `${path} responde 200`).toBe(200)
     }
   })
@@ -368,8 +385,10 @@ test('menores de edad: sin apellido, sin ficha y sin enlaces, también el juveni
   expect(await page.content()).not.toContain(surname)
 
   // Goleadores y partidos de la serie juvenil: nadie con apellido ni ficha.
-  await expectHidden('/partidos/goleadores?serie=juvenil')
-  await expect(page.locator('main a[href^="/jugadores/"]')).toHaveCount(0)
+  if (!isSectionHidden('goleadores')) {
+    await expectHidden('/partidos/goleadores?serie=juvenil')
+    await expect(page.locator('main a[href^="/jugadores/"]')).toHaveCount(0)
+  }
   await page.goto('/partidos?serie=juvenil')
   await page.getByRole('region', { name: 'Resultados' }).getByRole('link').first().click()
   await expect(page.getByRole('heading', { name: /^Nómina de / })).toBeVisible()

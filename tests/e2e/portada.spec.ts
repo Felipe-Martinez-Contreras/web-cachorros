@@ -205,12 +205,12 @@ test.describe('portada', () => {
       const club = page.getByRole('banner').locator('summary')
       await club.focus()
       await page.keyboard.press('Enter')
-      await expect(page.getByRole('banner').getByRole('link', { name: 'Directiva' })).toBeVisible()
+      await expect(page.getByRole('banner').getByRole('link', { name: 'La cancha' })).toBeVisible()
     } else {
       // La hoja «Más» se abre desde la barra inferior y se cierra con Escape.
       await page.getByRole('button', { name: 'Más' }).click()
       const sheet = page.getByRole('dialog', { name: 'Más secciones' })
-      await expect(sheet.getByRole('link', { name: 'Tienda' })).toBeVisible()
+      await expect(sheet.getByRole('link', { name: 'Galería' })).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(sheet).toBeHidden()
     }

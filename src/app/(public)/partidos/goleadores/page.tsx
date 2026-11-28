@@ -7,6 +7,7 @@ import { SportsNav } from '@/features/matches/components/sports-nav'
 import { resolveSportsParams } from '@/features/matches/lib/public-params'
 import { getSportsNav, getTopScorers } from '@/features/matches/public-queries'
 import { pageMetadata } from '@/features/seo/metadata'
+import { hideIfHidden } from '@/lib/hidden-section'
 
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
@@ -21,6 +22,7 @@ type Props = { searchParams: Promise<{ serie?: string | string[]; temporada?: st
 export default async function ScorersPage({ searchParams }: Props) {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
+  hideIfHidden('goleadores')
   const [params, nav] = await Promise.all([searchParams, getSportsNav()])
   const { series, season } = resolveSportsParams(nav, params)
   const scorers = series && season ? await getTopScorers(series.id, season.id) : []

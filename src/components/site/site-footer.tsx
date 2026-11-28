@@ -3,13 +3,13 @@ import Link from 'next/link'
 import type { SiteDTO } from '@/features/settings/dto'
 import { SocialFollowLinks, WhatsAppButton } from '@/features/social/components/social-post-card'
 import { formatPhone } from '@/lib/format'
-import { CLUB_NAV, FOOTER_NAV, MAIN_NAV, STORE_NAV } from './nav'
+import { clubNav, FOOTER_NAV, mainNavWithStore, type NavState } from './nav'
 import { ClubCrest } from './site-header'
 
 const linkClass = 'inline-flex min-h-11 items-center hover:underline hover:underline-offset-4'
 
-/** Pie del sitio: escudo, redes, dirección de la cancha, contacto, WhatsApp, transparencia y privacidad. */
-export function SiteFooter({ site }: { site: SiteDTO }) {
+/** Pie del sitio: escudo, redes, dirección de la cancha, contacto, WhatsApp y los enlaces del pie. */
+export function SiteFooter({ site, nav }: { site: SiteDTO; nav: NavState }) {
   const place = [site.address, site.commune, site.region].filter(Boolean).join(', ')
   return (
     // En celular deja espacio para la barra inferior fija.
@@ -31,7 +31,7 @@ export function SiteFooter({ site }: { site: SiteDTO }) {
         <nav aria-label="Secciones del sitio">
           <h2 className="mb-2 font-bold">El sitio</h2>
           <ul>
-            {[...MAIN_NAV, STORE_NAV].map((item) => (
+            {mainNavWithStore().map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className={linkClass}>
                   {item.label}
@@ -44,7 +44,7 @@ export function SiteFooter({ site }: { site: SiteDTO }) {
         <nav aria-label="El club">
           <h2 className="mb-2 font-bold">El club</h2>
           <ul>
-            {CLUB_NAV.map((item) => (
+            {clubNav(nav).map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className={linkClass}>
                   {item.label}

@@ -1,3 +1,4 @@
+import { isSectionHidden } from '@/config/secciones'
 import { siteBaseUrl } from '@/features/seo/metadata'
 import { getSite } from '@/features/settings/queries'
 import { orderWhatsappUrl, parseQuantity } from '@/features/store/lib/order'
@@ -15,6 +16,8 @@ function redirect(location: string) {
  * el mensaje armado. Si algo no calza, vuelve a la ficha con el error. No guarda nada.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  // Tienda oculta (`src/config/secciones.ts`): el proxy ya responde 404; esta es la segunda barrera.
+  if (isSectionHidden('tienda')) return new Response(null, { status: 404, headers: HEADERS })
   const { slug } = await params
   const [product, site] = await Promise.all([getProductDetail(slug), getSite()])
   if (!product) return redirect('/tienda')

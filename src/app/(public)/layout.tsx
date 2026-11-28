@@ -1,7 +1,7 @@
 import { connection } from 'next/server'
 import type { ReactNode } from 'react'
 import { ServiceWorker } from '@/components/site/service-worker'
-import { loadSite, SiteFrame } from '@/components/site/site-frame'
+import { loadNavState, loadSite, SiteFrame } from '@/components/site/site-frame'
 import { env } from '@/lib/env'
 
 // El sitio público bloquea en el servidor a propósito (ADR 0007): con esto Next no lo reporta como un
@@ -15,9 +15,9 @@ export const instant = false
  */
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   await connection()
-  const site = await loadSite()
+  const [site, nav] = await Promise.all([loadSite(), loadNavState()])
   return (
-    <SiteFrame site={site}>
+    <SiteFrame site={site} nav={nav}>
       {children}
       {/* En desarrollo no hay service worker: serviría archivos viejos mientras se programa. */}
       {env.SITE_ENV !== 'development' && <ServiceWorker version={env.APP_VERSION} />}

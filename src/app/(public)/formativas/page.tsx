@@ -10,6 +10,7 @@ import { TrainingSchedule } from '@/features/club/components/training-schedule'
 import { getTrainingBySeries } from '@/features/club/queries'
 import { getPageBlock } from '@/features/pages/queries'
 import { pageMetadata } from '@/features/seo/metadata'
+import { hideIfHidden } from '@/lib/hidden-section'
 import { whatsappUrl } from '@/lib/links'
 
 export function generateMetadata(): Promise<Metadata> {
@@ -24,6 +25,7 @@ export function generateMetadata(): Promise<Metadata> {
 export default async function YouthPage() {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
+  hideIfHidden('formativas')
   const [site, info, faq, training] = await Promise.all([
     loadSite(),
     getPageBlock('formativas.info'),

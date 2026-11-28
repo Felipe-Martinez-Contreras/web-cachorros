@@ -1,5 +1,10 @@
 import { expect, type Page, test } from '@playwright/test'
+import { isSectionHidden } from '../../src/config/secciones'
 import { ADMIN, expectAccessible, login, openModule } from './support'
+
+// Toda la tienda pública puede estar oculta (`src/config/secciones.ts`): mientras lo esté, estas pruebas
+// se saltan y `secciones.spec.ts` verifica que responda 404.
+test.skip(isSectionHidden('tienda'), 'Sección oculta en src/config/secciones.ts')
 
 const PRODUCT = '/tienda/camiseta-oficial-local'
 

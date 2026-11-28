@@ -7,6 +7,7 @@ import { MapFacade } from '@/components/site/map-facade'
 import { PageHero } from '@/components/site/page-shell'
 import { loadSite } from '@/components/site/site-frame'
 import { buttonVariants } from '@/components/ui/button'
+import { isSectionHidden } from '@/config/secciones'
 import { TrainingSchedule } from '@/features/club/components/training-schedule'
 import { openStreetMapUrls } from '@/features/club/lib/place'
 import { getClubPlace, getTrainingBySeries } from '@/features/club/queries'
@@ -82,13 +83,15 @@ export default async function FieldPage() {
               Horarios de entrenamiento
             </h2>
             <TrainingSchedule series={training} />
-            <p className="text-(--muted)">
-              ¿Tu hijo o hija quiere jugar? Revisa{' '}
-              <Link href="/formativas" className="text-(--link) underline">
-                Divisiones formativas
-              </Link>
-              .
-            </p>
+            {!isSectionHidden('formativas') && (
+              <p className="text-(--muted)">
+                ¿Tu hijo o hija quiere jugar? Revisa{' '}
+                <Link href="/formativas" className="text-(--link) underline">
+                  Divisiones formativas
+                </Link>
+                .
+              </p>
+            )}
           </section>
         )}
 

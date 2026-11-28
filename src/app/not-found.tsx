@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 import { NotFoundContent } from '@/components/site/not-found-content'
-import { loadSiteOrFallback, SiteFrame } from '@/components/site/site-frame'
+import { loadNavState, loadSiteOrFallback, SiteFrame } from '@/components/site/site-frame'
 
 export const metadata: Metadata = { title: 'Página no encontrada' }
 
@@ -12,9 +12,9 @@ export const metadata: Metadata = { title: 'Página no encontrada' }
  */
 export default async function NotFound() {
   await connection()
-  const site = await loadSiteOrFallback()
+  const [site, nav] = await Promise.all([loadSiteOrFallback(), loadNavState()])
   return (
-    <SiteFrame site={site}>
+    <SiteFrame site={site} nav={nav}>
       <NotFoundContent />
     </SiteFrame>
   )

@@ -8,6 +8,7 @@ import { pageMetadata } from '@/features/seo/metadata'
 import { ProductCard } from '@/features/store/components/product-card'
 import { getStoreCatalog } from '@/features/store/queries'
 import { cn } from '@/lib/cn'
+import { hideIfHidden } from '@/lib/hidden-section'
 
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
@@ -23,6 +24,7 @@ type Props = { searchParams: Promise<{ categoria?: string | string[] }> }
 export default async function StorePage({ searchParams }: Props) {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
+  hideIfHidden('tienda')
   const [params, catalog] = await Promise.all([searchParams, getStoreCatalog()])
   const requested = typeof params.categoria === 'string' ? params.categoria : null
   const active = catalog.find((group) => group.slug === requested) ?? null

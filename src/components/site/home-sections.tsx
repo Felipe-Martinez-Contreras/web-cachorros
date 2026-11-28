@@ -4,6 +4,7 @@ import { connection } from 'next/server'
 import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/feedback'
+import { isHiddenPath } from '@/config/secciones'
 import { getUpcomingEvents } from '@/features/events/queries'
 import { HeroMatchday } from '@/features/matches/components/hero-matchday'
 import { LiveMatchday, LiveMatchdayProvider } from '@/features/matches/components/live-matchday'
@@ -195,18 +196,21 @@ export async function QuickAccessSection() {
       title: 'Tienda',
       text: 'Camisetas, polerones y más. Pide por WhatsApp.',
     },
-    {
-      href: '/eventos',
-      icon: CalendarDays,
-      title: 'Próximos eventos',
-      text: nextEvent
-        ? `${nextEvent.title}, ${formatDayMonth(nextEvent.startsAt)}`
-        : 'Completadas, bingos y actividades del club.',
-    },
-  ]
+    // Como en el menú: «Eventos» solo con un evento próximo.
+    ...(nextEvent
+      ? [
+          {
+            href: '/eventos',
+            icon: CalendarDays,
+            title: 'Próximos eventos',
+            text: `${nextEvent.title}, ${formatDayMonth(nextEvent.startsAt)}`,
+          },
+        ]
+      : []),
+  ].filter((tile) => !isHiddenPath(tile.href))
   return (
     <Section label="Accesos rápidos" className="theme-dark">
-      <ul className="grid gap-4 md:grid-cols-3">
+      <ul className={cn('grid gap-4', tiles.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
         {tiles.map(({ href, icon: Icon, title, text }) => (
           <li key={href}>
             <Link

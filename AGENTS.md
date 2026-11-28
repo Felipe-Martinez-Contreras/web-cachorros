@@ -114,6 +114,7 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
 ├── scripts/           # migrate, seed, create-admin, content-pending
 ├── src/
 │   ├── app/           # (public)/ · admin/ · api/ · manifest.ts · robots.ts · sitemap.ts
+│   ├── config/        # secciones.ts (secciones públicas ocultas)
 │   ├── features/      # un módulo por dominio: queries.ts · actions.ts · schemas.ts · dto.ts · lib/ · components/
 │   ├── components/    # ui/ (shadcn adaptado) · site/ · admin/
 │   ├── db/            # schema/*.ts, relaciones, vistas, cliente
@@ -153,6 +154,16 @@ El autor trabaja en Windows 11 con PowerShell; CI y producción corren en Linux.
   como 200). Una sección pública todavía no construida tiene su `page.tsx` con `<ComingSoon>` (`noindex`). La página 404
   (`src/app/not-found.tsx`) lleva el marco del sitio (`SiteFrame`) y lee los datos del club con
   `loadSiteOrFallback()`: si la base falla usa el respaldo, nunca responde 500.
+- **Secciones ocultas** (`src/config/secciones.ts`: hoy goleadores, directiva, formativas, tienda y
+  transparencia): conservan código, tablas y panel, pero en el sitio responden 404 desde `proxy.ts` (su ruta va
+  en el *matcher*; lo revisa `tests/unit/secciones.test.ts`) y su página llama a `hideIfHidden()`. Los menús
+  (`components/site/nav.ts`), la portada, el sitemap, el manifest y todo enlace interno pasan por
+  `isHiddenPath()` / `isSectionHidden()`; las e2e de una sección oculta se saltan con `test.skip`. Para
+  mostrar una de nuevo, basta con quitarla de `HIDDEN_SECTIONS`.
+- Menú: «Eventos» sale solo con un evento próximo (`clubNav()` + `loadNavState()`). Salón de la fama y
+  Camisetas no van en el menú de Historia: `/historia` las enlaza solo si tienen contenido (lo mismo el
+  sitemap). `/videos` es la pestaña «Videos» de `/galeria` (`?vista=videos`) y «Apoya al club» está dentro de
+  `/socios`: las direcciones antiguas redirigen con 301 desde `next.config.ts`.
 - Las páginas de detalle (`/noticias/[slug]`, `/partidos/[slug]`, `/jugadores/[slug]`, `/plantel/[serie]`,
   `/tienda/[slug]`, `/eventos/[slug]`, `/galeria/[slug]`) reciben
   su 404 y su 301 desde `proxy.ts` (ADR 0008), que llama a `src/features/<dominio>/slug.ts`: **una sola consulta

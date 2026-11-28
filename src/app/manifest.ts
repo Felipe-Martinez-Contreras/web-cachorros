@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { connection } from 'next/server'
 import { loadSiteOrFallback } from '@/components/site/site-frame'
+import { isHiddenPath } from '@/config/secciones'
 
 /**
  * Manifest de la PWA (especificación 6.16), generado en runtime: el nombre viene de Configuración y nada
@@ -29,7 +30,10 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     shortcuts: [
       { name: 'Partidos', url: '/partidos', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
       { name: 'Noticias', url: '/noticias', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
-      { name: 'Tienda', url: '/tienda', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
+      // La tienda solo si la sección está visible (`src/config/secciones.ts`).
+      ...(isHiddenPath('/tienda')
+        ? []
+        : [{ name: 'Tienda', url: '/tienda', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] }]),
     ],
   }
 }

@@ -1,8 +1,10 @@
 import 'server-only'
 import { asc, desc, eq, max } from 'drizzle-orm'
 import { cacheLife, cacheTag } from 'next/cache'
+import { isHiddenPath } from '@/config/secciones'
 import { db } from '@/db/client'
 import { albums, events, matches, news, players, products, series } from '@/db/schema'
+import { getHallOfFame, getHistoricKits } from '@/features/history/queries'
 import { isClubMatch } from '@/features/matches/queries'
 import { isNewsVisible } from '@/features/news/queries'
 import { loadMinorIds } from '@/features/players/public'
@@ -10,8 +12,9 @@ import { tags } from '@/lib/cache-tags'
 
 export type SitemapEntry = { path: string; lastModified: string | null }
 
-// Secciones ya construidas. Las que siguen en «Próximamente» no se listan (tampoco se indexan).
-const STATIC_PATHS = [
+// Secciones ya construidas. Las que siguen en «Próximamente» no se listan (tampoco se indexan), ni las
+// ocultas (`src/config/secciones.ts`). /videos y /apoya-al-club ahora redirigen (a /galeria y /socios).
+const ALL_STATIC_PATHS = [
   '/',
   '/noticias',
   '/partidos',
@@ -19,8 +22,6 @@ const STATIC_PATHS = [
   '/partidos/goleadores',
   '/historia',
   '/historia/titulos',
-  '/historia/salon-de-la-fama',
-  '/historia/camisetas',
   '/socios',
   '/auspiciadores',
   '/tienda',
@@ -29,12 +30,13 @@ const STATIC_PATHS = [
   '/club/transparencia',
   '/club/la-cancha',
   '/formativas',
-  '/apoya-al-club',
   '/galeria',
-  '/videos',
+  '/galeria?vista=videos',
   '/contacto',
   '/privacidad',
 ]
+
+const STATIC_PATHS = ALL_STATIC_PATHS.filter((path) => !isHiddenPath(path))
 
 const SITEMAP_LIMIT = 5000
 
@@ -104,11 +106,20 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
         .orderBy(desc(albums.takenOn))
         .limit(SITEMAP_LIMIT),
     ])
-  const minors = await loadMinorIds(playerRows.map((player) => player.id))
+  const [minors, idols, kits] = await Promise.all([
+    loadMinorIds(playerRows.map((player) => player.id)),
+    getHallOfFame(),
+    getHistoricKits(),
+  ])
+  // Las páginas de Historia fuera del menú, solo con contenido (la misma regla que sus enlaces en /historia).
+  const historyPaths = [
+    ...(idols.length > 0 ? ['/historia/salon-de-la-fama'] : []),
+    ...(kits.length > 0 ? ['/historia/camisetas'] : []),
+  ]
   const iso = (date: Date | null | undefined) => date?.toISOString() ?? null
 
   return [
-    ...STATIC_PATHS.map((path) => ({
+    ...[...STATIC_PATHS, ...historyPaths].map((path) => ({
       path,
       lastModified: path === '/' || path === '/noticias' ? iso(latest?.newsAt) : null,
     })),
@@ -118,7 +129,10 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     ...playerRows
       .filter((player) => !minors.has(player.id))
       .map((row) => ({ path: `/jugadores/${row.slug}`, lastModified: iso(row.updatedAt) })),
-    ...productRows.map((row) => ({ path: `/tienda/${row.slug}`, lastModified: iso(row.updatedAt) })),
+    ...(isHiddenPath('/tienda') ? [] : productRows).map((row) => ({
+      path: `/tienda/${row.slug}`,
+      lastModified: iso(row.updatedAt),
+    })),
     ...eventRows.map((row) => ({ path: `/eventos/${row.slug}`, lastModified: iso(row.updatedAt) })),
     ...albumRows.map((row) => ({ path: `/galeria/${row.slug}`, lastModified: iso(row.updatedAt) })),
   ]

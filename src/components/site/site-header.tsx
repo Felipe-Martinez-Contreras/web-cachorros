@@ -4,7 +4,7 @@ import { buttonVariants } from '@/components/ui/button'
 import type { SiteDTO } from '@/features/settings/dto'
 import { cn } from '@/lib/cn'
 import { CrestImage } from './crest-image'
-import { CLUB_NAV, MAIN_NAV, MEMBERSHIP_NAV, STORE_NAV } from './nav'
+import { clubNav, MAIN_NAV, MEMBERSHIP_NAV, type NavState, STORE_NAV } from './nav'
 import { NavLink } from './nav-link'
 
 type Brand = Pick<SiteDTO, 'clubName' | 'shortName' | 'foundedYear' | 'crest'>
@@ -25,7 +25,7 @@ const activeClass = 'border-accent hover:border-accent'
 export const HEADER_HEIGHT = 'h-16'
 
 /** Encabezado: escudo y nombre; en escritorio, menú horizontal con el desplegable «Club» y «Hazte socio». */
-export function SiteHeader({ site }: { site: Brand }) {
+export function SiteHeader({ site, nav }: { site: Brand; nav: NavState }) {
   return (
     <header className={cn('theme-dark sticky top-0 z-40 border-b border-(--border)', HEADER_HEIGHT)}>
       <div className="container-site flex h-full items-center justify-between gap-4">
@@ -65,7 +65,7 @@ export function SiteHeader({ site }: { site: Brand }) {
                   />
                 </summary>
                 <ul className="absolute top-full right-0 z-50 mt-2 grid w-56 gap-0.5 rounded-lg border border-(--border) bg-(--bg) p-2 shadow-xl">
-                  {CLUB_NAV.map((item) => (
+                  {clubNav(nav).map((item) => (
                     <li key={item.href}>
                       <NavLink
                         href={item.href}
@@ -79,11 +79,13 @@ export function SiteHeader({ site }: { site: Brand }) {
                 </ul>
               </details>
             </li>
-            <li>
-              <NavLink href={STORE_NAV.href} className={linkClass} activeClassName={activeClass}>
-                {STORE_NAV.label}
-              </NavLink>
-            </li>
+            {STORE_NAV && (
+              <li>
+                <NavLink href={STORE_NAV.href} className={linkClass} activeClassName={activeClass}>
+                  {STORE_NAV.label}
+                </NavLink>
+              </li>
+            )}
           </ul>
         </nav>
 

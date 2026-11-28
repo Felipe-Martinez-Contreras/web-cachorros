@@ -1,15 +1,16 @@
 import Link from 'next/link'
 import { cn } from '@/lib/cn'
 
+// Salón de la fama y Camisetas no van en el menú: `/historia` las enlaza solo si tienen contenido.
 const LINKS = [
   { href: '/historia', label: 'Línea de tiempo' },
   { href: '/historia/titulos', label: 'Títulos' },
-  { href: '/historia/salon-de-la-fama', label: 'Salón de la fama' },
-  { href: '/historia/camisetas', label: 'Camisetas' },
 ] as const
 
+type HistoryPath = (typeof LINKS)[number]['href'] | '/historia/salon-de-la-fama' | '/historia/camisetas'
+
 /** Navegación entre las páginas de Historia; va dentro del encabezado oscuro. */
-export function HistoryNav({ current }: { current: (typeof LINKS)[number]['href'] }) {
+export function HistoryNav({ current }: { current: HistoryPath }) {
   return (
     <nav aria-label="Secciones de Historia" className="mt-3">
       <ul className="flex flex-wrap gap-2">

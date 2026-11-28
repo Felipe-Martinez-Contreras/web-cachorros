@@ -1,5 +1,6 @@
 import { getSessionCookie } from 'better-auth/cookies'
 import { type NextRequest, NextResponse } from 'next/server'
+import { isHiddenPath } from '@/config/secciones'
 import { eventSlugStatus } from '@/features/events/slug'
 import { albumSlugStatus } from '@/features/gallery/slug'
 import { matchSlugStatus } from '@/features/matches/slug'
@@ -73,6 +74,12 @@ function safeDecode(segment: string): string | null {
   }
 }
 
+function notFoundRewrite(request: NextRequest) {
+  const url = request.nextUrl.clone()
+  url.pathname = NOT_FOUND_PATH
+  return NextResponse.rewrite(url)
+}
+
 /**
  * Estado HTTP de las páginas de detalle (ADR 0008): con el documento detrás de un único `<Suspense>`
  * (ADR 0007), la página ya no puede responder 404 ni 301, así que el slug se resuelve aquí, antes del
@@ -80,6 +87,8 @@ function safeDecode(segment: string): string | null {
  * antes (su `notFound()` sigue siendo la segunda barrera). Tampoco es una barrera de seguridad.
  */
 async function detailProxy(request: NextRequest) {
+  // Sección oculta (`src/config/secciones.ts`): 404 real antes del render, con cualquier método.
+  if (isHiddenPath(request.nextUrl.pathname)) return notFoundRewrite(request)
   if (request.method !== 'GET' && request.method !== 'HEAD') return NextResponse.next()
   const [, section, segment, ...rest] = request.nextUrl.pathname.split('/')
   const route = section ? DETAIL_ROUTES[section] : undefined
@@ -95,8 +104,7 @@ async function detailProxy(request: NextRequest) {
       url.pathname = `/${section}/${status.slug}`
       return NextResponse.redirect(url, 301)
     }
-    url.pathname = NOT_FOUND_PATH
-    return NextResponse.rewrite(url)
+    return notFoundRewrite(request)
   } catch (error) {
     logger.warn({ err: error, section }, 'proxy: no se pudo resolver el slug; la petición sigue a la página')
     return NextResponse.next()
@@ -108,7 +116,9 @@ export function proxy(request: NextRequest) {
   return pathname === '/admin' || pathname.startsWith('/admin/') ? adminProxy(request) : detailProxy(request)
 }
 
-// Solo el panel y las páginas de detalle públicas: /api (subidas), /_next y /media nunca pasan por el proxy.
+// Solo el panel, las páginas de detalle públicas y las secciones que se pueden ocultar
+// (`SECTION_PATHS`; goleadores entra por `/partidos/:slug`): /api (subidas), /_next y /media nunca pasan
+// por el proxy. Next exige que la lista sea literal: `tests/unit/secciones.test.ts` revisa que cubra todas.
 export const config = {
   matcher: [
     '/admin',
@@ -117,8 +127,12 @@ export const config = {
     '/partidos/:slug',
     '/jugadores/:slug',
     '/plantel/:serie',
-    '/tienda/:slug',
+    '/tienda',
+    '/tienda/:path*',
     '/eventos/:slug',
     '/galeria/:slug',
+    '/club/directiva',
+    '/club/transparencia',
+    '/formativas',
   ],
 }

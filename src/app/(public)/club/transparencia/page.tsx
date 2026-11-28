@@ -8,6 +8,7 @@ import type { DocumentCategory } from '@/features/club/dto'
 import { getTransparency } from '@/features/club/queries'
 import { pageMetadata } from '@/features/seo/metadata'
 import { formatFileSize, formatShortDate, fromIsoDate } from '@/lib/format'
+import { hideIfHidden } from '@/lib/hidden-section'
 import { documentCategoryLabels } from '@/lib/labels'
 
 export function generateMetadata(): Promise<Metadata> {
@@ -31,6 +32,7 @@ function isCategory(value: unknown): value is DocumentCategory {
 export default async function TransparencyPage({ searchParams }: Props) {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
+  hideIfHidden('transparencia')
   const params = await searchParams
   const requestedCategory = first(params.categoria)
   const category = isCategory(requestedCategory) ? requestedCategory : null

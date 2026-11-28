@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import type { SiteDTO } from '@/features/settings/dto'
 import { SocialFollowLinks, WhatsAppButton } from '@/features/social/components/social-post-card'
-import { CLUB_NAV, MEMBERSHIP_NAV, STORE_NAV } from './nav'
+import { clubNav, MEMBERSHIP_NAV, type NavState, STORE_NAV } from './nav'
 import { NavLink } from './nav-link'
 
 const ITEMS = [
@@ -23,7 +23,7 @@ type Contact = Pick<SiteDTO, 'whatsapp' | 'socialLinks'>
  * Barra inferior del celular (especificación 5.2). «Más» abre una hoja con el resto de las secciones:
  * es un `<dialog popover>`, así que se abre y se cierra (toque afuera o Escape) sin JavaScript.
  */
-export function BottomNav({ site }: { site: Contact }) {
+export function BottomNav({ site, nav }: { site: Contact; nav: NavState }) {
   return (
     <>
       <nav
@@ -69,16 +69,18 @@ export function BottomNav({ site }: { site: Contact }) {
           </button>
         </div>
         <ul className="grid grid-cols-2 gap-x-4">
-          {[{ href: '/historia', label: 'Historia' }, ...CLUB_NAV, STORE_NAV].map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="flex min-h-12 items-center border-b border-(--border) font-medium"
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
+          {[{ href: '/historia', label: 'Historia' }, ...clubNav(nav), ...(STORE_NAV ? [STORE_NAV] : [])].map(
+            (item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="flex min-h-12 items-center border-b border-(--border) font-medium"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ),
+          )}
         </ul>
         <div className="mt-4 grid gap-3">
           <Link href={MEMBERSHIP_NAV.href} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
