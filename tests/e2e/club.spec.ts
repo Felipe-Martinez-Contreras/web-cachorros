@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { isSectionHidden } from '../../src/config/secciones'
 import { ADMIN, expectAccessible, login, openModule } from './support'
+
+// Directiva, Transparencia y Formativas pueden estar ocultas (`src/config/secciones.ts`): sus pruebas
+// públicas se saltan mientras lo estén, y `secciones.spec.ts` verifica que respondan 404.
+const HIDDEN = 'Sección oculta en src/config/secciones.ts'
 
 const PDF = Buffer.from(
   '%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n',
@@ -7,6 +12,7 @@ const PDF = Buffer.from(
 )
 
 test('directiva vigente y documentos de transparencia servidos con sandbox', async ({ page, request }) => {
+  test.skip(isSectionHidden('directiva') || isSectionHidden('transparencia'), HIDDEN)
   await page.goto('/club/directiva')
   await expect(page.getByRole('heading', { level: 1, name: 'Directiva' })).toBeVisible()
   await expect(page.getByRole('heading', { level: 2, name: 'María Fernanda Soto (ejemplo)' })).toBeVisible()
@@ -56,6 +62,7 @@ test('subir un documento PDF desde el panel lo publica; otro archivo se rechaza'
   await page.getByRole('button', { name: 'Guardar' }).click()
   await expect(page).toHaveURL(/\/admin\/club\/documentos$/)
 
+  if (isSectionHidden('transparencia')) return
   await page.goto('/club/transparencia?categoria=rendicion')
   await expect(page.getByRole('heading', { level: 3, name: title })).toBeVisible()
 })
@@ -88,10 +95,8 @@ test('la cancha: el mapa no carga nada de terceros antes del clic', async ({ pag
     .toBe(true)
 })
 
-test('formativas y apoya al club: horarios, contacto sin datos de niños y «Copiar datos»', async ({
-  page,
-  context,
-}) => {
+test('formativas: horarios y contacto sin datos de niños', async ({ page }) => {
+  test.skip(isSectionHidden('formativas'), HIDDEN)
   await page.goto('/formativas')
   await expect(page.getByRole('heading', { level: 1, name: 'Divisiones formativas' })).toBeVisible()
   await expect(page.getByRole('heading', { level: 2, name: 'Categorías y horarios' })).toBeVisible()
@@ -102,16 +107,29 @@ test('formativas y apoya al club: horarios, contacto sin datos de niños y «Cop
   // Ningún formulario en la página: no se recolectan datos de niños.
   await expect(page.getByRole('main').locator('form')).toHaveCount(0)
   await expectAccessible(page)
+})
 
+test('Hazte socio reúne las formas de apoyar: aporte con «Copiar datos» y auspicio', async ({
+  page,
+  context,
+}) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  // La dirección anterior redirige aquí.
   await page.goto('/apoya-al-club')
-  await expect(page.getByRole('heading', { level: 1, name: 'Apoya al club' })).toBeVisible()
-  await page.getByRole('button', { name: 'Copiar datos' }).click()
+  await expect(page).toHaveURL(/\/socios$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Hazte socio' })).toBeVisible()
+  const support = page.getByRole('region', { name: 'Haz un aporte' })
+  await support.getByRole('button', { name: 'Copiar datos' }).click()
   await expect(page.getByText('Datos copiados: pégalos en la app de tu banco.')).toBeVisible()
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^Titular: .+\r?\nRUT: /)
-  await expect(page.getByRole('link', { name: 'Ver las rendiciones' })).toHaveAttribute(
+  // Las rendiciones están en Transparencia: el enlace aparece solo si esa sección está visible.
+  await expect(support.getByRole('link', { name: 'Ver las rendiciones' })).toHaveCount(
+    isSectionHidden('transparencia') ? 0 : 1,
+  )
+  const sponsor = page.getByRole('region', { name: 'Auspicia al club' })
+  await expect(sponsor.getByRole('link', { name: 'Quiero auspiciar' })).toHaveAttribute(
     'href',
-    '/club/transparencia?categoria=rendicion',
+    '/auspiciadores#auspiciar',
   )
   await expectAccessible(page)
 })
@@ -146,12 +164,13 @@ test.describe('sin JavaScript', () => {
       'href',
       /^https:\/\/www\.openstreetmap\.org\/\?mlat=/,
     )
-    await page.goto('/apoya-al-club')
+    await page.goto('/socios')
     await expect(page.getByText(/^Titular: /)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Copiar datos' })).toHaveCount(0)
   })
 
   test('los filtros de transparencia funcionan con el formulario', async ({ page }) => {
+    test.skip(isSectionHidden('transparencia'), HIDDEN)
     await page.goto('/club/transparencia')
     await page.getByRole('combobox', { name: 'Categoría' }).selectOption('balance')
     await page.getByRole('button', { name: 'Ver' }).click()

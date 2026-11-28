@@ -40,9 +40,9 @@ export const PAGE_BLOCKS = {
     href: '/auspiciadores#auspiciar',
   },
   'donaciones.uso': {
-    label: 'Apoya al club · uso de los aportes',
-    where: 'Página Apoya al club, antes de los datos de transferencia.',
-    href: '/apoya-al-club',
+    label: 'Hazte socio · uso de los aportes',
+    where: 'Página Hazte socio, en «Haz un aporte», antes de los datos de transferencia.',
+    href: '/socios#aporta',
   },
   'privacidad.politica': {
     label: 'Política de privacidad',
