@@ -37,22 +37,21 @@ test.describe('portada', () => {
     await expect(plate).toBeVisible()
     await expect(plate).toBeInViewport({ ratio: 1 })
 
-    // Franja matchday: el detalle del próximo partido de Honor.
-    const matchday = page.getByRole('region', { name: 'Próximo partido' })
-    await expect(matchday.getByText('Próximo partido')).toBeVisible()
-    await expect(matchday.getByText(/^Honor, /)).toBeVisible()
-    await expect(matchday.getByText(/^Cancha /)).toBeVisible()
-    // «Cómo llegar» solo aparece si la cancha del partido tiene coordenadas (la del club las tiene).
-    for (const link of await matchday.getByRole('link', { name: /Cómo llegar/ }).all()) {
-      await expect(link).toHaveAttribute('href', /^https:\/\/www\.google\.com\/maps\/dir\//)
-    }
+    // Centro de partidos: la serie destacada (Honor), con su último resultado, el próximo partido y el
+    // siguiente; cada tarjeta con fecha, cancha y «Ver el partido».
+    const center = page.getByRole('region', { name: 'Partidos', exact: true })
+    const tabs = center.getByRole('navigation', { name: 'Series del centro de partidos' })
+    await expect(tabs.getByRole('link', { name: 'Honor' })).toHaveAttribute('aria-current', 'page')
+    const cards = center.getByRole('article')
+    await expect(cards).toHaveCount(3)
+    await expect(cards.filter({ hasText: 'Próximo partido' }).getByText(/^Cancha /)).toBeVisible()
+    await expect(center.getByRole('link', { name: 'Ver el partido' })).toHaveCount(3)
 
-    for (const name of ['Últimos resultados', 'Noticias', 'Accesos rápidos', 'Tabla de posiciones']) {
+    for (const name of ['Partidos', 'Noticias', 'Accesos rápidos', 'Tabla de posiciones']) {
       await expect(page.getByRole('region', { name, exact: true })).toBeVisible()
     }
-    await expect(page.getByRole('region', { name: 'Últimos resultados' }).getByRole('listitem')).toHaveCount(
-      7,
-    )
+    // Ya no están la tarjeta «Próximo partido» ni «Últimos resultados»: los reemplaza el centro de partidos.
+    await expect(page.getByRole('region', { name: 'Últimos resultados' })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Noticias' }).getByRole('article')).toHaveCount(6)
     await expect(page.getByRole('region', { name: 'Redes sociales' }).getByRole('listitem')).toHaveCount(6)
     // Los logos están bajo el pliegue y son `loading="lazy"`: se cargan al acercarse.
@@ -70,6 +69,29 @@ test.describe('portada', () => {
     ).toBeVisible()
 
     expect(errors).toEqual([])
+  })
+
+  test('las pestañas del centro de partidos cambian de serie, también sin JavaScript', async ({
+    browser,
+  }) => {
+    for (const javaScriptEnabled of [true, false]) {
+      const context = await browser.newContext({ javaScriptEnabled })
+      const page = await context.newPage()
+      await page.goto('/')
+      const center = page.getByRole('region', { name: 'Partidos', exact: true })
+      await center
+        .getByRole('navigation', { name: 'Series del centro de partidos' })
+        .getByRole('link', { name: 'Tercera' })
+        .click()
+      await expect(page).toHaveURL(/\/\?serie=tercera#partidos$/)
+      await expect(
+        center.getByRole('navigation', { name: 'Series del centro de partidos' }).getByRole('link', {
+          name: 'Tercera',
+        }),
+      ).toHaveAttribute('aria-current', 'page')
+      await expect(center.getByRole('article').first()).toBeVisible()
+      await context.close()
+    }
   })
 
   for (const width of [360, 768, 1280]) {
@@ -263,10 +285,12 @@ test.describe('portada con un partido en vivo', () => {
    * que el servidor entregue el estado esperado. Sin esta espera al final, el partido en vivo seguía en
    * caché cuando el seed tardaba menos de 30 s, y la prueba siguiente (que espera «Próximo partido») fallaba.
    */
-  async function waitForMatchday(page: Page, region: 'Partidos en vivo' | 'Próximo partido') {
+  async function waitForMatchday(page: Page, state: 'En vivo' | 'Próximo partido') {
     await expect(async () => {
       await page.goto('/')
-      await expect(page.getByRole('region', { name: region })).toBeVisible({ timeout: 2000 })
+      const hero = page.getByRole('region', { name: 'Presentación' })
+      // «En vivo» es la insignia; «Próximo partido» va seguido de la serie («Próximo partido, Honor»).
+      await expect(hero.getByText(state, { exact: state === 'En vivo' })).toBeVisible({ timeout: 2000 })
     }).toPass({ timeout: 90_000 })
   }
 
@@ -282,19 +306,17 @@ test.describe('portada con un partido en vivo', () => {
     await page.close()
   })
 
-  test('la franja muestra el marcador EN VIVO renderizado en el servidor', async ({ page }) => {
-    await waitForMatchday(page, 'Partidos en vivo')
+  test('las placas del hero muestran el marcador EN VIVO renderizado en el servidor', async ({ page }) => {
+    await waitForMatchday(page, 'En vivo')
 
-    const live = page.getByRole('region', { name: 'Partidos en vivo' })
-    await expect(live.getByText('En vivo', { exact: true })).toBeVisible()
-    await expect(live.getByText('1.er tiempo')).toBeVisible()
-    await expect(live.getByText(/Cachorros 1, .+ 0|.+ 0, Cachorros 1/)).toBeAttached()
-    await expect(live.getByRole('link', { name: 'Seguir el partido' })).toBeVisible()
-
-    // Las placas del hero muestran el mismo marcador, con el texto equivalente para lectores de pantalla.
+    // El marcador con su texto equivalente para lectores de pantalla, y el enlace al partido.
     const hero = page.getByRole('region', { name: 'Presentación' })
-    await expect(hero.getByText('En vivo', { exact: true })).toBeVisible()
     await expect(hero.getByText(/Cachorros 1, .+ 0\.|.+ 0, Cachorros 1\./)).toBeAttached()
     await expect(hero.locator('.plate').first()).toBeInViewport({ ratio: 1 })
+    await expect(hero.getByRole('link', { name: 'Ver el partido' })).toBeVisible()
+
+    // En el centro de partidos, el partido en vivo ocupa la tarjeta del centro.
+    const center = page.getByRole('region', { name: 'Partidos', exact: true })
+    await expect(center.getByRole('article', { name: /^En vivo: / })).toBeVisible()
   })
 })

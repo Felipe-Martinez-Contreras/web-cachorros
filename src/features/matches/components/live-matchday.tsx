@@ -1,4 +1,4 @@
-'use client' // Cliente: mantiene al día la franja y las placas de la portada con el polling de /api/live/current.
+'use client' // Cliente: mantiene al día las placas de la portada con el polling de /api/live/current.
 
 import { useRouter } from 'next/navigation'
 import { createContext, type ReactNode, use, useEffect, useMemo, useRef, useState } from 'react'
@@ -10,8 +10,6 @@ import {
   scoreText,
 } from '../dto'
 import { patchMatch, pollInterval, SOON_WINDOW_MS } from '../lib/live-poll'
-import { LiveMinute } from './live-minute'
-import { MatchdayStrip } from './matchday-strip'
 import { useLivePolling } from './use-live-polling'
 
 /** Partidos de la franja que interesan al polling. */
@@ -141,17 +139,5 @@ export function LiveMatchdayProvider({
         {announcement}
       </p>
     </LiveMatchdayContext>
-  )
-}
-
-/** Tarjeta de la franja, al día con el polling del proveedor. */
-export function LiveMatchday({ className }: { className?: string }) {
-  const { view, offset } = useLiveMatchday()
-  return (
-    <MatchdayStrip
-      matchday={view}
-      className={className}
-      renderMinute={(match) => <LiveMinute match={match} serverOffsetMs={offset} />}
-    />
   )
 }

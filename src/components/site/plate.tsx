@@ -5,6 +5,8 @@ const PLATE_SIZES = {
   score: 'text-score min-w-[1.1em] px-[0.12em]',
   /** Cuenta regresiva: cuatro placas de dos cifras caben en 360 px. */
   countdown: 'text-plate-countdown min-w-[1.25em] px-[0.1em]',
+  /** Tarjetas del centro de partidos: 48 px. */
+  card: 'text-5xl min-w-[1.1em] px-[0.12em]',
 } as const
 
 type PlateProps = {

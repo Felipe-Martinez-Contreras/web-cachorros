@@ -127,6 +127,18 @@ export type SportsNavDTO = {
 }
 
 /** Franja matchday de la portada (5.3), en orden de prioridad. */
+/**
+ * Centro de partidos de la portada: las series (pestañas) y, de la elegida, el último resultado, el
+ * partido actual (en vivo o el próximo) y el siguiente.
+ */
+export type MatchCenterDTO = {
+  series: { slug: string; name: string }[]
+  activeSlug: string
+  last: MatchDTO | null
+  current: MatchDTO | null
+  following: MatchDTO | null
+}
+
 export type MatchdayDTO =
   | { kind: 'live'; matches: MatchDTO[] }
   | { kind: 'next'; match: MatchDTO; alsoToday: MatchDTO[] }

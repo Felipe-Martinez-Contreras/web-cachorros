@@ -7,11 +7,11 @@ import { Skeleton } from '@/components/ui/feedback'
 import { isHiddenPath } from '@/config/secciones'
 import { getUpcomingEvents } from '@/features/events/queries'
 import { HeroMatchday } from '@/features/matches/components/hero-matchday'
-import { LiveMatchday, LiveMatchdayProvider } from '@/features/matches/components/live-matchday'
-import { MatchCard } from '@/features/matches/components/match-card'
+import { LiveMatchdayProvider } from '@/features/matches/components/live-matchday'
+import { MatchCenter } from '@/features/matches/components/match-center'
 import { StandingsTable } from '@/features/matches/components/standings-table'
 import { livePollBaseMs } from '@/features/matches/live-queries'
-import { getFeaturedStandings, getLatestResults, getMatchday } from '@/features/matches/queries'
+import { getFeaturedStandings, getMatchCenter, getMatchday } from '@/features/matches/queries'
 import { NewsCard } from '@/features/news/components/news-card'
 import { getHomeNews } from '@/features/news/queries'
 import { getSite } from '@/features/settings/queries'
@@ -52,7 +52,7 @@ function Section({ className, children, label }: { className?: string; children:
   )
 }
 
-// ── 1 y 2. Hero con las placas + franja matchday ─────────────────────────────────────────────────
+// ── 1. Hero con las placas ─────────────────────────────────────────────────
 
 // En el celular la portada ocupa el 70 % de la pantalla y las placas quedan en ese espacio, sin desplazarse.
 const HERO_HEIGHT = 'min-h-[70svh] lg:min-h-[82svh]'
@@ -76,7 +76,7 @@ export async function HeroSection() {
             image={image}
             sizes="100vw"
             priority
-            className="absolute inset-0 -z-20 size-full object-cover photo-mono"
+            className="absolute inset-0 -z-20 size-full object-cover"
           />
         )}
         {image && mobile && (
@@ -87,7 +87,7 @@ export async function HeroSection() {
               image={image}
               sizes="100vw"
               priority
-              className="absolute inset-0 -z-20 size-full object-cover photo-mono"
+              className="absolute inset-0 -z-20 size-full object-cover"
             />
           </picture>
         )}
@@ -113,16 +113,10 @@ export async function HeroSection() {
           )}
         </div>
       </section>
-
-      {matchday && (
-        <div className="container-site pt-8 md:pt-12">
-          <LiveMatchday className="mx-auto max-w-3xl" />
-        </div>
-      )}
     </>
   )
 
-  // Un solo polling para las placas del hero y la tarjeta de la franja.
+  // El polling de /api/live/current mantiene al día las placas del hero.
   return matchday ? (
     <LiveMatchdayProvider matchday={matchday} pollBaseMs={livePollBaseMs()}>
       {content}
@@ -132,25 +126,17 @@ export async function HeroSection() {
   )
 }
 
-// ── 3. Últimos resultados por serie ──────────────────────────────────────────────────────────────
+// ── 2. Centro de partidos ────────────────────────────────────────────────────────────────────────
 
-export async function LatestResultsSection() {
+/**
+ * Reemplaza la tarjeta «Próximo partido» y «Últimos resultados»: pestañas por serie (`?serie=`) y tres
+ * tarjetas sobre la foto de la cancha.
+ */
+export async function MatchCenterSection({ serie }: { serie: Promise<string | null> }) {
   await connection()
-  const results = await getLatestResults()
-  if (results.length === 0) return null
-  return (
-    <Section label="Últimos resultados">
-      <SectionHeader title="Últimos resultados" href="/partidos" linkLabel="Todos los partidos" />
-      {/* Carrusel con desplazamiento nativo: sin JavaScript, sin autoplay y navegable con teclado. */}
-      <ul className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3 xl:grid-cols-4">
-        {results.map((match) => (
-          <li key={match.id} className="w-[82%] shrink-0 snap-center sm:w-[46%] md:w-auto">
-            <MatchCard match={match} />
-          </li>
-        ))}
-      </ul>
-    </Section>
-  )
+  const [site, center] = await Promise.all([getSite(), serie.then((slug) => getMatchCenter(slug))])
+  if (!center) return null
+  return <MatchCenter center={center} image={site?.hero.image ?? null} />
 }
 
 // ── 4. Noticias ──────────────────────────────────────────────────────────────────────────────────
@@ -160,7 +146,7 @@ export async function NewsSection() {
   const [featured, ...rest] = await getHomeNews()
   if (!featured) return null
   return (
-    <Section label="Noticias" className="bg-(--surface)">
+    <Section label="Noticias" className="theme-light">
       <SectionHeader title="Noticias" href="/noticias" linkLabel="Todas las noticias" />
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-12">
         <NewsCard news={featured} variant="featured" headingLevel="h3" />
@@ -215,9 +201,9 @@ export async function QuickAccessSection() {
           <li key={href}>
             <Link
               href={href}
-              className="group flex h-full min-h-40 flex-col justify-between gap-6 rounded-lg border border-(--border) bg-(--surface) p-6 transition-colors duration-200 hover:border-accent"
+              className="group flex h-full min-h-40 flex-col justify-between gap-6 rounded-lg border border-(--border) bg-(--surface) p-6 transition-colors duration-200 hover:border-(--fg)"
             >
-              <Icon aria-hidden="true" className="size-8 text-accent" />
+              <Icon aria-hidden="true" className="size-8" />
               <span className="grid gap-1">
                 <span className="font-display text-3xl font-extrabold uppercase [font-stretch:75%]">
                   {title}
@@ -239,7 +225,7 @@ export async function StandingsSection() {
   const standings = await getFeaturedStandings()
   if (!standings) return null
   return (
-    <Section label="Tabla de posiciones">
+    <Section label="Tabla de posiciones" className="theme-light">
       <div className="mx-auto max-w-3xl">
         <SectionHeader
           title={`Tabla de la serie ${standings.seriesName}`}
@@ -259,7 +245,7 @@ export async function SocialSection() {
   const [posts, site] = await Promise.all([socialFeed().latest(6), getSite()])
   if (posts.length === 0) return null
   return (
-    <Section label="Redes sociales" className="bg-(--surface)">
+    <Section label="Redes sociales">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4 md:mb-8">
         <h2 className="text-h2 uppercase">En redes</h2>
         {site && <SocialFollowLinks links={site.socialLinks} />}
@@ -282,7 +268,7 @@ export async function SponsorsSection() {
   const sponsors = await getActiveSponsors()
   if (sponsors.length === 0) return null
   return (
-    <Section label="Auspiciadores">
+    <Section label="Auspiciadores" className="theme-light">
       <h2 className="mb-8 text-center text-h2 uppercase">Nos apoyan</h2>
       <SponsorStrip sponsors={sponsors} />
       <p className="mt-10 text-center">
