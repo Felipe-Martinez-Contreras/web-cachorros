@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   // CSP del sitio público (9.3), obligatoria, fija y compatible con la caché. El panel lleva la suya, con nonce, desde
   // proxy.ts: por eso se excluye aquí. /media (los PDF llevan su propia CSP `sandbox`) y /api (JSON, imágenes y
   // archivos, no páginas) tampoco la llevan.
+  // Secciones fusionadas (simplificación del sitio): 301, como pide la especificación para las URL que
+  // cambian. `permanent` daría 308. El código de esas páginas vive ahora en /galeria y /socios.
+  async redirects() {
+    return [
+      { source: '/videos', destination: '/galeria?vista=videos', statusCode: 301 },
+      { source: '/apoya-al-club', destination: '/socios', statusCode: 301 },
+    ]
+  },
   async headers() {
     return [
       {
