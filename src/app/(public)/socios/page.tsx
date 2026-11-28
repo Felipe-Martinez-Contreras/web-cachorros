@@ -1,7 +1,8 @@
-import { Check } from 'lucide-react'
+import { Check, ExternalLink, FileText } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { connection } from 'next/server'
+import { CopyBlock } from '@/components/site/copy-block'
 import { DirectChannels } from '@/components/site/direct-channels'
 import { PageHero } from '@/components/site/page-shell'
 import { type PublicFieldConfig, PublicForm } from '@/components/site/public-form'
@@ -9,6 +10,8 @@ import { RichText } from '@/components/site/rich-text'
 import { loadSite } from '@/components/site/site-frame'
 import { buttonVariants } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
+import { isSectionHidden } from '@/config/secciones'
+import { getDonationInfo } from '@/features/club/queries'
 import { publicFormProps } from '@/features/inbox/form-props'
 import { getMembershipPlans, type MembershipPlanDTO } from '@/features/members/queries'
 import { getPageBlock } from '@/features/pages/queries'
@@ -21,7 +24,7 @@ export function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     title: 'Hazte socio',
     description:
-      'Hazte socio del Club Deportivo Los Cachorros: beneficios, planes y cuotas, y el formulario de inscripción.',
+      'Hazte socio del Club Deportivo Los Cachorros: beneficios, planes y cuotas, el formulario de inscripción y otras formas de aportar.',
     path: '/socios',
   })
 }
@@ -59,12 +62,14 @@ function PlanCard({ plan }: { plan: MembershipPlanDTO }) {
 export default async function MembershipPage({ searchParams }: Props) {
   // Por petición: la página firma el momento en que se dibuja el formulario (tiempo mínimo de llenado).
   await connection()
-  const [params, site, plans, benefits, faq] = await Promise.all([
+  const [params, site, plans, benefits, faq, usage, donation] = await Promise.all([
     searchParams,
     loadSite(),
     getMembershipPlans(),
     getPageBlock('socios.beneficios'),
     getPageBlock('socios.preguntas'),
+    getPageBlock('donaciones.uso'),
+    getDonationInfo(),
   ])
   const chosen = plans.find((plan) => plan.id === params.plan)?.id ?? plans[0]?.id
   const notice =
@@ -123,6 +128,15 @@ export default async function MembershipPage({ searchParams }: Props) {
       <PageHero crumbs={[{ href: '/', label: 'Inicio' }, { label: 'Hazte socio' }]} title="Hazte socio">
         <p className="max-w-2xl text-(--muted)">
           Ser socio es la forma más directa de sostener al club: sus series, sus formativas y su cancha.
+          También puedes{' '}
+          <a href="#aporta" className="text-(--link) underline">
+            hacer un aporte
+          </a>{' '}
+          o{' '}
+          <Link href="/auspiciadores#auspiciar" className="text-(--link) underline">
+            auspiciar al club
+          </Link>
+          .
         </p>
       </PageHero>
 
@@ -183,6 +197,67 @@ export default async function MembershipPage({ searchParams }: Props) {
           />
         </section>
       )}
+
+      {/* Antes `/apoya-al-club` (redirige aquí con 301): todas las formas de apoyar en una página. */}
+      <section
+        id="aporta"
+        aria-labelledby="aporta-titulo"
+        className="container-site grid max-w-3xl grid-cols-1 gap-4 py-8"
+      >
+        <h2 id="aporta-titulo" className="text-h2 uppercase">
+          Haz un aporte
+        </h2>
+        <p className="text-(--muted)">
+          Cada aporte se transforma en balones, camisetas, traslados y una cancha mejor para todas las series.
+        </p>
+        {usage && (
+          <div className="grid gap-3">
+            <h3 className="text-h3">{usage.title ?? '¿En qué se usan los aportes?'}</h3>
+            <RichText doc={usage.body} images={usage.images} />
+          </div>
+        )}
+        <h3 className="text-h3">Transferencia</h3>
+        {donation.transferText ? (
+          <CopyBlock text={donation.transferText} buttonLabel="Copiar datos" />
+        ) : (
+          <p className="text-(--muted)">Pronto publicaremos los datos. Mientras tanto, escríbenos.</p>
+        )}
+        <div className="flex flex-wrap gap-3">
+          {donation.paymentUrl && (
+            <a
+              href={donation.paymentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: 'dark', size: 'lg' })}
+            >
+              Aportar con tarjeta <ExternalLink aria-hidden="true" />
+              <span className="sr-only"> (se abre en una pestaña nueva)</span>
+            </a>
+          )}
+          {/* Las rendiciones están en Transparencia: el enlace sale solo si esa sección está visible. */}
+          {!isSectionHidden('transparencia') && (
+            <Link
+              href="/club/transparencia?categoria=rendicion"
+              className={buttonVariants({ variant: 'outline', size: 'lg' })}
+            >
+              <FileText aria-hidden="true" /> Ver las rendiciones
+            </Link>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="auspicia" className="container-site grid max-w-3xl grid-cols-1 gap-4 py-8">
+        <h2 id="auspicia" className="text-h2 uppercase">
+          Auspicia al club
+        </h2>
+        <p className="text-(--muted)">Tu empresa o negocio en la cancha, la camiseta y las redes del club.</p>
+        <p>
+          <Link href="/auspiciadores#auspiciar" className={buttonVariants({ variant: 'outline' })}>
+            Quiero auspiciar
+          </Link>
+        </p>
+        <DirectChannels site={site} />
+      </section>
 
       {faq && (
         <section

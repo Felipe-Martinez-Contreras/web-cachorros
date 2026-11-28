@@ -105,7 +105,7 @@ export default async function ContactPage({ searchParams }: Props) {
           <DirectChannels site={site} />
           {site.socialLinks.length > 0 && (
             <>
-              <h3 className="text-eyebrow text-(--muted)">Síguenos</h3>
+              <h3 className="text-lg font-bold">Síguenos</h3>
               <SocialFollowLinks links={site.socialLinks} />
             </>
           )}

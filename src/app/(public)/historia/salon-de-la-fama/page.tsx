@@ -64,7 +64,7 @@ export default async function HallOfFamePage() {
                 </h2>
                 {(idol.position || idol.eraLabel) && (
                   <p className="text-meta text-(--muted)">
-                    {[idol.position, idol.eraLabel].filter(Boolean).join(' · ')}
+                    {[idol.position, idol.eraLabel].filter(Boolean).join(', ')}
                   </p>
                 )}
                 {idol.bio && <p className="whitespace-pre-line">{idol.bio}</p>}

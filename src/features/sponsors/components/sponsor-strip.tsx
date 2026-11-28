@@ -47,7 +47,7 @@ export function SponsorStrip({ sponsors, className }: { sponsors: SponsorDTO[]; 
         if (group.length === 0) return null
         return (
           <div key={tier} className="grid justify-items-center gap-3">
-            <h3 className="text-eyebrow text-(--muted)">
+            <h3 className="font-bold">
               {group.length > 1 && tier !== 'principal'
                 ? `${sponsorTierLabels[tier].replace('Auspiciador oficial', 'Auspiciadores oficiales').replace('Colaborador', 'Colaboradores')}`
                 : sponsorTierLabels[tier]}

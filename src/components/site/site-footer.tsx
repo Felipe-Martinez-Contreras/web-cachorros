@@ -3,13 +3,13 @@ import Link from 'next/link'
 import type { SiteDTO } from '@/features/settings/dto'
 import { SocialFollowLinks, WhatsAppButton } from '@/features/social/components/social-post-card'
 import { formatPhone } from '@/lib/format'
-import { CLUB_NAV, FOOTER_NAV, MAIN_NAV, STORE_NAV } from './nav'
+import { clubNav, FOOTER_NAV, mainNavWithStore, type NavState } from './nav'
 import { ClubCrest } from './site-header'
 
 const linkClass = 'inline-flex min-h-11 items-center hover:underline hover:underline-offset-4'
 
-/** Pie del sitio: escudo, redes, dirección de la cancha, contacto, WhatsApp, transparencia y privacidad. */
-export function SiteFooter({ site }: { site: SiteDTO }) {
+/** Pie del sitio: escudo, redes, dirección de la cancha, contacto, WhatsApp y los enlaces del pie. */
+export function SiteFooter({ site, nav }: { site: SiteDTO; nav: NavState }) {
   const place = [site.address, site.commune, site.region].filter(Boolean).join(', ')
   return (
     // En celular deja espacio para la barra inferior fija.
@@ -22,16 +22,16 @@ export function SiteFooter({ site }: { site: SiteDTO }) {
               <span className="font-display text-2xl font-extrabold uppercase [font-stretch:75%]">
                 {site.clubName}
               </span>
-              <span className="text-eyebrow text-accent">Desde {site.foundedYear}</span>
+              <span className="text-meta text-(--muted)">Desde {site.foundedYear}</span>
             </p>
           </div>
           <SocialFollowLinks links={site.socialLinks} />
         </div>
 
         <nav aria-label="Secciones del sitio">
-          <h2 className="mb-2 text-eyebrow text-(--muted)">El sitio</h2>
+          <h2 className="mb-2 font-bold">El sitio</h2>
           <ul>
-            {[...MAIN_NAV, STORE_NAV].map((item) => (
+            {mainNavWithStore().map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className={linkClass}>
                   {item.label}
@@ -42,9 +42,9 @@ export function SiteFooter({ site }: { site: SiteDTO }) {
         </nav>
 
         <nav aria-label="El club">
-          <h2 className="mb-2 text-eyebrow text-(--muted)">El club</h2>
+          <h2 className="mb-2 font-bold">El club</h2>
           <ul>
-            {CLUB_NAV.map((item) => (
+            {clubNav(nav).map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className={linkClass}>
                   {item.label}
@@ -55,7 +55,7 @@ export function SiteFooter({ site }: { site: SiteDTO }) {
         </nav>
 
         <div className="grid content-start gap-3">
-          <h2 className="text-eyebrow text-(--muted)">Contacto</h2>
+          <h2 className="font-bold">Contacto</h2>
           <ul className="grid gap-3">
             {place && (
               <li className="flex items-start gap-2">
@@ -90,8 +90,9 @@ export function SiteFooter({ site }: { site: SiteDTO }) {
 
       <div className="border-t border-(--border)">
         <div className="container-site flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-4 text-sm text-(--muted)">
-          <p>
-            {site.clubName} · {[site.commune, site.region].filter(Boolean).join(', ')}
+          <p className="flex flex-wrap gap-x-4">
+            <span>{site.clubName}</span>
+            <span>{[site.commune, site.region].filter(Boolean).join(', ')}</span>
           </p>
           <ul className="flex flex-wrap gap-x-5">
             {FOOTER_NAV.map((item) => (

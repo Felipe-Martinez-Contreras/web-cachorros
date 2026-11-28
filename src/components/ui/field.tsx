@@ -35,11 +35,11 @@ function FieldShell({
     <div className={cn('grid gap-1', className)}>
       <label htmlFor={id} className="font-medium">
         {label}
-        {required === false && <span className="font-normal text-neutral-600"> (opcional)</span>}
+        {required === false && <span className="font-normal text-(--muted)"> (opcional)</span>}
       </label>
       {children}
       {help && (
-        <p id={`${id}-help`} className="text-sm text-neutral-600">
+        <p id={`${id}-help`} className="text-sm text-(--muted)">
           {help}
         </p>
       )}
@@ -174,7 +174,7 @@ export function CheckboxField({
         <span>{label}</span>
       </label>
       {help && (
-        <p id={`${id}-help`} className="text-sm text-neutral-600">
+        <p id={`${id}-help`} className="text-sm text-(--muted)">
           {help}
         </p>
       )}

@@ -1,12 +1,14 @@
 /* Tokens de diseño (especificación 4.2) — Tailwind CSS v4 */
 @theme {
   /* Marca */
-  --color-ink: #0b0b0c; /* negro base */
+  --color-ink: #000000; /* negro base: el de las placas del marcador, sin tinte */
   --color-paper: #ffffff; /* blanco base */
-  /* Naranja oficial del club (plantilla matchday, docs/diseno). */
+  /* Naranja oficial del club (plantilla matchday, docs/diseno). En el sitio, solo para acciones. */
   --color-accent: #f27405;
   --color-accent-strong: #b05500; /* acento para texto, enlaces e indicadores sobre fondo claro */
   --color-accent-soft: #fdeedd; /* fondos sutiles */
+  /* Gris hormigón de la galería: bordes y divisiones del sitio público. */
+  --color-concrete: #d6d6d3;
 
   /* Neutros */
   --color-neutral-50: #f7f7f7;
@@ -35,7 +37,44 @@
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
+  --radius-button: 4px; /* el único radio del sitio público (`rounded-button`) */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * Escala tipográfica (sección 4.3). Pasos de la escala clásica de Bringhurst (14 · 16 · 18 · 21 · 24 · 36 ·
+ * 48 · 72 · 96 px): cada título se mueve entre dos pasos con `clamp`. El panel conserva sus medidas; el sitio
+ * público (`.site-public`) usa la escala nueva.
+ */
+:root {
+  --type-meta: 0.875rem;
+  --type-h3: clamp(1.25rem, 2vw, 1.5rem);
+  --type-h2: clamp(1.75rem, 4vw, 3rem);
+  --type-h1: clamp(2.25rem, 6vw, 4.5rem);
+  --type-hero: clamp(3rem, 7.5vw, 6rem);
+  --type-score: clamp(3rem, 14vw, 7rem);
+}
+
+/*
+ * Sitio público, «el marcador de la cancha»: blanco dominante, negro puro, naranja solo para acciones y
+ * esquinas rectas. El radio de 4 px queda solo en los botones (`--radius-button`); `rounded-full` (discos de
+ * los escudos, avatares) no usa estas variables y no cambia.
+ */
+.site-public {
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+
+  --type-meta: 0.875rem; /* 14 */
+  --type-h3: clamp(1.3125rem, 1.15rem + 0.5vw, 1.5rem); /* 21 → 24 */
+  --type-h2: clamp(2.25rem, 1.7rem + 2.3vw, 3rem); /* 36 → 48 */
+  --type-h1: clamp(3rem, 2rem + 4.4vw, 4.5rem); /* 48 → 72 */
+  --type-hero: clamp(3rem, 1.5rem + 6.5vw, 6rem); /* 48 → 96 */
+  --type-score: clamp(4.5rem, 2rem + 11vw, 7.5rem); /* 72 → 120: los números de las placas */
 }
 
 /*
@@ -61,4 +100,31 @@
   --surface: var(--color-neutral-900);
   --link: var(--color-accent);
   --focus: var(--color-accent);
+}
+
+/*
+ * Sitio público (rediseño 3a): blanco y negro, como la camiseta. La base es negra; los bloques
+ * `.theme-light` son blancos con texto negro. El naranjo queda solo como acento («Hazte socio», la
+ * pestaña activa, EN VIVO y el relleno de los botones al pasar el cursor). El borde oscuro usa
+ * neutral-600: alcanza 3:1 sobre negro, lo que pide un control de formulario (WCAG 1.4.11).
+ */
+.site-public,
+.site-public .theme-dark {
+  --bg: var(--color-ink);
+  --fg: var(--color-paper);
+  --muted: var(--color-neutral-400);
+  --border: var(--color-neutral-600);
+  --surface: var(--color-neutral-900);
+  /* Los enlaces van en el color del texto (con subrayado): el naranjo queda para los acentos. */
+  --link: var(--color-paper);
+  --focus: var(--color-accent);
+}
+.site-public .theme-light {
+  --bg: var(--color-paper);
+  --fg: var(--color-ink);
+  --muted: var(--color-neutral-600);
+  --border: var(--color-concrete);
+  --surface: var(--color-neutral-50);
+  --link: var(--color-ink);
+  --focus: var(--color-accent-strong);
 }

@@ -44,6 +44,9 @@ describe('contraste de tokens (WCAG AA)', () => {
     ['neutral-600', 'neutral-100', 'texto secundario sobre gris 100'],
     ['neutral-700', 'neutral-100', 'etiqueta neutra'],
     ['neutral-400', 'ink', 'texto secundario en secciones oscuras'],
+    // Sitio público negro (rediseño 3a).
+    ['ink', 'accent', 'EN VIVO y «Hazte socio»: texto negro sobre naranjo'],
+    ['ink', 'paper', 'botón principal: texto negro sobre blanco'],
   ])('%s sobre %s alcanza 4,5:1 (%s)', (foreground, background) => {
     expect(contrast(foreground, background)).toBeGreaterThanOrEqual(AA_TEXT)
   })
@@ -52,6 +55,8 @@ describe('contraste de tokens (WCAG AA)', () => {
     ['accent-strong', 'paper', 'foco e indicadores sobre blanco'],
     ['accent', 'ink', 'foco e indicadores en secciones oscuras'],
     ['neutral-500', 'paper', 'borde de los campos de formulario'],
+    ['neutral-600', 'ink', 'bordes del sitio público sobre negro'],
+    ['accent', 'ink', 'pestaña activa sobre negro'],
   ])('%s sobre %s alcanza 3:1 para componentes de interfaz (%s)', (foreground, background) => {
     expect(contrast(foreground, background)).toBeGreaterThanOrEqual(AA_LARGE)
   })

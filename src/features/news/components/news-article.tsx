@@ -36,11 +36,12 @@ export function NewsArticle({
       <header className="theme-dark">
         <div className="container-site grid grid-cols-1 gap-3 pt-4 pb-8 md:pb-12">
           {breadcrumbs}
+          <h1 className="max-w-4xl text-h1 normal-case">{news.title}</h1>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-2 text-meta text-(--muted)">
             {news.type === 'comunicado' ? (
               <Badge variant="accent">{newsTypeLabels.comunicado}</Badge>
             ) : (
-              <span className="text-eyebrow text-accent">
+              <span className="font-semibold text-(--fg)">
                 {news.categoryName ?? newsTypeLabels[news.type]}
               </span>
             )}
@@ -50,7 +51,6 @@ export function NewsArticle({
               <span>Sin publicar</span>
             )}
           </p>
-          <h1 className="max-w-4xl text-h1 normal-case">{news.title}</h1>
           {showScore && news.match && (
             <div className="mt-4 grid max-w-xl gap-2 justify-self-center">
               <Scoreboard match={news.match} size="lg" />
@@ -82,7 +82,7 @@ export function NewsArticle({
         {!showScore && news.match && (
           <p>
             <Link href={`/partidos/${news.match.slug}`} className="font-semibold text-(--link) underline">
-              Partido relacionado: {news.match.home.shortName} vs {news.match.away.shortName} ·{' '}
+              Partido relacionado: {news.match.home.shortName} vs {news.match.away.shortName},{' '}
               {news.match.seriesName}
             </Link>
           </p>

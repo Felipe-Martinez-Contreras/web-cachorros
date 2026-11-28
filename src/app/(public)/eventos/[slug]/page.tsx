@@ -15,7 +15,7 @@ import { getEventDetail, resolveEventRedirect } from '@/features/events/queries'
 import { JsonLd } from '@/features/seo/components/json-ld'
 import { eventJsonLd } from '@/features/seo/lib/json-ld'
 import { pageMetadata, siteBaseUrl } from '@/features/seo/metadata'
-import { formatLongDateTime, formatTime, toIsoDate } from '@/lib/format'
+import { formatLongDateTime, formatLongDateTimeShown, formatTime, toIsoDate } from '@/lib/format'
 import { eventTypeLabels } from '@/lib/labels'
 import { richTextToPlain } from '@/lib/rich-text/document'
 
@@ -45,11 +45,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /** «sábado 14 de noviembre, 13:00 a 17:00» o, si termina otro día, con las dos fechas completas. */
 function eventWhen(startsAt: string, endsAt: string | null): string {
-  const start = formatLongDateTime(startsAt)
+  const start = formatLongDateTimeShown(startsAt)
   if (!endsAt) return start
   return toIsoDate(startsAt) === toIsoDate(endsAt)
     ? `${start} a ${formatTime(endsAt)}`
-    : `${start} al ${formatLongDateTime(endsAt)}`
+    : `${start} al ${formatLongDateTimeShown(endsAt)}`
 }
 
 export default async function EventPage({ params }: Props) {
@@ -151,7 +151,7 @@ export default async function EventPage({ params }: Props) {
                   {event.venue?.address && `, ${event.venue.address}`}
                   {event.mapUrl && (
                     <>
-                      {' · '}
+                      {'. '}
                       <a
                         href={event.mapUrl}
                         target="_blank"

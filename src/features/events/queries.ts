@@ -74,6 +74,23 @@ export async function getUpcomingEvents(limit = 3): Promise<EventCardDTO[]> {
   return rows.map(toCard)
 }
 
+/**
+ * Hay al menos un evento próximo publicado y no cancelado: el menú muestra «Eventos» solo entonces. La
+ * misma regla de «próximo» que el listado.
+ */
+export async function hasUpcomingEvent(): Promise<boolean> {
+  'use cache'
+  cacheTag(tags.events())
+  cacheLife('minutes')
+
+  const [row] = await db
+    .select({ id: events.id })
+    .from(events)
+    .where(and(eq(events.isPublished, true), isUpcoming, ne(events.status, 'cancelado')))
+    .limit(1)
+  return row !== undefined
+}
+
 /** `/eventos`: todos los próximos (ascendente) y una página de los pasados (descendente). */
 export async function getEventsPage(requestedPage: number): Promise<EventsPageDTO> {
   'use cache'

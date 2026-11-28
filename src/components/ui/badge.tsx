@@ -12,7 +12,8 @@ export const badgeVariants = cva(
         accent: 'bg-accent text-ink',
         soft: 'bg-accent-soft text-ink',
         outline: 'border border-current',
-        live: 'bg-live text-paper',
+        // `badge-live`: en el sitio público, EN VIVO va en naranjo con texto negro (globals.css).
+        live: 'badge-live bg-live text-paper',
         success: 'bg-success text-paper',
         danger: 'bg-danger text-paper',
       },

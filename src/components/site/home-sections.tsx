@@ -1,15 +1,17 @@
-import { ArrowRight, CalendarDays, ShoppingBag, UserPlus } from 'lucide-react'
+import { CalendarDays, ShoppingBag, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { connection } from 'next/server'
 import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/feedback'
+import { isHiddenPath } from '@/config/secciones'
 import { getUpcomingEvents } from '@/features/events/queries'
-import { LiveMatchday } from '@/features/matches/components/live-matchday'
-import { MatchCard } from '@/features/matches/components/match-card'
+import { HeroMatchday } from '@/features/matches/components/hero-matchday'
+import { LiveMatchdayProvider } from '@/features/matches/components/live-matchday'
+import { MatchCenter } from '@/features/matches/components/match-center'
 import { StandingsTable } from '@/features/matches/components/standings-table'
 import { livePollBaseMs } from '@/features/matches/live-queries'
-import { getFeaturedStandings, getLatestResults, getMatchday } from '@/features/matches/queries'
+import { getFeaturedStandings, getMatchCenter, getMatchday } from '@/features/matches/queries'
 import { NewsCard } from '@/features/news/components/news-card'
 import { getHomeNews } from '@/features/news/queries'
 import { getSite } from '@/features/settings/queries'
@@ -34,7 +36,6 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href?: strin
           className="inline-flex min-h-11 items-center gap-1 font-semibold text-(--link) hover:underline hover:underline-offset-4"
         >
           {linkLabel}
-          <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       )}
     </div>
@@ -51,9 +52,10 @@ function Section({ className, children, label }: { className?: string; children:
   )
 }
 
-// ── 1 y 2. Hero + franja matchday ────────────────────────────────────────────────────────────────
+// ── 1. Hero con las placas ─────────────────────────────────────────────────
 
-const HERO_HEIGHT = 'min-h-[78svh] lg:min-h-[82svh]'
+// En el celular la portada ocupa el 70 % de la pantalla y las placas quedan en ese espacio, sin desplazarse.
+const HERO_HEIGHT = 'min-h-[70svh] lg:min-h-[82svh]'
 
 export async function HeroSection() {
   await connection()
@@ -62,7 +64,7 @@ export async function HeroSection() {
   const image = hero?.image
   const mobile = hero?.mobileImage
 
-  return (
+  const content = (
     <>
       <section
         aria-label="Presentación"
@@ -90,17 +92,20 @@ export async function HeroSection() {
           </picture>
         )}
         {/* Degradado que asegura el contraste del texto sobre cualquier foto. */}
-        <div className="absolute inset-0 -z-10 bg-linear-to-t from-ink via-ink/70 to-ink/20" />
+        <div className="absolute inset-0 -z-10 bg-linear-to-t from-ink via-ink/75 to-ink/20" />
 
-        <div className="container-site grid gap-5 pt-24 pb-28 md:pb-36">
-          <p className="text-eyebrow text-accent">
-            {site?.clubName} · Desde {site?.foundedYear}
-          </p>
+        <div className="container-site grid gap-4 pt-12 pb-8 md:gap-5 md:pt-24 md:pb-16">
           {/* Sin el escudo grande: el de la barra de navegación ya identifica al club. */}
           <h1 className="text-hero max-w-5xl text-balance">{hero?.title ?? site?.shortName}</h1>
           {hero?.subtitle && <p className="max-w-xl text-lg text-paper/90 md:text-xl">{hero.subtitle}</p>}
-          {hero?.ctaLabel && hero.ctaHref && (
-            <div>
+          {matchday && (
+            <div className="mt-2 md:mt-4">
+              <HeroMatchday />
+            </div>
+          )}
+          {/* Con partido, el botón es «Ver el partido» (va con las placas); sin partido, el de Configuración. */}
+          {!matchday && hero?.ctaLabel && hero.ctaHref && (
+            <div className="mt-2">
               <Link href={hero.ctaHref} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
                 {hero.ctaLabel}
               </Link>
@@ -108,46 +113,30 @@ export async function HeroSection() {
           )}
         </div>
       </section>
-
-      {matchday && (
-        <div className="container-site relative z-10 -mt-20 md:-mt-28">
-          <LiveMatchday matchday={matchday} pollBaseMs={livePollBaseMs()} className="mx-auto max-w-3xl" />
-        </div>
-      )}
     </>
+  )
+
+  // El polling de /api/live/current mantiene al día las placas del hero.
+  return matchday ? (
+    <LiveMatchdayProvider matchday={matchday} pollBaseMs={livePollBaseMs()}>
+      {content}
+    </LiveMatchdayProvider>
+  ) : (
+    content
   )
 }
 
-export function HeroSkeleton() {
-  return (
-    <>
-      <div className={cn('theme-dark', HERO_HEIGHT)} />
-      <div className="container-site relative z-10 -mt-20 md:-mt-28">
-        <Skeleton className="mx-auto h-[26rem] max-w-3xl bg-neutral-100" />
-      </div>
-    </>
-  )
-}
+// ── 2. Centro de partidos ────────────────────────────────────────────────────────────────────────
 
-// ── 3. Últimos resultados por serie ──────────────────────────────────────────────────────────────
-
-export async function LatestResultsSection() {
+/**
+ * Reemplaza la tarjeta «Próximo partido» y «Últimos resultados»: pestañas por serie (`?serie=`) y tres
+ * tarjetas sobre la foto de la cancha.
+ */
+export async function MatchCenterSection({ serie }: { serie: Promise<string | null> }) {
   await connection()
-  const results = await getLatestResults()
-  if (results.length === 0) return null
-  return (
-    <Section label="Últimos resultados">
-      <SectionHeader title="Últimos resultados" href="/partidos" linkLabel="Todos los partidos" />
-      {/* Carrusel con desplazamiento nativo: sin JavaScript, sin autoplay y navegable con teclado. */}
-      <ul className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3 xl:grid-cols-4">
-        {results.map((match) => (
-          <li key={match.id} className="w-[82%] shrink-0 snap-center sm:w-[46%] md:w-auto">
-            <MatchCard match={match} />
-          </li>
-        ))}
-      </ul>
-    </Section>
-  )
+  const [site, center] = await Promise.all([getSite(), serie.then((slug) => getMatchCenter(slug))])
+  if (!center) return null
+  return <MatchCenter center={center} image={site?.hero.image ?? null} />
 }
 
 // ── 4. Noticias ──────────────────────────────────────────────────────────────────────────────────
@@ -157,7 +146,7 @@ export async function NewsSection() {
   const [featured, ...rest] = await getHomeNews()
   if (!featured) return null
   return (
-    <Section label="Noticias" className="bg-(--surface)">
+    <Section label="Noticias" className="theme-light">
       <SectionHeader title="Noticias" href="/noticias" linkLabel="Todas las noticias" />
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-12">
         <NewsCard news={featured} variant="featured" headingLevel="h3" />
@@ -193,32 +182,31 @@ export async function QuickAccessSection() {
       title: 'Tienda',
       text: 'Camisetas, polerones y más. Pide por WhatsApp.',
     },
-    {
-      href: '/eventos',
-      icon: CalendarDays,
-      title: 'Próximos eventos',
-      text: nextEvent
-        ? `${nextEvent.title} · ${formatDayMonth(nextEvent.startsAt)}`
-        : 'Completadas, bingos y actividades del club.',
-    },
-  ]
+    // Como en el menú: «Eventos» solo con un evento próximo.
+    ...(nextEvent
+      ? [
+          {
+            href: '/eventos',
+            icon: CalendarDays,
+            title: 'Próximos eventos',
+            text: `${nextEvent.title}, ${formatDayMonth(nextEvent.startsAt)}`,
+          },
+        ]
+      : []),
+  ].filter((tile) => !isHiddenPath(tile.href))
   return (
     <Section label="Accesos rápidos" className="theme-dark">
-      <ul className="grid gap-4 md:grid-cols-3">
+      <ul className={cn('grid gap-4', tiles.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
         {tiles.map(({ href, icon: Icon, title, text }) => (
           <li key={href}>
             <Link
               href={href}
-              className="group flex h-full min-h-40 flex-col justify-between gap-6 rounded-lg border border-(--border) bg-(--surface) p-6 transition-colors duration-200 hover:border-accent"
+              className="group flex h-full min-h-40 flex-col justify-between gap-6 rounded-lg border border-(--border) bg-(--surface) p-6 transition-colors duration-200 hover:border-(--fg)"
             >
-              <Icon aria-hidden="true" className="size-8 text-accent" />
+              <Icon aria-hidden="true" className="size-8" />
               <span className="grid gap-1">
-                <span className="flex items-center gap-2 font-display text-3xl font-extrabold uppercase [font-stretch:75%]">
+                <span className="font-display text-3xl font-extrabold uppercase [font-stretch:75%]">
                   {title}
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-6 transition-transform duration-200 ease-out group-hover:translate-x-1"
-                  />
                 </span>
                 <span className="text-(--muted)">{text}</span>
               </span>
@@ -237,10 +225,10 @@ export async function StandingsSection() {
   const standings = await getFeaturedStandings()
   if (!standings) return null
   return (
-    <Section label="Tabla de posiciones">
+    <Section label="Tabla de posiciones" className="theme-light">
       <div className="mx-auto max-w-3xl">
         <SectionHeader
-          title={`Tabla · ${standings.seriesName}`}
+          title={`Tabla de la serie ${standings.seriesName}`}
           href={`/partidos/posiciones?serie=${standings.seriesSlug}`}
           linkLabel="Tabla completa"
         />
@@ -257,7 +245,7 @@ export async function SocialSection() {
   const [posts, site] = await Promise.all([socialFeed().latest(6), getSite()])
   if (posts.length === 0) return null
   return (
-    <Section label="Redes sociales" className="bg-(--surface)">
+    <Section label="Redes sociales">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4 md:mb-8">
         <h2 className="text-h2 uppercase">En redes</h2>
         {site && <SocialFollowLinks links={site.socialLinks} />}
@@ -280,7 +268,7 @@ export async function SponsorsSection() {
   const sponsors = await getActiveSponsors()
   if (sponsors.length === 0) return null
   return (
-    <Section label="Auspiciadores">
+    <Section label="Auspiciadores" className="theme-light">
       <h2 className="mb-8 text-center text-h2 uppercase">Nos apoyan</h2>
       <SponsorStrip sponsors={sponsors} />
       <p className="mt-10 text-center">

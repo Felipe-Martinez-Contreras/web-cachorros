@@ -55,7 +55,7 @@ test('sitio público: CSP fija y sin violaciones en portada, formulario, visor, 
   await expect(page.locator('iframe[title^="Mapa"]')).toBeVisible()
 
   // Video detrás de su fachada (iframe de youtube-nocookie después del clic).
-  await page.goto('/videos')
+  await page.goto('/galeria?vista=videos')
   const video = page.getByRole('link', { name: /^Ver el video \(/ }).first()
   if ((await video.count()) > 0) {
     await video.click()

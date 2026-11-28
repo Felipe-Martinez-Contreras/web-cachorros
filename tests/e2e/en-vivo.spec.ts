@@ -96,7 +96,8 @@ test('el admin juega el partido en vivo y el visitante lo ve sin recargar', asyn
   })
   const visitor = await visitorContext.newPage()
   await visitor.goto('/')
-  const strip = visitor.getByRole('region', { name: 'Partidos en vivo' })
+  // Las placas del hero se actualizan con el polling (la tarjeta de la franja ya no existe).
+  const strip = visitor.getByRole('region', { name: 'Presentación' })
   await expect(strip.getByText('Cachorros 0, Los Litres 0')).toBeVisible()
 
   // Gol del club: la portada lo muestra sin recargar (≤ 30 s).
@@ -105,7 +106,7 @@ test('el admin juega el partido en vivo y el visitante lo ve sin recargar', asyn
   await expect(strip.getByText('Cachorros 1, Los Litres 0')).toBeVisible({ timeout: 30_000 })
 
   // El detalle del partido, también sin recargar.
-  await strip.getByRole('link', { name: 'Seguir el partido' }).click()
+  await strip.getByRole('link', { name: 'Ver el partido' }).click()
   await expect(visitor.getByText('Cachorros 1, Los Litres 0').first()).toBeVisible()
   const timeline = visitor.getByRole('region', { name: 'Cronología' })
   await admin.rivalGoal()

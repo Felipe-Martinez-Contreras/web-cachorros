@@ -1,4 +1,3 @@
-import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
@@ -16,7 +15,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
       <ol className="flex flex-wrap items-center gap-x-1 text-meta text-(--muted)">
         {items.map((item, index) => (
           <li key={`${item.href ?? ''}${item.label}`} className="flex items-center gap-1">
-            {index > 0 && <ChevronRight aria-hidden="true" className="size-4" />}
+            {index > 0 && <span aria-hidden="true">/</span>}
             {item.href ? (
               <Link href={item.href} className="inline-flex min-h-11 items-center hover:underline">
                 {item.label}
@@ -33,15 +32,13 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
   )
 }
 
-/** Encabezado oscuro de las páginas interiores, con migas de pan y título. */
+/** Encabezado oscuro de las páginas interiores, con migas de pan y título; `children` va debajo del título. */
 export function PageHero({
   crumbs,
-  eyebrow,
   title,
   children,
 }: {
   crumbs: Crumb[]
-  eyebrow?: string
   title: string
   children?: ReactNode
 }) {
@@ -49,7 +46,6 @@ export function PageHero({
     <header className="theme-dark">
       <div className="container-site grid gap-2 pt-4 pb-8 md:pb-12">
         <Breadcrumbs items={crumbs} />
-        {eyebrow && <p className="text-eyebrow text-accent">{eyebrow}</p>}
         <h1 className="text-h1">{title}</h1>
         {children}
       </div>

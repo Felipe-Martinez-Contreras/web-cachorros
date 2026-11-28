@@ -2,7 +2,7 @@ import { MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
-import { formatMatchDate } from '@/lib/format'
+import { formatKickoff, formatTime } from '@/lib/format'
 import { hasScore, type MatchDTO } from '../dto'
 import { LiveBadge, Scoreboard, TeamCrest } from './scoreboard'
 
@@ -28,17 +28,20 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
         )}
       >
         <span className="w-20 text-meta font-semibold">{match.seriesName}</span>
-        <span className="flex min-w-0 items-center gap-2">
-          <TeamCrest team={match.home} size="sm" />
-          <span className="truncate text-sm">
-            {match.home.shortName} <span className="text-(--muted)">vs</span> {match.away.shortName}
+        {/* Sin cortar nombres: en el celular, un equipo por línea; desde `sm`, en una fila con «vs». */}
+        <span className="grid min-w-0 gap-1 text-sm sm:flex sm:items-center sm:gap-2">
+          <span className="flex min-w-0 items-center gap-2">
+            <TeamCrest team={match.home} size="sm" />
+            <span className="text-pretty">{match.home.shortName}</span>
           </span>
-          <TeamCrest team={match.away} size="sm" />
+          <span className="text-(--muted) max-sm:sr-only">vs</span>
+          <span className="flex min-w-0 items-center gap-2 sm:flex-row-reverse">
+            <TeamCrest team={match.away} size="sm" />
+            <span className="text-pretty">{match.away.shortName}</span>
+          </span>
         </span>
         <span className="text-right font-tight text-xl font-black tabular-nums [font-stretch:62.5%]">
-          {hasScore(match)
-            ? `${match.homeScore}-${match.awayScore}`
-            : formatMatchDate(match.kickoffAt).split(' · ')[1]}
+          {hasScore(match) ? `${match.homeScore}-${match.awayScore}` : formatTime(match.kickoffAt)}
         </span>
       </Link>
     )
@@ -47,15 +50,11 @@ export function MatchCard({ match, variant = 'standard', className }: MatchCardP
   return (
     <Card interactive className={cn('relative', className)}>
       <div className="flex items-center justify-between gap-2 px-4 pt-4">
-        <p className="text-eyebrow">
-          {match.seriesName}
-          {match.roundLabel && <span className="text-(--muted)"> · {match.roundLabel}</span>}
+        <p className="text-meta">
+          <span className="font-bold">{match.seriesName}</span>
+          {match.roundLabel && <span className="text-(--muted)">, {match.roundLabel}</span>}
         </p>
-        {live ? (
-          <LiveBadge />
-        ) : (
-          <p className="text-meta text-(--muted)">{formatMatchDate(match.kickoffAt)}</p>
-        )}
+        {live ? <LiveBadge /> : <p className="text-meta text-(--muted)">{formatKickoff(match.kickoffAt)}</p>}
       </div>
       <Link href={href} className="block p-4 after:absolute after:inset-0 after:rounded-lg">
         <Scoreboard match={match} />

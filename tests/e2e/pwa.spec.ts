@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isSectionHidden } from '../../src/config/secciones'
 import { SECOND_SITE } from './second-site'
 import { expectAccessible } from './support'
 
@@ -16,10 +17,11 @@ test('manifest instalable con nombre, idioma, íconos y accesos directos', async
     display: 'standalone',
     lang: 'es-CL',
   })
+  // La tienda solo si la sección está visible (`src/config/secciones.ts`).
   expect(manifest.shortcuts.map((shortcut: { url: string }) => shortcut.url)).toEqual([
     '/partidos',
     '/noticias',
-    '/tienda',
+    ...(isSectionHidden('tienda') ? [] : ['/tienda']),
   ])
   const purposes = manifest.icons.map(
     (icon: { sizes: string; purpose: string }) => `${icon.sizes} ${icon.purpose}`,

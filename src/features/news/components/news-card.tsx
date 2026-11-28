@@ -29,7 +29,7 @@ function Meta({ news }: { news: NewsCardDTO }) {
       {news.type === 'comunicado' ? (
         <Badge variant="dark">{newsTypeLabels.comunicado}</Badge>
       ) : (
-        news.categoryName && <span className="font-bold text-(--link) uppercase">{news.categoryName}</span>
+        news.categoryName && <span className="font-semibold text-(--fg)">{news.categoryName}</span>
       )}
       <time dateTime={news.publishedAt}>{formatShortDate(news.publishedAt)}</time>
     </p>

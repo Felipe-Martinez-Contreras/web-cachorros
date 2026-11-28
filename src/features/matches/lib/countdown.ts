@@ -32,6 +32,38 @@ export function countdownParts(target: Date | string, now: Date): CountdownParts
   }
 }
 
+/** Placas de la cuenta regresiva: sin segundos, para que ninguna placa gire cada segundo. */
+export const COUNTDOWN_UNITS = [
+  ['days', 'días'],
+  ['hours', 'horas'],
+  ['minutes', 'min'],
+] as const
+
+/**
+ * Cifras de cada placa de la cuenta regresiva, con dos dígitos («03»). Sin `parts` (antes de montar, en el
+ * servidor) cada placa muestra «--» con el mismo ancho. Más de 99 días se muestran completos.
+ */
+export function countdownPlates(parts: CountdownParts | null): Record<CountdownUnit, string> {
+  const plate = (value: number | undefined) => (value === undefined ? '--' : String(value).padStart(2, '0'))
+  return {
+    days: plate(parts?.days),
+    hours: plate(parts?.hours),
+    minutes: plate(parts?.minutes),
+  }
+}
+
+export type CountdownUnit = (typeof COUNTDOWN_UNITS)[number][0]
+
+/**
+ * Milisegundos hasta que cambie el minuto que muestra la cuenta regresiva (`null` si ya comenzó). Así la
+ * cuenta se recalcula una vez por minuto, justo a tiempo.
+ */
+export function msUntilNextMinute(target: Date | string, now: Date): number | null {
+  const remaining = new Date(target).getTime() - now.getTime()
+  if (remaining <= 0) return null
+  return remaining % MINUTE || MINUTE
+}
+
 /** Días de calendario en Santiago entre hoy y la fecha (0 = hoy, 1 = mañana, negativos = pasado). */
 export function calendarDaysUntil(target: Date | string, now: Date): number {
   return differenceInCalendarDays(

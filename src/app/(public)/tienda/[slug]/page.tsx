@@ -17,6 +17,7 @@ import { ProductPrice } from '@/features/store/components/product-card'
 import { MAX_ORDER_QUANTITY } from '@/features/store/lib/order'
 import { getProductDetail, resolveProductRedirect } from '@/features/store/queries'
 import { cn } from '@/lib/cn'
+import { hideIfHidden } from '@/lib/hidden-section'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -32,6 +33,7 @@ const ORDER_ERRORS: Record<string, string> = {
 async function loadProduct(slug: string) {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
+  hideIfHidden('tienda')
   const product = await getProductDetail(slug)
   if (product) return product
   // Segunda barrera (el 404 y el 301 reales los responde el proxy, ADR 0008).

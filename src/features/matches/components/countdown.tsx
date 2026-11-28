@@ -1,8 +1,15 @@
-'use client' // Cliente: la cuenta regresiva depende de la hora del dispositivo y se actualiza cada segundo.
+'use client' // Cliente: la cuenta regresiva depende de la hora del dispositivo y se actualiza cada minuto.
 
 import { useEffect, useState } from 'react'
+import { Plate } from '@/components/site/plate'
 import { cn } from '@/lib/cn'
-import { type CountdownParts, countdownParts } from '../lib/countdown'
+import {
+  COUNTDOWN_UNITS,
+  type CountdownParts,
+  countdownParts,
+  countdownPlates,
+  msUntilNextMinute,
+} from '../lib/countdown'
 
 type CountdownProps = {
   /** Inicio del partido (ISO 8601). */
@@ -12,40 +19,38 @@ type CountdownProps = {
   className?: string
 }
 
-const UNITS = [
-  ['days', 'días'],
-  ['hours', 'hrs'],
-  ['minutes', 'min'],
-  ['seconds', 'seg'],
-] as const
-
 /**
- * Cuenta regresiva al inicio del partido. El servidor renderiza los casilleros vacíos («--») con el mismo
- * tamaño final y el valor real se calcula después de montar: así no hay errores de hidratación ni CLS
- * (especificación 3.3). No se anuncia a lectores de pantalla: en su lugar va la fecha como texto.
+ * Cuenta regresiva al inicio del partido en placas del marcador: días, horas y minutos. El servidor dibuja
+ * las placas con «--» y el mismo ancho final; el valor real se calcula después de montar: así no hay errores
+ * de hidratación ni CLS (especificación 3.3). Cada placa gira cuando cambia su número. No se anuncia a
+ * lectores de pantalla: en su lugar va la fecha como texto.
  */
 export function Countdown({ target, label, className }: CountdownProps) {
   const [parts, setParts] = useState<CountdownParts | null>(null)
 
   useEffect(() => {
-    const update = () => setParts(countdownParts(target, new Date()))
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const update = () => {
+      const now = new Date()
+      setParts(countdownParts(target, now))
+      const wait = msUntilNextMinute(target, now)
+      // Un margen pequeño: el temporizador puede adelantarse unos milisegundos.
+      if (wait !== null) timer = setTimeout(update, wait + 50)
+    }
     update()
-    const timer = setInterval(update, 1000)
-    return () => clearInterval(timer)
+    return () => clearTimeout(timer)
   }, [target])
 
+  const plates = countdownPlates(parts)
   return (
     <div className={cn('inline-block', className)}>
       <p className="sr-only">Comienza el {label}.</p>
-      <div aria-hidden="true" className="grid grid-cols-4 gap-2 text-center">
-        {UNITS.map(([unit, name]) => (
-          <div key={unit} className="grid min-w-14 gap-1 rounded-md bg-(--fg)/8 px-2 py-2">
-            <span className="font-tight text-3xl font-black tabular-nums [font-stretch:62.5%] md:text-4xl">
-              {parts ? String(parts[unit]).padStart(2, '0') : '--'}
-            </span>
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-(--muted) uppercase">
-              {name}
-            </span>
+      <div aria-hidden="true" className="flex gap-1.5 md:gap-2">
+        {COUNTDOWN_UNITS.map(([unit, name]) => (
+          <div key={unit} className="grid justify-items-center gap-1.5">
+            {/* El primer valor también gira: reemplaza a «--», que no es un número. */}
+            <Plate value={plates[unit]} size="countdown" flip={parts !== null} />
+            <span className="text-meta text-(--muted)">{name}</span>
           </div>
         ))}
       </div>

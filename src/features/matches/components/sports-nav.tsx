@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { FilterForm } from '@/components/site/page-shell'
+import { isHiddenPath } from '@/config/secciones'
 import { cn } from '@/lib/cn'
 import type { SportsNavDTO } from '../dto'
 import { sportsQuery } from '../lib/public-params'
@@ -43,7 +44,7 @@ export function SportsNav({ nav, path, section, seriesSlug, season, seriesInPath
         {section && (
           <nav aria-label="Secciones de partidos">
             <ul className="flex flex-wrap gap-2">
-              {SECTIONS.map((item) => (
+              {SECTIONS.filter((item) => !isHiddenPath(item.path)).map((item) => (
                 <li key={item.key}>
                   <Link
                     href={`${item.path}${sportsQuery(seriesSlug, season)}`}

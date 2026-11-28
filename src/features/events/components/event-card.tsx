@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ClubImage } from '@/components/site/club-image'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/cn'
-import { formatLongDateTime } from '@/lib/format'
+import { formatLongDateTimeShown } from '@/lib/format'
 import { eventTypeLabels } from '@/lib/labels'
 import type { EventCardDTO } from '../dto'
 
@@ -38,7 +38,7 @@ export function EventCard({ event, headingLevel: Heading = 'h3', className }: Ev
         <li className="flex items-start gap-1.5">
           <CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <time dateTime={event.startsAt} className="first-letter:uppercase">
-            {formatLongDateTime(event.startsAt)}
+            {formatLongDateTimeShown(event.startsAt)}
           </time>
         </li>
         {event.locationText && (

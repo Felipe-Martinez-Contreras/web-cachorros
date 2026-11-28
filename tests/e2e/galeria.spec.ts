@@ -98,7 +98,12 @@ test('videos: nada de YouTube se carga antes del clic', async ({ page, baseURL }
   await page.route('https://www.youtube-nocookie.com/**', (route) =>
     route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Video</title>' }),
   )
+  // Los videos son la pestaña «Videos» de la galería; /videos redirige ahí con 301.
   await page.goto('/videos')
+  await expect(page).toHaveURL(/\/galeria\?vista=videos$/)
+  await expect(
+    page.getByRole('navigation', { name: 'Secciones de la galería' }).getByRole('link', { name: 'Videos' }),
+  ).toHaveAttribute('aria-current', 'page')
   const facade = page.getByRole('link', { name: `Ver el video (${title})` })
   await expect(facade).toBeVisible()
   await expectAccessible(page)

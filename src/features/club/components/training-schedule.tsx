@@ -34,8 +34,9 @@ export function TrainingSchedule({
                 <li key={`${session.weekday}-${session.startsAt}`} className="flex items-start gap-2">
                   <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-strong" />
                   <span>
-                    <strong>{weekdayLabels[session.weekday]}</strong> · {session.startsAt} a {session.endsAt}
-                    {session.venueName && <span className="text-(--muted)"> · {session.venueName}</span>}
+                    <strong>{weekdayLabels[session.weekday]}</strong>, de {session.startsAt} a{' '}
+                    {session.endsAt}
+                    {session.venueName && <span className="block text-(--muted)">{session.venueName}</span>}
                     {session.notes && <span className="block text-meta text-(--muted)">{session.notes}</span>}
                   </span>
                 </li>

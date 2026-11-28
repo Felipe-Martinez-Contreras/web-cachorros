@@ -6,7 +6,7 @@ import { RichText } from '@/components/site/rich-text'
 import { EmptyState } from '@/components/ui/feedback'
 import { getPageBlock } from '@/features/pages/queries'
 import { pageMetadata } from '@/features/seo/metadata'
-import { formatLongDateTime } from '@/lib/format'
+import { formatLongDateTimeShown } from '@/lib/format'
 
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
@@ -32,7 +32,7 @@ export default async function PrivacyPage() {
           // La versión es la fecha de la última edición: es la que queda registrada con cada consentimiento.
           <p className="text-meta text-(--muted)">
             Versión vigente del{' '}
-            <time dateTime={policy.updatedAt}>{formatLongDateTime(policy.updatedAt)}</time>
+            <time dateTime={policy.updatedAt}>{formatLongDateTimeShown(policy.updatedAt)}</time>
           </p>
         )}
       </PageHero>

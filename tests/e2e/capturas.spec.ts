@@ -1,6 +1,7 @@
 // Capturas para el reporte de fase (360 px y 1280 px). playwright.config.ts las excluye de las pruebas normales:
 //   PowerShell:  $env:CAPTURAS = 'fase-2b'; pnpm test:e2e capturas; Remove-Item Env:CAPTURAS
 import { expect, type Page, test } from '@playwright/test'
+import { isHiddenPath, isSectionHidden } from '../../src/config/secciones'
 import { ADMIN, drawCardPreview, login, waitForTurnstile } from './support'
 
 const fase = process.env.CAPTURAS ?? ''
@@ -68,9 +69,11 @@ test.describe('capturas del reporte de fase', () => {
     await page.goto('/partidos/posiciones')
     await expect(page.getByRole('table')).toBeVisible()
     await shot('posiciones')
-    await page.goto('/partidos/goleadores')
-    await expect(page.getByRole('table')).toBeVisible()
-    await shot('goleadores')
+    if (!isSectionHidden('goleadores')) {
+      await page.goto('/partidos/goleadores')
+      await expect(page.getByRole('table')).toBeVisible()
+      await shot('goleadores')
+    }
     await page.goto('/plantel/honor')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await shot('plantel')
@@ -237,10 +240,12 @@ test.describe('capturas del reporte de fase', () => {
       ['/club/transparencia', 'transparencia'],
       ['/formativas', 'formativas'],
       ['/club/la-cancha', 'la-cancha'],
-      ['/apoya-al-club', 'apoya-al-club'],
+      ['/socios', 'socios'],
       ['/galeria', 'galeria'],
-      ['/videos', 'videos'],
+      ['/galeria?vista=videos', 'videos'],
     ] as const) {
+      // Las secciones ocultas (`src/config/secciones.ts`) responden 404: no hay nada que capturar.
+      if (isHiddenPath(path)) continue
       await page.goto(path)
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       await shot(name)
@@ -318,9 +323,10 @@ test.describe('capturas del reporte de fase', () => {
     const visitor = await browser.newContext({ viewport: page.viewportSize() ?? undefined })
     const site = await visitor.newPage()
     await site.goto('/')
-    await expect(site.getByRole('region', { name: 'Partidos en vivo' })).toBeVisible()
+    const hero = site.getByRole('region', { name: 'Presentación' })
+    await expect(hero.getByText('En vivo', { exact: true })).toBeVisible()
     await site.screenshot({ path: `${dir}/portada-en-vivo-${width}.png` })
-    await site.getByRole('link', { name: 'Seguir el partido' }).click()
+    await hero.getByRole('link', { name: 'Ver el partido' }).click()
     await expect(site.getByText('En vivo', { exact: true }).filter({ visible: true })).toBeVisible()
     await site.waitForTimeout(1500)
     await site.screenshot({ path: `${dir}/partido-en-vivo-${width}.png`, fullPage: true })

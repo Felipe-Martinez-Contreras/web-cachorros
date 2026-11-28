@@ -1,5 +1,6 @@
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { HIDDEN_SECTIONS, isSectionHidden, SECTION_PATHS } from '@/config/secciones'
 import { testDb } from './db-urls'
 import { cleanSport, createMatch, createPlayer, createSportFixture, type SportFixture } from './fixtures'
 
@@ -79,8 +80,9 @@ describe('entradas del sitemap', () => {
         '/noticias/noticia-publicada',
         '/partidos/partido-del-club',
         '/jugadores/adulto-del-sitemap',
-        '/tienda',
-        '/tienda/camiseta-del-sitemap',
+        '/galeria',
+        '/galeria?vista=videos',
+        ...(isSectionHidden('tienda') ? [] : ['/tienda', '/tienda/camiseta-del-sitemap']),
         '/eventos',
         '/eventos/bingo-del-sitemap',
       ]),
@@ -96,6 +98,11 @@ describe('entradas del sitemap', () => {
       '/plantel/serie-antigua',
       '/tienda/producto-oculto',
       '/eventos/evento-borrador',
+      // Fusionadas (redirigen con 301) y secciones ocultas (`src/config/secciones.ts`).
+      '/videos',
+      '/apoya-al-club',
+      ...[...HIDDEN_SECTIONS].map((key) => SECTION_PATHS[key]),
+      ...(isSectionHidden('tienda') ? ['/tienda/camiseta-del-sitemap'] : []),
     ]) {
       expect(paths, `${hidden} no debe estar en el sitemap`).not.toContain(hidden)
     }

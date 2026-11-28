@@ -26,11 +26,10 @@ export function SeriesTabs({ series, activeSlug, hrefFor, label = 'Series', clas
                 href={hrefFor(item.slug)}
                 scroll={false}
                 aria-current={active ? 'page' : undefined}
+                // `tab-link` (globals.css): la línea bajo la pestaña, naranja en la activa.
                 className={cn(
-                  '-mb-px flex min-h-11 items-center border-b-[3px] px-3 font-semibold whitespace-nowrap transition-colors duration-150',
-                  active
-                    ? 'border-(--link) text-(--fg)'
-                    : 'border-transparent text-(--muted) hover:border-(--border) hover:text-(--fg)',
+                  'tab-link flex min-h-11 items-center px-3 font-semibold whitespace-nowrap',
+                  active ? 'text-(--fg)' : 'text-(--muted) hover:text-(--fg)',
                 )}
               >
                 {item.name}

@@ -9,7 +9,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { HistoryNav } from '@/features/history/components/history-nav'
 import { decadeOf, decadesOf, resolveDecade } from '@/features/history/lib/dates'
-import { getTimeline, type MilestoneDTO } from '@/features/history/queries'
+import { getHallOfFame, getHistoricKits, getTimeline, type MilestoneDTO } from '@/features/history/queries'
 import { getPageBlock } from '@/features/pages/queries'
 import { pageMetadata } from '@/features/seo/metadata'
 import { cn } from '@/lib/cn'
@@ -67,11 +67,18 @@ function Milestone({ milestone, anchor }: { milestone: MilestoneDTO; anchor: boo
 export default async function HistoryPage({ searchParams }: Props) {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
-  const [params, intro, timeline] = await Promise.all([
+  const [params, intro, timeline, idols, kits] = await Promise.all([
     searchParams,
     getPageBlock('historia.intro'),
     getTimeline(),
+    getHallOfFame(),
+    getHistoricKits(),
   ])
+  // Salón de la fama y Camisetas no están en el menú: se enlazan aquí solo si tienen contenido.
+  const more = [
+    ...(idols.length > 0 ? [{ href: '/historia/salon-de-la-fama', label: 'Salón de la fama' }] : []),
+    ...(kits.length > 0 ? [{ href: '/historia/camisetas', label: 'Camisetas' }] : []),
+  ]
   const decades = decadesOf(timeline.map((milestone) => milestone.year))
   const decade = resolveDecade(params.decada, decades)
   const milestones = decade === null ? timeline : timeline.filter((item) => decadeOf(item.year) === decade)
@@ -156,6 +163,26 @@ export default async function HistoryPage({ searchParams }: Props) {
           </>
         )}
       </section>
+
+      {more.length > 0 && (
+        <section
+          aria-labelledby="mas-historia"
+          className="container-site grid grid-cols-1 gap-4 pb-8 md:pb-12"
+        >
+          <h2 id="mas-historia" className="text-h2 uppercase">
+            Más historia
+          </h2>
+          <ul className="flex flex-wrap gap-3">
+            {more.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className={buttonVariants({ variant: 'outline' })}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="fotos-antiguas" className="theme-dark">
         <div className="container-site grid justify-items-start gap-3 py-10 md:py-14">

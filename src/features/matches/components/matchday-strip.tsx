@@ -3,22 +3,21 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
-import { formatLongDateTime, formatMatchDate } from '@/lib/format'
+import { formatKickoff, formatLongDateTimeShown } from '@/lib/format'
 import type { MatchDTO, MatchdayDTO } from '../dto'
-import { Countdown } from './countdown'
 import { MatchCard } from './match-card'
 import { LiveBadge, Scoreboard } from './scoreboard'
 
-function MatchHeading({ match, eyebrow }: { match: MatchDTO; eyebrow: string }) {
+/** Qué partido es («Próximo partido») como título, y su serie y torneo debajo, separados por comas. */
+function MatchHeading({ match, title }: { match: MatchDTO; title: string }) {
   return (
     <div className="grid gap-1 text-center">
-      <p className="text-eyebrow text-(--link)">{eyebrow}</p>
-      <p className="font-semibold">
-        {match.seriesName}
-        <span className="font-normal text-(--muted)">
-          {' · '}
-          {match.competitionName}
-          {match.roundLabel && ` · ${match.roundLabel}`}
+      <p className="font-display text-2xl font-extrabold [font-stretch:75%]">{title}</p>
+      <p>
+        <span className="font-semibold">{match.seriesName}</span>
+        <span className="text-(--muted)">
+          , {match.competitionName}
+          {match.roundLabel && `, ${match.roundLabel}`}
         </span>
       </p>
     </div>
@@ -43,7 +42,7 @@ function LiveMatch({ match, renderMinute }: { match: MatchDTO; renderMinute?: Mi
       <div className="flex justify-center">
         <LiveBadge />
       </div>
-      <MatchHeading match={match} eyebrow="Se está jugando" />
+      <MatchHeading match={match} title="Se está jugando" />
       <Scoreboard match={match} size="lg" minute={renderMinute?.(match)} />
       <div className="flex justify-center">
         <Link href={`/partidos/${match.slug}`} className={buttonVariants({ variant: 'primary' })}>
@@ -57,13 +56,12 @@ function LiveMatch({ match, renderMinute }: { match: MatchDTO; renderMinute?: Mi
 function NextMatch({ match, alsoToday }: { match: MatchDTO; alsoToday: MatchDTO[] }) {
   return (
     <div className="grid gap-5 p-5 md:p-8">
-      <MatchHeading match={match} eyebrow="Próximo partido" />
+      <MatchHeading match={match} title="Próximo partido" />
       <Scoreboard match={match} size="lg" />
       <div className="grid justify-items-center gap-3">
         <p className="text-center font-medium first-letter:uppercase">
-          {formatLongDateTime(match.kickoffAt)}
+          {formatLongDateTimeShown(match.kickoffAt)}
         </p>
-        <Countdown target={match.kickoffAt} label={formatLongDateTime(match.kickoffAt)} />
         <Venue match={match} />
       </div>
       <div className="flex flex-wrap justify-center gap-3">
@@ -84,7 +82,7 @@ function NextMatch({ match, alsoToday }: { match: MatchDTO; alsoToday: MatchDTO[
       </div>
       {alsoToday.length > 0 && (
         <div className="border-t border-(--border) pt-4">
-          <h2 className="mb-1 text-eyebrow text-(--muted)">Ese día también juegan</h2>
+          <h2 className="mb-1 font-bold">Ese día también juegan</h2>
           <ul className="grid gap-1 md:grid-cols-2">
             {alsoToday.map((other) => (
               <li key={other.id}>
@@ -101,9 +99,9 @@ function NextMatch({ match, alsoToday }: { match: MatchDTO; alsoToday: MatchDTO[
 function LastMatch({ match }: { match: MatchDTO }) {
   return (
     <div className="grid gap-4 p-5 md:p-8">
-      <MatchHeading match={match} eyebrow="Último resultado" />
+      <MatchHeading match={match} title="Último resultado" />
       <Scoreboard match={match} size="lg" />
-      <p className="text-center text-meta text-(--muted)">{formatMatchDate(match.kickoffAt)}</p>
+      <p className="text-center text-meta text-(--muted)">{formatKickoff(match.kickoffAt)}</p>
       <div className="flex justify-center">
         <Link href={`/partidos/${match.slug}`} className={buttonVariants({ variant: 'outline' })}>
           Ver el partido
@@ -115,7 +113,8 @@ function LastMatch({ match }: { match: MatchDTO }) {
 
 /**
  * Franja matchday de la portada (especificación 5.3): en vivo → próximo partido → último resultado.
- * Se renderiza en el servidor con el último estado; `LiveMatchday` la actualiza con el polling (2.6).
+ * Se renderiza en el servidor con el último estado; `LiveMatchday` la actualiza con el polling (2.6). La
+ * cuenta regresiva no va aquí: está en las placas del hero (`HeroMatchday`).
  */
 export function MatchdayStrip({
   matchday,

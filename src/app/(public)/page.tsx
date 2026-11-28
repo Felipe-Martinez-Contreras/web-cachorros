@@ -1,6 +1,6 @@
 import {
   HeroSection,
-  LatestResultsSection,
+  MatchCenterSection,
   NewsSection,
   QuickAccessSection,
   SocialSection,
@@ -19,12 +19,16 @@ export function generateMetadata() {
  * desde consultas cacheadas por tags, y todas se resuelven en paralelo. No hay <Suspense> por capa: el
  * HTML llega completo, sin saltos de layout y legible sin JavaScript.
  */
-export default function HomePage() {
+type Props = { searchParams: Promise<{ serie?: string | string[] }> }
+
+export default function HomePage({ searchParams }: Props) {
+  // La serie del centro de partidos (`/?serie=tercera#partidos`); el resto de la portada no depende de ella.
+  const serie = searchParams.then(({ serie }) => (typeof serie === 'string' ? serie : null))
   return (
     <>
       <SiteJsonLd />
       <HeroSection />
-      <LatestResultsSection />
+      <MatchCenterSection serie={serie} />
       <NewsSection />
       <QuickAccessSection />
       <StandingsSection />

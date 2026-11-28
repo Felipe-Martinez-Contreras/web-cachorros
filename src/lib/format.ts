@@ -56,6 +56,11 @@ export function formatDayMonth(value: DateInput): string {
 }
 
 /** «sáb 10 oct · 16:00» */
+/** «sáb 10 oct, 16:00»: fecha y hora de un partido en el sitio público (sin punto medio). */
+export function formatKickoff(value: DateInput): string {
+  return `${formatDayMonth(value)}, ${formatTime(value)}`
+}
+
 export function formatMatchDate(value: DateInput): string {
   return `${formatDayMonth(value)} · ${formatTime(value)}`
 }
@@ -75,6 +80,15 @@ export function formatLongDate(value: DateInput): string {
 /** «sábado 10 de octubre de 2026, 16:00 h» */
 export function formatLongDateTime(value: DateInput): string {
   return `${formatLongDate(value)}, ${formatTime(value)} h`
+}
+
+/**
+ * La misma fecha para mostrar en una página: la «h» va pegada a la hora con un espacio duro y nunca queda
+ * sola al comienzo de una línea. Para textos que salen del sitio (CSV, correos, Facebook) usa
+ * `formatLongDateTime`, con espacio normal.
+ */
+export function formatLongDateTimeShown(value: DateInput): string {
+  return `${formatLongDate(value)}, ${formatTime(value)} h`
 }
 
 /** «10/10» (para «Actualizada al dd/mm»). */

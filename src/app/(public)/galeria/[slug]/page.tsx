@@ -47,11 +47,11 @@ export default async function AlbumPage({ params }: Props) {
       />
       <header className="grid gap-2">
         <h1 className="text-h1">{album.title}</h1>
-        <p className="text-(--muted)">
+        <p className="flex flex-wrap gap-x-4 text-(--muted)">
           {album.takenOn && (
-            <time dateTime={album.takenOn}>{formatLongDate(fromIsoDate(album.takenOn))} · </time>
+            <time dateTime={album.takenOn}>{formatLongDate(fromIsoDate(album.takenOn))}</time>
           )}
-          {album.photos.length === 1 ? '1 foto' : `${album.photos.length} fotos`}
+          <span>{album.photos.length === 1 ? '1 foto' : `${album.photos.length} fotos`}</span>
         </p>
         {(album.match || album.event) && (
           <p>

@@ -28,11 +28,9 @@ export function AlbumCard({ album }: { album: AlbumCardDTO }) {
           {album.title}
         </Link>
       </h2>
-      <p className="text-meta text-(--muted)">
-        {album.takenOn && (
-          <time dateTime={album.takenOn}>{formatShortDate(fromIsoDate(album.takenOn))} · </time>
-        )}
-        {album.photoCount === 1 ? '1 foto' : `${album.photoCount} fotos`}
+      <p className="flex flex-wrap gap-x-3 text-meta text-(--muted)">
+        {album.takenOn && <time dateTime={album.takenOn}>{formatShortDate(fromIsoDate(album.takenOn))}</time>}
+        <span>{album.photoCount === 1 ? '1 foto' : `${album.photoCount} fotos`}</span>
       </p>
     </article>
   )

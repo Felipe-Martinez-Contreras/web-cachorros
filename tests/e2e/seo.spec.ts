@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
+import { isSectionHidden } from '../../src/config/secciones'
 import { adminSql } from './db'
 import { SECOND_SITE } from './second-site'
 
@@ -239,7 +240,8 @@ test('ningún JSON-LD lleva el nombre completo de un menor de edad', async ({ re
   for (const path of [
     '/plantel/juvenil',
     `/partidos/${seed.juvenileMatchSlug}`,
-    '/partidos/goleadores?serie=juvenil',
+    // Goleadores puede estar oculta (404): entonces no hay JSON-LD que revisar.
+    ...(isSectionHidden('goleadores') ? [] : ['/partidos/goleadores?serie=juvenil']),
     '/plantel/honor',
   ]) {
     const data = JSON.stringify(jsonLd(await html(request, `${base}${path}`)))

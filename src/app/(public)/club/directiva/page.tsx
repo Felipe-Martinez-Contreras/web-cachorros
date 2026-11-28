@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/feedback'
 import { getCurrentBoard } from '@/features/club/queries'
 import { pageMetadata } from '@/features/seo/metadata'
 import { formatShortDate, fromIsoDate } from '@/lib/format'
+import { hideIfHidden } from '@/lib/hidden-section'
 import { isContentMarker } from '@/lib/markers'
 
 export function generateMetadata(): Promise<Metadata> {
@@ -38,6 +39,7 @@ function term(start: string | null, end: string | null): string | null {
 export default async function BoardPage() {
   // Los datos se leen en runtime: sin esto, el build intentaría consultar la base (especificación 3.4).
   await connection()
+  hideIfHidden('directiva')
   const board = await getCurrentBoard()
 
   return (
@@ -79,8 +81,8 @@ export default async function BoardPage() {
                     )}
                   </div>
                   <div className="grid min-w-0 content-start gap-1">
-                    <p className="text-eyebrow text-accent-strong">{member.roleTitle}</p>
                     <h2 className="text-lg leading-snug font-bold">{member.fullName}</h2>
+                    <p className="font-semibold">{member.roleTitle}</p>
                     {period && <p className="text-meta text-(--muted)">{period}</p>}
                     {member.publicEmail && !isContentMarker(member.publicEmail) && (
                       <a

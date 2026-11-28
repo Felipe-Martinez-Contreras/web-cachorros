@@ -128,16 +128,23 @@ test.describe('historia sin JavaScript', () => {
       '/contacto?tema=historia',
     )
 
+    // Salón de la fama y Camisetas no van en el menú de Historia: /historia las enlaza en «Más historia»
+    // porque el seed les trae contenido.
     const sections = page.getByRole('navigation', { name: 'Secciones de Historia' })
+    await expect(sections.getByRole('link')).toHaveText(['Línea de tiempo', 'Títulos'])
     for (const [link, heading] of [
-      ['Títulos', 'Títulos'],
       ['Salón de la fama', 'Salón de la fama'],
       ['Camisetas', 'Camisetas históricas'],
     ] as const) {
-      await sections.getByRole('link', { name: link }).click()
+      await page.goto('/historia')
+      await page.getByRole('region', { name: 'Más historia' }).getByRole('link', { name: link }).click()
       await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
       await expect(page.getByRole('main').getByRole('listitem').first()).toBeVisible()
     }
+    await page.goto('/historia')
+    await sections.getByRole('link', { name: 'Títulos' }).click()
+    await expect(page.getByRole('heading', { name: 'Títulos', level: 1 })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('listitem').first()).toBeVisible()
   })
 })
 

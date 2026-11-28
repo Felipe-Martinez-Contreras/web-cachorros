@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, gt, gte, inArray, lt, ne } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, lt, ne, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { cacheLife, cacheTag } from 'next/cache'
 import { db } from '@/db/client'
@@ -17,7 +17,7 @@ import { rankTable } from '@/features/standings/compute'
 import { tags } from '@/lib/cache-tags'
 import { toImageDTO } from '@/lib/images/dto'
 import { directionsUrls } from '@/lib/links'
-import type { MatchDTO, MatchdayDTO, StandingsDTO, TeamDTO } from './dto'
+import type { MatchCenterDTO, MatchDTO, MatchdayDTO, StandingsDTO, TeamDTO } from './dto'
 import { startOfSantiagoDay } from './lib/countdown'
 import { compactStandings } from './lib/standings'
 
@@ -215,29 +215,57 @@ export async function getMatchday(): Promise<MatchdayDTO | null> {
   return last ? { kind: 'last', match: toMatchDTO(last) } : null
 }
 
-const RECENT_RESULTS_DAYS = 10
-
-/** Último partido finalizado de cada serie activa en los últimos 10 días, en el orden de las series. */
-export async function getLatestResults(): Promise<MatchDTO[]> {
+/**
+ * Centro de partidos de la portada: pestañas con las series activas y, de la elegida (`?serie=`; si no, la
+ * destacada o la primera), el último resultado, el partido actual (en vivo o el próximo programado) y el
+ * siguiente. Tres consultas indexadas; la misma caché corta que la franja matchday.
+ */
+export async function getMatchCenter(requestedSlug: string | null): Promise<MatchCenterDTO | null> {
   'use cache'
-  cacheTag(tags.matches())
-  cacheLife('minutes')
+  cacheTag(tags.matches(), tags.live(), tags.settings())
+  cacheLife({ stale: 30, revalidate: 30, expire: 300 })
 
-  const since = new Date(Date.now() - RECENT_RESULTS_DAYS * 86_400_000)
-  const rows = await selectMatches()
-    .where(
-      and(
-        isClubMatch,
-        eq(matches.status, 'finalizado'),
-        gte(matches.kickoffAt, since),
-        eq(series.isActive, true),
-      ),
-    )
-    .orderBy(asc(series.sortOrder), desc(matches.kickoffAt))
-  // Viene ordenado por serie y fecha descendente: el primero de cada serie es su último partido.
-  const latest = new Map<string, MatchRow>()
-  for (const row of rows) if (!latest.has(row.seriesId)) latest.set(row.seriesId, row)
-  return [...latest.values()].map(toMatchDTO)
+  const [allSeries, featuredId] = await Promise.all([
+    db
+      .select({ id: series.id, slug: series.slug, name: series.name })
+      .from(series)
+      .where(eq(series.isActive, true))
+      .orderBy(asc(series.sortOrder)),
+    featuredSeriesId(),
+  ])
+  const active =
+    allSeries.find((item) => item.slug === requestedSlug) ??
+    allSeries.find((item) => item.id === featuredId) ??
+    allSeries[0]
+  if (!active) return null
+
+  const ofSeries = and(isClubMatch, eq(matches.seriesId, active.id))
+  const [[last], [current, following]] = await Promise.all([
+    selectMatches()
+      .where(and(ofSeries, eq(matches.status, 'finalizado')))
+      .orderBy(desc(matches.kickoffAt))
+      .limit(1),
+    // En vivo primero (empezó antes) y después los programados que aún no comienzan.
+    selectMatches()
+      .where(
+        and(
+          ofSeries,
+          or(
+            eq(matches.status, 'en_vivo'),
+            and(eq(matches.status, 'programado'), gt(matches.kickoffAt, new Date())),
+          ),
+        ),
+      )
+      .orderBy(asc(matches.kickoffAt))
+      .limit(2),
+  ])
+  return {
+    series: allSeries.map(({ slug, name }) => ({ slug, name })),
+    activeSlug: active.slug,
+    last: last ? toMatchDTO(last) : null,
+    current: current ? toMatchDTO(current) : null,
+    following: following ? toMatchDTO(following) : null,
+  }
 }
 
 /**
